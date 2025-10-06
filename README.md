@@ -1,46 +1,33 @@
-EV Battery Swap Platform
-Overview
-
-A platform for managing and operating an EV battery swapping system.
-It supports three main roles: EV Driver, Battery Swap Station Staff, and Administrator.
-
-Key Features
-EV Driver
-
-Register & manage account, link vehicle (VIN, battery type).
-
-Find nearest swap station, check battery availability, and book in advance.
-
-Pay per swap or via subscription package, manage invoices & history.
-
-Request support in case of issues, rate station service.
-
-Station Staff
-
-Manage battery inventory: full, charging, and maintenance status.
-
-Confirm and log battery swap transactions, track returned battery condition.
-
-Process on-site payments.
-
-Administrator
-
-Monitor battery health (SoH), coordinate battery allocation across stations.
-
-Manage customers, subscription packages, and staff permissions.
-
-Generate reports on revenue, swap frequency, and peak hours.
-
-AI-powered demand forecasting for station infrastructure upgrades.
-
-Tech Stack
-
-Backend: .NET 6+ (REST API)
-
-Frontend: React (Web & Mobile Web)
-
-Database: SQL Server
-
-Analytics & AI (optional): Python
-
-Installation
+<!-- prettier-ignore -->
+src/
+ ├─ app/                      # Next.js app router (entrypoints)
+ │   ├─ (marketing)/
+ │   ├─ (dashboard)/
+ │   └─ layout.tsx
+ │
+ ├─ presentation/             # UI layer
+ │   ├─ components/           # Shared UI components
+ │   │   ├─ ui/               # Atoms (Button, Input, Card...)
+ │   │   ├─ common/           # Reusable composite (Header, Footer...)
+ │   │   └─ feature/          # Feature-specific (Chart, ProfileForm...)
+ │   ├─ layouts/              # Layout components
+ │   └─ hooks/                # UI hooks (e.g. useTheme, useFormInput)
+ │
+ ├─ application/              # App services (use cases, state management)
+ │   ├─ services/             
+ │   ├─ slices/               # Redux/RTK slices hoặc Zustand store
+ │   └─ usecases/             
+ │
+ ├─ domain/                   # Pure business logic (no React, no fetch)
+ │   ├─ entities/             # Entities (User, Order...)
+ │   ├─ dto/                  # Data Transfer Objects
+ │   └─ repositories/         # Interface definitions (e.g. IUserRepo)
+ │
+ ├─ infrastructure/           # Implementation of external stuff
+ │   ├─ api/                  # API clients (axios, fetch wrappers)
+ │   ├─ repositories/         # Repo implementation (calls API)
+ │   └─ config/               # env, constants, db config
+ │
+ └─ shared/                   # Shared code across layers
+     ├─ lib/                  # Utilities (date, format...)
+     └─ constants/
