@@ -3,8 +3,12 @@ import React from "react";
 interface SidebarProps {
   currentPath?: string;
 }
-
-const navigationItems = [
+type NavigationItem = {
+  name: string;
+  path: string;
+  icon: React.ReactNode;
+};
+const navigationItems: NavigationItem[] = [
   {
     name: "Home",
     path: "/home",
