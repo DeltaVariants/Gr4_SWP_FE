@@ -17,11 +17,11 @@ export default function MainLayout({
   headerSubtitle = "Welcome back! Monitor your EV battery status and find nearby swap stations.",
 }: MainLayoutProps) {
   return (
-    <div className="min-h-screen bg-[#E6F4FE] flex overflow-hidden">
+    <div className="min-h-screen bg-[#E6F4FE] flex">
       <SideBar01 currentPath={currentPath} />
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col ml-0 lg:ml-0 overflow-auto">
+      <div className="flex-1 flex flex-col ml-0 lg:ml-0">
         <Header title={headerTitle} subtitle={headerSubtitle} />
 
         {/* Main Dashboard Content */}

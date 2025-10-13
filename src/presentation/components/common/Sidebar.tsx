@@ -107,7 +107,7 @@ const navigationItems: NavigationItem[] = [
 
 export default function Sidebar({ currentPath = "/home" }: SidebarProps) {
   return (
-    <div className="w-64 bg-gradient-to-b from-[#1E5A8C] to-[#0A4A7C] text-white flex flex-col h-screen fixed left-0 top-0 z-10 lg:relative lg:z-auto">
+    <div className="w-64 bg-gradient-to-b from-[#1E5A8C] to-[#0A4A7C] text-white flex flex-col h-screen fixed left-0 top-0 z-50">
       {/* Logo Section */}
       <div className="p-6 flex items-center space-x-3 flex-shrink-0">
         <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center">

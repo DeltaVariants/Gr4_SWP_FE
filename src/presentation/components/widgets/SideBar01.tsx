@@ -50,20 +50,18 @@ const SideBar01 = ({ currentPath = "/home" }: SidebarProps) => {
 
   return (
     <div
-      className={`h-screen flex flex-col left-0 top-0 z-10 transition-all duration-300 ease-in-out bg-white shadow-[0_4px_4px_rgba(0,0,0,0.1)] ${
-        isExpanded ? "w-60" : "w-24"
+      className={`h-screen flex flex-col sticky top-0 z-10 transition-all duration-300 ease-in-out bg-white shadow-[0_4px_4px_rgba(0,0,0,0.1)] ${
+        isExpanded ? "w-60" : "w-22"
       }`}
     >
       {/* Logo Section*/}
       <div
-        className={`p-4 flex items-center flex-shrink-0 border-b border-gray-200 transition-all duration-300 ease-in-out ${
-          isExpanded ? "justify-start" : "justify-center" // Canh giữa khi collapsed
-        }`}
+        className={`p-4 flex items-center flex-shrink-0 border-b border-gray-200 transition-all duration-300 ease-in-out `}
       >
         <div className="flex items-center space-x-3">
           <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
             {/* Logo */}
-            <div className="w-8 h-8 bg-blue-500 rounded-full"></div>
+            <div className="w-8 h-8 bg-gray-700 rounded-full"></div>
           </div>
         </div>
       </div>
@@ -72,7 +70,7 @@ const SideBar01 = ({ currentPath = "/home" }: SidebarProps) => {
       <div className={`p-4 flex justify-start border-b border-gray-200`}>
         <button
           onClick={toggleSidebar}
-          className="bg-transparent border-none cursor-pointer p-2 rounded-lg flex items-center justify-center transition-colors duration-200 text-gray-700 hover:bg-gray-100"
+          className="bg-transparent border-none cursor-pointer p-4 rounded-lg flex items-center justify-center transition-colors duration-200 text-gray-700 hover:bg-gray-100"
         >
           <FaBars size={24} />
         </button>
@@ -86,11 +84,11 @@ const SideBar01 = ({ currentPath = "/home" }: SidebarProps) => {
           return (
             <Link href={item.path} key={item.name}>
               <div
-                className={`flex items-center py-3 cursor-pointer transition-colors duration-200 mx-4 rounded-xl gap-4 px-4 ${
+                className={`flex items-center px-4 py-4 cursor-pointer transition-all duration-200 mx-4 rounded-xl gap-4 ${
                   isActive
-                    ? "bg-blue-50 text-blue-600 font-bold"
-                    : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
-                } ${!isExpanded ? "justify-center" : ""}`}
+                    ? "bg-gray-100 text-gray-900"
+                    : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                }`}
                 title={!isExpanded ? item.name : ""}
               >
                 <div className="flex items-center justify-center w-6 h-6 flex-shrink-0">
@@ -114,12 +112,12 @@ const SideBar01 = ({ currentPath = "/home" }: SidebarProps) => {
       {/* --- User Profile Section --- */}
       <div className="p-4 border-t border-gray-200 flex-shrink-0">
         <div
-          className={`flex items-center ${
-            isExpanded ? "space-x-3" : "justify-center"
+          className={`ml-1.5 flex items-center ${
+            isExpanded ? "space-x-3" : ""
           }`}
         >
-          <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-            <span className="text-sm font-medium text-blue-600">NA</span>
+          <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center flex-shrink-0">
+            <span className="text-sm font-medium text-gray-700">NA</span>
           </div>
           <div
             className={`transition-opacity duration-200 ${
@@ -128,7 +126,6 @@ const SideBar01 = ({ currentPath = "/home" }: SidebarProps) => {
                 : "opacity-0 absolute left-full"
             }`}
           >
-            {" "}
             {/* Ẩn hoàn toàn khi collapsed */}
             <p className="text-sm font-medium text-gray-800 whitespace-nowrap">
               Nguyen Van A
