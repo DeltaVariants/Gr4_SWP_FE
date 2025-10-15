@@ -1,4 +1,4 @@
-// RefactoredSidebar.tsx (Phiên bản 2: Có Logo & Logo căn giữa khi Expanded)
+"use client";
 import React, { useState } from "react";
 import Link from "next/link";
 import {
@@ -27,7 +27,7 @@ const navigationItems: NavigationItem[] = [
   { name: "Home", path: "/home", icon: <FaHome size={20} /> },
   {
     name: "Find Stations",
-    path: "/stations",
+    path: "/findstation",
     icon: <FaMapMarkerAlt size={24} />,
   },
   { name: "My Bookings", path: "/bookings", icon: <FaCalendarAlt size={24} /> },

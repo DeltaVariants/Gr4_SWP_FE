@@ -1,12 +1,7 @@
 "use client";
 
 import React from "react";
-import {
-  MainLayout,
-  BatteryAlert,
-  StatsGrid,
-  CarsSection,
-} from "../../../presentation";
+import { BatteryAlert, StatsGrid, CarsSection } from "../../../presentation";
 
 export default function HomePage() {
   // Mock data - in a real app, this would come from state management or API
@@ -51,7 +46,7 @@ export default function HomePage() {
   };
 
   return (
-    <MainLayout currentPath="/home">
+    <>
       {/* Battery Alert */}
       <BatteryAlert
         batteryPercentage={28}
@@ -65,6 +60,6 @@ export default function HomePage() {
 
       {/* My Cars Section */}
       <CarsSection cars={carsData} onAddCar={handleAddCar} />
-    </MainLayout>
+    </>
   );
 }

@@ -1,5 +1,4 @@
 // Common components
-export * from "./components/common";
 
 // Feature components
 export * from "./components/features";
