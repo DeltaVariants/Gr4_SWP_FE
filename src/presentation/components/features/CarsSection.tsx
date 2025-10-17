@@ -1,5 +1,5 @@
 import React from "react";
-import CarCard from "../ui/CarCard";
+import CarCard from "../widgets/CarCard";
 
 interface Car {
   id: string;

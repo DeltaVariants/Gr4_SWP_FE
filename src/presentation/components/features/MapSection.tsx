@@ -1,7 +1,9 @@
 "use client";
 import { useEffect, useRef, useState, useCallback } from "react";
+import { createRoot } from "react-dom/client";
 import listOfStations from "../../data/listOfStations";
 import { FaLocationCrosshairs } from "react-icons/fa6";
+import MarkerPopup from "./MarkerPopup";
 
 const stations = listOfStations;
 
@@ -159,38 +161,29 @@ export default function MapSection() {
 
     // Thêm markers cho các trạm
     stations.forEach((station) => {
-      const popupContent = `
-        <div class="p-3 min-w-[200px]">
-          <h3 class="font-semibold text-lg mb-2">${station.name}</h3>
-          <p class="text-sm text-gray-600 mb-1">${station.address}</p>
-          <p class="text-sm ${
-            station.available ? "text-green-600" : "text-red-600"
-          } mb-2">
-            ${station.available ? "✅ Đang hoạt động" : "❌ Không hoạt động"}
-          </p>
-          <p class="text-sm text-blue-600 mb-3">
-            Còn trống: ${station.availableSlots}/${station.totalSlots} chỗ
-          </p>
-          <div class="flex gap-2">
-            <button 
-              onclick="window.createRoute(${station.lat}, ${station.lng})"
-              class="px-3 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600 transition-colors"
-            >
-              🗺️ Chỉ đường
-            </button>
-            <button 
-              onclick="window.clearRoute()"
-              class="px-3 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600 transition-colors"
-            >
-              ❌ Xóa route
-            </button>
-          </div>
-        </div>
-      `;
+      // Tạo div container cho popup
+      const popupDiv = document.createElement("div");
 
-      L.marker([station.lat, station.lng])
+      // Render React component vào div
+      const root = createRoot(popupDiv);
+      root.render(
+        <MarkerPopup
+          stationName={station.name}
+          address={station.address}
+          status={station.available}
+          availableSlots={station.availableSlots}
+          totalSlots={station.totalSlots}
+          onDirection={() => createRoute(station.lat, station.lng)}
+          onClearRoute={clearRoute}
+        />
+      );
+
+      const marker = L.marker([station.lat, station.lng])
         .addTo(mapInstance)
-        .bindPopup(popupContent);
+        .bindPopup(popupDiv);
+
+      // Store root reference để cleanup sau
+      marker._popupRoot = root;
     });
 
     // Hàm zoom để hiển thị tất cả trạm
@@ -213,7 +206,7 @@ export default function MapSection() {
       }
       mapInstance.remove();
     };
-  }, []);
+  }, [createRoute, clearRoute]);
 
   // Expose functions to global window for popup buttons
   useEffect(() => {
