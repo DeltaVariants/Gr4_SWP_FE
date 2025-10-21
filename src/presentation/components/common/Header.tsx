@@ -1,23 +1,33 @@
 import React from "react";
 
-interface HeaderProps {
-  title?: string;
-  subtitle?: string;
-  weather?: {
-    temperature: string;
-    condition: string;
-  };
+export interface WeatherInfo {
+  temperature: string;
+  condition: string;
+}
+
+export interface HeaderUIProps {
+  title: string;
+  subtitle: string;
+  weather?: WeatherInfo;
   hasNotifications?: boolean;
+  onNotificationClick?: () => void;
+  onSettingsClick?: () => void;
+  className?: string;
 }
 
 export default function Header({
-  title = "Home",
-  subtitle = "Welcome back! Monitor your EV battery status and find nearby swap stations.",
-  weather = { temperature: "24°C", condition: "Sunny" },
-  hasNotifications = true,
-}: HeaderProps) {
+  title,
+  subtitle,
+  weather,
+  hasNotifications = false,
+  onNotificationClick,
+  onSettingsClick,
+  className = "",
+}: HeaderUIProps) {
   return (
-    <header className="bg-white border-b border-gray-200 px-6 py-4 shadow-sm">
+    <header
+      className={`bg-white border-b border-gray-200 px-6 py-4 shadow-sm ${className}`}
+    >
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold text-[#1E1E1E]">{title}</h1>
@@ -27,27 +37,35 @@ export default function Header({
         {/* Weather and Notifications */}
         <div className="flex items-center space-x-4">
           {/* Weather Widget */}
-          <div className="bg-[#E6F4FE] rounded-lg px-3 py-2 flex items-center space-x-2">
-            <svg
-              className="w-4 h-4 text-black"
-              fill="currentColor"
-              viewBox="0 0 20 20"
-            >
-              <path
-                fillRule="evenodd"
-                d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z"
-                clipRule="evenodd"
-              />
-            </svg>
-            <span className="text-sm font-medium text-[#1E5A8C]">
-              {weather.temperature}
-            </span>
-            <span className="text-sm text-[#B3B3B3]">{weather.condition}</span>
-          </div>
+          {weather && (
+            <div className="bg-[#E6F4FE] rounded-lg px-3 py-2 flex items-center space-x-2">
+              <svg
+                className="w-4 h-4 text-black"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z"
+                  clipRule="evenodd"
+                />
+              </svg>
+              <span className="text-sm font-medium text-[#1E5A8C]">
+                {weather.temperature}
+              </span>
+              <span className="text-sm text-[#B3B3B3]">
+                {weather.condition}
+              </span>
+            </div>
+          )}
 
           {/* Notification Icons */}
           <div className="flex items-center space-x-2">
-            <div className="w-9 h-9 bg-[#E6F4FE] rounded-lg flex items-center justify-center cursor-pointer hover:bg-[#d1e9fe]">
+            <button
+              onClick={onNotificationClick}
+              className="w-9 h-9 bg-[#E6F4FE] rounded-lg flex items-center justify-center cursor-pointer hover:bg-[#d1e9fe] relative"
+              aria-label="Notifications"
+            >
               <svg
                 className="w-5 h-5 text-black"
                 fill="currentColor"
@@ -55,13 +73,16 @@ export default function Header({
               >
                 <path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z" />
               </svg>
-            </div>
+              {hasNotifications && (
+                <div className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></div>
+              )}
+            </button>
 
-            {hasNotifications && (
-              <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-            )}
-
-            <div className="w-9 h-9 bg-[#E6F4FE] rounded-lg flex items-center justify-center cursor-pointer hover:bg-[#d1e9fe]">
+            <button
+              onClick={onSettingsClick}
+              className="w-9 h-9 bg-[#E6F4FE] rounded-lg flex items-center justify-center cursor-pointer hover:bg-[#d1e9fe]"
+              aria-label="Settings"
+            >
               <svg
                 className="w-5 h-5 text-black"
                 fill="currentColor"
@@ -73,7 +94,7 @@ export default function Header({
                   clipRule="evenodd"
                 />
               </svg>
-            </div>
+            </button>
           </div>
         </div>
       </div>
