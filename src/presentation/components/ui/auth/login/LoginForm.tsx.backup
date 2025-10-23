@@ -1,0 +1,181 @@
+'use client';
+
+import { useState } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
+import Link from 'next/link';
+import { EmailInput } from './EmailInput';
+import { PasswordInput } from './PasswordInput';
+import { RememberForgot } from './RememberForgot';
+import { SocialLogin } from './SocialLogin';
+
+interface LoginFormData {
+  email: string;
+  password: string;
+  rememberMe: boolean;
+}
+
+interface LoginFormErrors {
+  email?: string;
+  password?: string;
+}
+
+export const LoginForm = () => {
+  const { login, loading } = useAuth();
+  const [formData, setFormData] = useState<LoginFormData>({
+    email: '',
+    password: '',
+    rememberMe: false,
+  });
+  const [errors, setErrors] = useState<LoginFormErrors>({});
+  const [apiError, setApiError] = useState<string>('');
+
+  const validateEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+
+    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setApiError('');
+    let newErrors: LoginFormErrors = {};
+
+    // Validate email
+    if (!formData.email) {
+      newErrors.email = 'Email là bắt buộc';
+    } else if (!validateEmail(formData.email)) {
+      newErrors.email = 'Vui lòng nhập địa chỉ email hợp lệ';
+    }
+
+    // Validate password
+    if (!formData.password) {
+      newErrors.password = 'Mật khẩu là bắt buộc';
+    } else if (formData.password.length < 6) {
+      newErrors.password = 'Mật khẩu phải có ít nhất 6 ký tự';
+    }
+
+    setErrors(newErrors);
+
+    if (Object.keys(newErrors).length > 0) return;
+
+    try {
+      console.log('Gửi yêu cầu đăng nhập với:', {
+        email: formData.email,
+        password: '*'.repeat(formData.password.length) // Ẩn mật khẩu trong log
+      });
+
+      // Gọi API đăng nhập qua hook useAuth
+      const result = await login({
+        email: formData.email,
+        password: formData.password,
+      });
+
+      console.log('Kết quả đăng nhập:', { success: !!result.accessToken });
+
+      // Kiểm tra kết quả trả về từ API
+      if (result.success === false) {
+        const errorMsg = result.message || 'Email hoặc mật khẩu không đúng';
+        setApiError(errorMsg);
+        console.error('Đăng nhập thất bại:', errorMsg);
+        
+        // Focus vào field có lỗi
+        if (errorMsg.toLowerCase().includes('email')) {
+          (document.querySelector('input[name="email"]') as HTMLInputElement)?.focus();
+        } else if (errorMsg.toLowerCase().includes('password') || errorMsg.toLowerCase().includes('mật khẩu')) {
+          (document.querySelector('input[name="password"]') as HTMLInputElement)?.focus();
+        }
+      } else {
+        // Đăng nhập thành công - Chuyển hướng sẽ được xử lý bởi useAuth hook
+        console.log('Đăng nhập thành công, đang chuyển hướng...');
+      }
+    } catch (err: any) {
+      // Xử lý lỗi từ API hoặc lỗi mạng
+      console.error('Chi tiết lỗi đăng nhập:', {
+        message: err.message,
+        response: err.response?.data,
+        status: err.response?.status
+      });
+      
+      const errorMessage = err.response?.data?.message || err.message || 'Đã xảy ra lỗi khi đăng nhập';
+      setApiError(errorMessage);
+    }
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value, type, checked } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value,
+    }));
+  };
+
+  const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    let fieldError = '';
+
+    if (name === 'email') {
+      if (!value) fieldError = 'Email is required';
+      else if (!validateEmail(value)) fieldError = 'Please enter a valid email address';
+    }
+
+    if (name === 'password') {
+      if (!value) fieldError = 'Password is required';
+      else if (value.length < 6) fieldError = 'Password must be at least 6 characters';
+    }
+
+    setErrors((prev) => ({ ...prev, [name]: fieldError }));
+  };
+
+  return (
+    <div className="w-full max-w-sm md:w-[368px] md:h-[533px] flex flex-col justify-center">
+      <h2 className="text-2xl font-semibold text-gray-900 text-center mb-2">
+        Sign In
+      </h2>
+      <p className="text-sm text-gray-600 text-center mb-6">
+        Enter your credentials to access your account
+      </p>
+
+      <form onSubmit={handleSubmit} className="space-y-5">
+        {apiError && (
+          <div className="text-red-500 text-sm text-center mb-4">
+            {apiError}
+          </div>
+        )}
+        <EmailInput
+          value={formData.email}
+          onChange={handleChange}
+          onBlur={handleBlur}
+          error={errors.email}
+        />
+
+        <PasswordInput
+          value={formData.password}
+          onChange={handleChange}
+          onBlur={handleBlur}
+          error={errors.password}
+        />
+
+        <RememberForgot
+          rememberMe={formData.rememberMe}
+          onRememberChange={handleChange}
+        />
+
+        <button
+          type="submit"
+          disabled={loading}
+          className="w-full bg-[#295E9C] text-white py-2 rounded-md font-medium hover:bg-[#1C4078] transition-colors disabled:opacity-50"
+        >
+          {loading ? 'Signing in...' : 'Sign in'}
+        </button>
+
+        <p className="text-center text-sm text-gray-600">
+          Don&apos;t have an account?{' '}
+          <Link
+            href="/register"
+            className="font-medium text-[#0062FF] hover:text-[#0055E0]"
+          >
+            Sign Up
+          </Link>
+        </p>
+
+        <SocialLogin />
+      </form>
+    </div>
+  );
+};
