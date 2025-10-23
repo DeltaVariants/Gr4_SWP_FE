@@ -1,6 +1,6 @@
 import React from "react";
-import Header from "../components/common/Header";
-import SideBar01 from "../components/widgets/SideBar01";
+import CustomerHeader from "@/app/(customer)/components/CustomerHeader";
+import CustomerSideBar from "@/app/(customer)/components/CustomerSideBar";
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -16,12 +16,12 @@ export default function MainLayout({
   headerSubtitle = "Welcome back! Monitor your EV battery status and find nearby swap stations.",
 }: MainLayoutProps) {
   return (
-    <div className="min-h-screen bg-[#E6F4FE] flex">
-      <SideBar01 currentPath={currentPath} />
+    <div className="min-h-screen bg-[#f5f5f5] flex">
+      <CustomerSideBar currentPath={currentPath} />
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col ml-0 lg:ml-0">
-        <Header title={headerTitle} subtitle={headerSubtitle} />
+        <CustomerHeader title={headerTitle} subtitle={headerSubtitle} />
 
         {/* Main Dashboard Content */}
         <main className="flex-1 p-6 space-y-6 max-w-full overflow-x-auto">

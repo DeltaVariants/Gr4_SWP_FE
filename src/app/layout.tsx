@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Script from "next/script";
 import "./globals.css";
+import { ReduxProvider } from "../application/providers/ReduxProvider";
 
 export const metadata: Metadata = {
   title: "eSwap - Driver Portal",
@@ -41,7 +42,7 @@ export default function RootLayout({
           src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"
           strategy="beforeInteractive"
         />
-        {children}
+        <ReduxProvider>{children}</ReduxProvider>
       </body>
     </html>
   );
