@@ -1,5 +1,4 @@
 "use client";
-import { StaffShell } from '@/presentation/components/layouts/StaffShell';
 import { Table } from '@/presentation/components/ui/staff/Table';
 import { useMemo, useState } from 'react';
 
@@ -47,7 +46,7 @@ export default function ReservationsPage() {
     );
   }, [q]);
   return (
-    <StaffShell title="Reservations / Queue">
+    <div>
       <div className="mb-4 flex items-center justify-between">
         <div className="text-sm text-gray-500">Upcoming reservations</div>
         <div className="flex items-center gap-2">
@@ -61,6 +60,6 @@ export default function ReservationsPage() {
         </div>
       </div>
       <Table columns={columns} data={filtered} />
-    </StaffShell>
+    </div>
   );
 }

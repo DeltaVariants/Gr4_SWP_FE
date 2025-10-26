@@ -1,5 +1,4 @@
 "use client";
-import { StaffShell } from '@/presentation/components/layouts/StaffShell';
 import { StatCard } from '@/presentation/components/ui/staff/StatCard';
 import { Table } from '@/presentation/components/ui/staff/Table';
 import Link from 'next/link';
@@ -54,7 +53,7 @@ export default function StaffDashboard() {
     );
   }, [q]);
   return (
-    <StaffShell title="Dashboard">
+    <div>
       {/* KPIs */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <StatCard
@@ -122,6 +121,6 @@ export default function StaffDashboard() {
           <div className="text-sm text-gray-600">Xác nhận hoàn tất, ghi nhận giao dịch</div>
         </Link>
       </div>
-    </StaffShell>
+    </div>
   );
 }

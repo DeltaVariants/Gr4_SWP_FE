@@ -11,25 +11,32 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, message: 'name, email, password are required' }, { status: 400 });
     }
 
-    // Map FE fields to BE expected payload
+    // Map FE fields to BE expected payload (send both casings to maximize compatibility)
     const payload = {
       Username: name,
+      username: name,
       Email: email,
+      email: email,
       Password: password,
-      PhoneNumber: phoneNumber || ''
-    };
+      password: password,
+      PhoneNumber: phoneNumber || '',
+      phoneNumber: phoneNumber || '',
+    } as Record<string, string>;
 
     const response = await fetch(`${API_URL}/api/Auth/register`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
       body: JSON.stringify(payload),
       // Do not forward cookies/credentials by default
     });
 
-    const data = await response.json().catch(() => ({}));
+    const contentType = response.headers.get('content-type') || '';
+    const data = contentType.includes('application/json')
+      ? await response.json().catch(() => ({}))
+      : { raw: await response.text().catch(() => '') };
 
     if (!response.ok) {
-      let message = (data && (data.message || data.error)) || 'Register failed';
+      let message = (data && (data.message || data.error)) || (data as any)?.raw || 'Register failed';
       // Chuẩn hóa thông báo 409 thành tiếng Việt thân thiện
       if (response.status === 409) {
         message = 'Email đã tồn tại, vui lòng sử dụng email khác';
@@ -37,7 +44,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, message }, { status: response.status });
     }
 
-    return NextResponse.json({ success: true, data });
+    // Some backends wrap response inside { data: {...} }
+    const normalized = (data && ((data as any).data || (data as any).Data)) || data;
+    return NextResponse.json({ success: true, data: normalized });
   } catch (error: any) {
     console.error('Register proxy error:', error);
     return NextResponse.json({ success: false, message: 'Server error' }, { status: 500 });

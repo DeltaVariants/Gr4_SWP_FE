@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 const STRICT_VERIFY = process.env.NEXT_PUBLIC_STRICT_VERIFY === 'true';
-const VERIFY_CODE_PATH = process.env.NEXT_PUBLIC_AUTH_VERIFY_CODE_PATH || '/api/Auth/verify-reset-code';
+const VERIFY_CODE_PATH = process.env.NEXT_PUBLIC_AUTH_VERIFY_CODE_PATH || '/api/Auth/verifyCode';
 
 export async function POST(req: NextRequest) {
   try {
@@ -22,6 +22,9 @@ export async function POST(req: NextRequest) {
     if (STRICT_VERIFY) {
       const url = `${API_URL}${VERIFY_CODE_PATH}`;
       const resp = await fetch(url, {
+
+
+
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, code }),
@@ -36,10 +39,7 @@ export async function POST(req: NextRequest) {
 
     // Non-strict: Try common verify-only endpoints on backend, fallback if needed
     const endpoints = [
-      `${API_URL}/api/Auth/verify-reset-code`,
-      `${API_URL}/api/Auth/verify-code`,
-      // Some backends combine verify+reset; this may still return 400 without passwords
-      `${API_URL}/api/Auth/verify-reset-password`,
+      `${API_URL}/api/Auth/verifyCode`,
     ];
 
     let lastError: { status: number; message: string } | null = null;

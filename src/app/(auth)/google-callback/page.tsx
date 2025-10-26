@@ -83,6 +83,15 @@ function CallbackContent() {
           }
         }
 
+        // Ensure httpOnly cookies are set for middleware by calling our session endpoint
+        try {
+          await fetch('/api/auth/session', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token, role, maxAge: 60 * 60 }), // 1h
+          });
+        } catch {}
+
         setIsAuthenticated(true);
 
         setStatus('success');

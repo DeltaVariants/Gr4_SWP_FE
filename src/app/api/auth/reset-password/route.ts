@@ -28,8 +28,8 @@ export async function POST(req: NextRequest) {
       confirmNewPassword: body.confirmNewPassword
     };
 
-    // Backend combines verify + reset in one endpoint
-    const response = await fetch(`${API_URL}/api/Auth/verify-reset-password`, {
+    // Backend reset password endpoint mới
+    const response = await fetch(`${API_URL}/api/Auth/reset-password`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

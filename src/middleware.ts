@@ -16,16 +16,17 @@ export function middleware(req: NextRequest) {
   const token = req.cookies.get('token')?.value;
   const role = (req.cookies.get('role')?.value || '').toUpperCase();
   const hasAuth = Boolean(token && role);
+  // Optional dev flag to allow viewing staff UI with DRIVER role
+  const allowDriverStaff = process.env.NEXT_PUBLIC_ALLOW_DRIVER_STAFF === '1';
 
   const inStaff = isIn(STAFF_PATHS, pathname);
   const inAdmin = isIn(ADMIN_PATHS, pathname);
   const inAuthUser = isIn(AUTH_USER_PATHS, pathname);
   const inPublicAuth = isIn(PUBLIC_AUTH_PATHS, pathname);
 
-  if ((inStaff || inAdmin || inAuthUser) && !token) {
-    const url = req.nextUrl.clone();
-    url.pathname = '/login';
-    return NextResponse.redirect(url);
+  // Cho phép truy cập công khai các route employee (STAFF_PATHS)
+  if (inStaff) {
+    return NextResponse.next();
   }
 
   // Nếu đã đăng nhập mà vào /login, /register, ... thì đẩy về homepage
@@ -41,9 +42,9 @@ export function middleware(req: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  if (inStaff && !['ADMIN', 'EMPLOYEE', 'STAFF'].includes(role)) {
+  if (inAuthUser && !token) {
     const url = req.nextUrl.clone();
-    url.pathname = '/';
+    url.pathname = '/login';
     return NextResponse.redirect(url);
   }
 

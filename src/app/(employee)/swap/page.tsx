@@ -1,6 +1,5 @@
 'use client';
 import { useState } from 'react';
-import { StaffShell } from '@/presentation/components/layouts/StaffShell';
 
 export default function SwapPage() {
   const [oldId, setOldId] = useState('');
@@ -13,7 +12,7 @@ export default function SwapPage() {
   };
 
   return (
-    <StaffShell title="Battery Swap">
+    <div className="max-w-3xl">
       <div className="bg-white rounded-xl shadow p-6 max-w-3xl">
         {step === 'scan-old' && (
           <div>
@@ -47,6 +46,6 @@ export default function SwapPage() {
           </div>
         )}
       </div>
-    </StaffShell>
+    </div>
   );
 }

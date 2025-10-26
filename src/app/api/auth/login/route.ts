@@ -49,10 +49,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Normalize keys from backend (both lower/upper case)
-    const token = data.token ?? data.Token;
-    const refreshToken = data.refreshToken ?? data.RefreshToken;
-    const rawAuth = data.authDTO ?? data.AuthDTO ?? data.user ?? null;
+    // Normalize keys from backend (both lower/upper case), support nested { data: {...} }
+    const base = (data && (data.data || data.Data)) ? (data.data || data.Data) : data;
+    const token = base.token ?? base.Token;
+    const refreshToken = base.refreshToken ?? base.RefreshToken;
+    const rawAuth = base.authDTO ?? base.AuthDTO ?? base.user ?? base.User ?? null;
     const authDTO = rawAuth
       ? {
           userID: rawAuth.userID ?? rawAuth.UserID ?? rawAuth.id ?? rawAuth.Id ?? rawAuth.ID,
