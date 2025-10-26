@@ -52,22 +52,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     const checkAuth = async () => {
       const token = localStorage.getItem('accessToken');
-      if (token) {
-        try {
-          // TODO: Khi backend có endpoint /me thì uncomment
-          // await refreshUser();
-          
-          // Tạm thời chỉ set isAuthenticated = true nếu có token
-          setIsAuthenticated(true);
-          console.log('Found access token, user is authenticated');
-        } catch (error) {
-          console.error('Error checking auth:', error);
-          // Token không hợp lệ, xóa tokens và reset state
-          localStorage.removeItem('accessToken');
-          localStorage.removeItem('refreshToken');
-          setUser(null);
-          setIsAuthenticated(false);
-        }
+      if (!token) return;
+      try {
+        await refreshUser();
+      } catch (error) {
+        console.error('Error checking auth:', error);
+        // Token không hợp lệ, xóa tokens và reset state
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
+        setUser(null);
+        setIsAuthenticated(false);
       }
     };
 
@@ -78,11 +72,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // Lấy thông tin user từ API
   const refreshUser = async () => {
     try {
-      // TODO: Backend chưa có endpoint /me, tạm thời skip
-      // const userData = await authService.getCurrentUser();
-      // setUser(userData);
-      // setIsAuthenticated(true);
-      console.log('refreshUser: Backend chưa có endpoint /me, skip for now');
+      const userData = await authService.getCurrentUser();
+      setUser(userData);
+      setIsAuthenticated(true);
     } catch (error) {
       console.error('Error refreshing user:', error);
       throw error;
@@ -117,7 +109,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         id: responseData.authDTO.userID,         // "userID"
         email: responseData.authDTO.email,       // "email"
         name: responseData.authDTO.username,     // "username"
-        role: responseData.authDTO.roleName,     // "roleName" 
+        role: responseData.authDTO.roleName || 'EMPLOYEE',     // fallback role to avoid redirect errors
         phone: responseData.authDTO.phoneNumber  // "phoneNumber"
       };
 
@@ -127,6 +119,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       // Lưu tokens vào localStorage
       localStorage.setItem('accessToken', accessToken);
       localStorage.setItem('refreshToken', refreshToken);
+      // Thiết lập cookie server-side để tránh race condition với middleware
+      try {
+        await fetch('/api/auth/session', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token: accessToken, role: user.role, maxAge: 60 * 60 }), // 1h
+        });
+      } catch {}
       
       // Set user data
       setUser(user);
@@ -134,7 +134,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       
       // Redirect dựa vào role
       const redirectPath = getRedirectPathByRole(user.role);
-      router.push(redirectPath);
+      // Dùng replace để tránh quay lại trang login khi Back
+      try {
+        router.replace(redirectPath);
+      } catch {}
+      // Fallback hard redirect nếu client router gặp vấn đề
+      setTimeout(() => {
+        if (typeof window !== 'undefined' && window.location.pathname.includes('/login')) {
+          window.location.href = redirectPath;
+        }
+      }, 200);
       
       return { success: true };
     } catch (error) {
@@ -175,6 +184,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       // Gọi API logout (optional)
       await authService.logout();
+      // Xóa cookie token/role phía server để middleware không coi là đã đăng nhập
+      try {
+        await fetch('/api/auth/logout-local', { method: 'POST' });
+      } catch {}
     } catch (error) {
       console.error('Logout API error:', error);
     } finally {
@@ -183,7 +196,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       localStorage.removeItem('refreshToken');
       setUser(null);
       setIsAuthenticated(false);
-      router.push('/login');
+      router.replace('/login');
     }
   };
 
@@ -251,17 +264,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   // Helper function để xác định redirect path dựa vào role
-  const getRedirectPathByRole = (role: string): string => {
-    switch (role.toUpperCase()) {
-      case 'ADMIN':
-        return '/admin';
-      case 'EMPLOYEE':
-        return '/employee';
-      case 'CUSTOMER':
-        return '/customer';
-      default:
-        return '/dashboard';
-    }
+  const getRedirectPathByRole = (_role?: string): string => {
+    // Theo yêu cầu: luôn chuyển về homepage sau khi đăng nhập
+    return '/';
   };
 
   // Google Login handler - Use existing backend API
@@ -272,7 +277,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     // "The oauth state was missing or invalid" khi đi qua proxy rewrite.
     // Đảm bảo NEXT_PUBLIC_API_URL trỏ đúng tới BE (ví dụ: https://gr4-swp-be2-sp25.onrender.com)
     // Gọi route FE để server-side redirect sang BE, đảm bảo cookie/state OAuth đúng domain
-    window.location.href = `/auth/google-login`;
+  // Updated: endpoint now lives under /api/auth/google-login
+  window.location.href = `/api/auth/google-login`;
   };
 
   const contextValue: AuthContextType = {

@@ -77,26 +77,55 @@ export const authService = {
   // Đăng ký
   async register(data: RegisterRequest): Promise<ApiResponse<any>> {
     try {
+      // Chuẩn hóa input trước khi gửi
+      const payload: RegisterRequest = {
+        name: data.name?.trim(),
+        email: data.email?.trim().toLowerCase(),
+        password: data.password,
+        phoneNumber: data.phoneNumber?.trim()
+      };
+
       // Call Next.js API proxy to avoid CORS and map payload
       const response = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
+        body: JSON.stringify(payload)
       });
 
-      const json = await response.json();
-      if (!response.ok || !json.success) {
-        throw new Error(json.message || 'Đăng ký thất bại');
+      // Chống lỗi parse khi server trả về non-JSON (e.g., "Internal Server Error")
+      const contentType = response.headers.get('content-type') || '';
+      let parsed: any = {};
+      let rawText = '';
+      try {
+        if (contentType.includes('application/json')) {
+          parsed = await response.json();
+        } else {
+          rawText = await response.text();
+        }
+      } catch {
+        // fallback giữ parsed là {}
+      }
+
+      if (!response.ok || !parsed?.success) {
+        // Ưu tiên message từ JSON, sau đó từ rawText, cuối cùng là theo status
+        let message = parsed?.message || parsed?.error || rawText || 'Đăng ký thất bại';
+        if (response.status === 409) {
+          message = 'Email đã tồn tại, vui lòng sử dụng email khác';
+        } else if (response.status >= 500) {
+          message = 'Máy chủ đang bận hoặc gặp sự cố. Vui lòng thử lại sau.';
+        }
+        throw new Error(message);
       }
 
       return {
         success: true,
-        data: json.data,
+        data: parsed.data,
         message: 'Đăng ký thành công'
       };
     } catch (error: any) {
-      console.error('Register error:', error);
-      throw new Error(error.message || 'Đăng ký thất bại');
+      // Giảm bớt log trùng lặp ở console (AuthContext cũng log)
+      // console.error('Register error:', error);
+      throw new Error(error?.message || 'Đăng ký thất bại');
     }
   },
 
@@ -236,21 +265,16 @@ export const authService = {
   // Lấy thông tin user hiện tại
   async getCurrentUser(): Promise<User> {
     try {
-      const token = localStorage.getItem('accessToken');
-      if (!token) {
-        throw new Error('No access token available');
+      // Gọi qua Next API để dùng cookie httpOnly thay vì localStorage
+      const res = await fetch('/api/auth/me', { cache: 'no-store' });
+      const payload = await res.json();
+      if (!res.ok || !payload?.success) {
+        throw new Error(payload?.message || 'Không thể lấy thông tin người dùng');
       }
 
-      const response = await api.get('/api/Auth/me', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
+      const userData = payload.data;
+      console.log('Get current user response:', userData);
       
-      console.log('Get current user response:', response.data);
-      
-      // Map response to User interface
-      const userData = response.data;
       return {
         id: userData.UserID || userData.userID || userData.id,
         email: userData.Email || userData.email,

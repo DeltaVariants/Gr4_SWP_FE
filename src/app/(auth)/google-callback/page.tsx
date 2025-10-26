@@ -35,8 +35,9 @@ function CallbackContent() {
           return;
         }
 
-        // Save token locally
-        localStorage.setItem('accessToken', token);
+  // Save token locally and as cookie for middleware
+  localStorage.setItem('accessToken', token);
+  try { document.cookie = `token=${token}; path=/`; } catch {}
 
         // Parse user if provided; otherwise try to fetch via /api/Auth/me
         let role = 'Driver';
@@ -53,6 +54,7 @@ function CallbackContent() {
             });
             role = userObj.RoleName || userObj.roleName || role;
             haveUser = true;
+            try { document.cookie = `role=${role}; path=/`; } catch {}
           } catch (e) {
             // ignore parse error
           }
@@ -74,6 +76,7 @@ function CallbackContent() {
                 phone: me.PhoneNumber || me.phoneNumber || me.phone,
               });
               role = me.RoleName || me.roleName || me.role || role;
+              try { document.cookie = `role=${role}; path=/`; } catch {}
             }
           } catch {
             // ignore, fallback to token only
@@ -101,12 +104,12 @@ function CallbackContent() {
       case 'ADMIN':
         return '/admin';
       case 'EMPLOYEE':
-        return '/employee';
+        return '/dashboardstaff';
       case 'DRIVER':
       case 'CUSTOMER':
         return '/customer';
       default:
-        return '/dashboard';
+        return '/dashboardstaff';
     }
   };
 

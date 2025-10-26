@@ -40,18 +40,16 @@ export function ProfileCard() {
           if (!cancelled) setProfile(ctxUser);
         }
 
-        // Always attempt to refresh from BE for latest info if authenticated
-        const token = localStorage.getItem('accessToken');
-        if (!token) {
-          if (!cancelled) setError('Bạn chưa đăng nhập');
+        // Fetch via Next API using httpOnly cookie
+        const resp = await fetch('/api/auth/me', { cache: 'no-store' });
+        if (!resp.ok) {
+          const payload = await resp.json().catch(() => ({}));
+          const message = payload?.message || 'Phiên đăng nhập đã hết hạn';
+          if (!cancelled) setError(message);
           return;
         }
-        const resp = await api.get('/api/Auth/me');
-        if (resp.status === 401) {
-          if (!cancelled) setError('Phiên đăng nhập đã hết hạn');
-          return;
-        }
-        const me: MeResponse = resp.data;
+        const payload = await resp.json();
+        const me: MeResponse = payload.data;
         const normalized = {
           id: me.UserID || me.userID,
           email: me.Email || me.email,
@@ -60,8 +58,9 @@ export function ProfileCard() {
           phone: me.PhoneNumber || me.phoneNumber,
         };
         if (!cancelled) setProfile(normalized);
-      } catch (e: any) {
-        if (!cancelled) setError(e?.message || 'Lỗi không xác định');
+      } catch (e: unknown) {
+        const message = e instanceof Error ? e.message : 'Lỗi không xác định';
+        if (!cancelled) setError(message);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -74,15 +73,15 @@ export function ProfileCard() {
 
   if (loading) {
     return (
-      <div className="min-h-[300px] flex items-center justify-center">
-        <div className="animate-spin h-6 w-6 border-2 border-gray-300 border-t-blue-600 rounded-full" />
+      <div className="h-20 flex items-center justify-center">
+        <div className="animate-spin h-5 w-5 border-2 border-gray-300 border-t-blue-600 rounded-full" />
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="p-4 rounded-md bg-red-50 text-red-700 border border-red-200">
+      <div className="p-3 rounded-md bg-red-50 text-red-700 border border-red-200 text-sm">
         {error}
       </div>
     );
@@ -90,42 +89,37 @@ export function ProfileCard() {
 
   if (!profile) {
     return (
-      <div className="p-4 rounded-md bg-yellow-50 text-yellow-800 border border-yellow-200">
+      <div className="p-3 rounded-md bg-yellow-50 text-yellow-800 border border-yellow-200 text-sm">
         Không có dữ liệu hồ sơ
       </div>
     );
   }
 
   return (
-    <div className="bg-white rounded-lg shadow p-6">
-      <h2 className="text-xl font-semibold mb-4">Thông tin cá nhân</h2>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div>
-          <div className="text-sm text-gray-500">Họ tên</div>
-          <div className="font-medium">{profile.name || '-'} </div>
-        </div>
-        <div>
-          <div className="text-sm text-gray-500">Email</div>
-          <div className="font-medium">{profile.email || '-'} </div>
-        </div>
-        <div>
-          <div className="text-sm text-gray-500">Số điện thoại</div>
-          <div className="font-medium">{profile.phone || '-'} </div>
-        </div>
-        <div>
-          <div className="text-sm text-gray-500">Vai trò</div>
-          <div className="font-medium">{profile.role || '-'} </div>
-        </div>
+    <div className="space-y-4">
+      <div>
+        <label className="block text-sm text-gray-500">Họ tên</label>
+        <div className="font-medium text-gray-900">{profile.name || '-'} </div>
+      </div>
+      <div>
+        <label className="block text-sm text-gray-500">Email</label>
+        <div className="font-medium text-gray-900">{profile.email || '-'} </div>
+      </div>
+      <div>
+        <label className="block text-sm text-gray-500">Số điện thoại</label>
+        <div className="font-medium text-gray-900">{profile.phone || '-'} </div>
+      </div>
+      <div>
+        <label className="block text-sm text-gray-500">Vai trò</label>
+        <div className="font-medium text-gray-900">{profile.role || '-'} </div>
       </div>
 
-      <div className="mt-6 flex items-center gap-3">
-        <button
-          onClick={logout}
-          className="px-4 py-2 rounded-md border border-gray-300 hover:bg-gray-50"
-        >
-          Đăng xuất
-        </button>
-      </div>
+      <button
+        onClick={logout}
+        className="w-full bg-[#295E9C] text-white py-2.5 rounded-md font-medium hover:bg-[#1C4078] transition-colors"
+      >
+        Đăng xuất
+      </button>
     </div>
   );
 }

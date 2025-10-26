@@ -53,9 +53,9 @@ export const LoginForm = () => {
     setErrors(newErrors);
     if (Object.keys(newErrors).length > 0) return;
 
-    // Gọi login từ AuthContext
+    // Gọi login từ AuthContext (chuẩn hóa input)
     const result = await login({
-      email: formData.email,
+      email: formData.email.trim().toLowerCase(),
       password: formData.password,
     });
 

@@ -29,7 +29,11 @@ export async function POST(req: NextRequest) {
     const data = await response.json().catch(() => ({}));
 
     if (!response.ok) {
-      const message = (data && (data.message || data.error)) || 'Register failed';
+      let message = (data && (data.message || data.error)) || 'Register failed';
+      // Chuẩn hóa thông báo 409 thành tiếng Việt thân thiện
+      if (response.status === 409) {
+        message = 'Email đã tồn tại, vui lòng sử dụng email khác';
+      }
       return NextResponse.json({ success: false, message }, { status: response.status });
     }
 

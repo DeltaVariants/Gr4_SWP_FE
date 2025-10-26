@@ -1,5 +1,4 @@
-'use client';'use client';
-"use client";
+'use client';
 
 import { useState } from "react";
 import Link from "next/link";
@@ -84,10 +83,10 @@ export const RegisterForm = () => {
 
     try {
       const result = await register({
-        name: formData.name,
-        email: formData.email,
+        name: formData.name.trim(),
+        email: formData.email.trim().toLowerCase(),
         password: formData.password,
-        phoneNumber: formData.phoneNumber,
+        phoneNumber: (formData.phoneNumber || '').trim(),
       });
 
       if (!result.success) {
@@ -106,8 +105,9 @@ export const RegisterForm = () => {
           window.location.href = "/login?registered=true";
         }
       }, 1000);
-    } catch (err: any) {
-      setApiError(err.message || "Đăng ký thất bại");
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Đăng ký thất bại';
+      setApiError(message);
     }
   };
 
