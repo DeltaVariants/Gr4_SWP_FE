@@ -27,7 +27,7 @@ export default function Header({
 }: HeaderUIProps) {
   return (
     <header
-      className={`bg-white border-b border-gray-200 px-6 py-4 shadow-sm ${className}`}
+      className={`bg-white border-b border-gray-200 px-12 py-2 shadow-sm h-[10vh] ${className}`}
     >
       <div className="flex items-center justify-between">
         <div>
