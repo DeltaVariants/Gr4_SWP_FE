@@ -265,8 +265,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   // Helper function để xác định redirect path dựa vào role
   const getRedirectPathByRole = (_role?: string): string => {
-    // Theo yêu cầu: luôn chuyển về homepage sau khi đăng nhập
-    return '/';
+    // Theo yêu cầu: luôn chuyển về trang /home sau khi đăng nhập
+    return '/home';
   };
 
   // Google Login handler - Use existing backend API

@@ -15,17 +15,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Use API_URL with safe default to avoid 'undefined' in dev
+    
     const response = await fetch(`${API_URL}/api/Auth/login`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      // Map payload to BE expected casing
+      
       body: JSON.stringify({ Email: email, Password: password }),
     });
 
-    // Try JSON first; if not JSON, capture text
+    
     const contentType = response.headers.get('content-type') || '';
     let data: any = {};
     let rawText = '';
@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (!response.ok) {
-      // Chuẩn hóa thông điệp lỗi thân thiện
+      
   let message = data?.message || data?.error || rawText || 'Invalid credentials';
       if (response.status >= 500) {
         message = 'Máy chủ đang bận hoặc gặp sự cố. Vui lòng thử lại sau.';
@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Normalize keys from backend (both lower/upper case), support nested { data: {...} }
+    
     const base = (data && (data.data || data.Data)) ? (data.data || data.Data) : data;
     const token = base.token ?? base.Token;
     const refreshToken = base.refreshToken ?? base.RefreshToken;

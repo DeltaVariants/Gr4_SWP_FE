@@ -11,7 +11,7 @@ function CallbackContent() {
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
   const [message, setMessage] = useState('Processing Google login...');
 
-  // Accept multiple possible token param names from BE
+ 
   const token = useMemo(() => {
     return (
       searchParams.get('token') ||
@@ -39,7 +39,7 @@ function CallbackContent() {
   localStorage.setItem('accessToken', token);
   try { document.cookie = `token=${token}; path=/`; } catch {}
 
-        // Parse user if provided; otherwise try to fetch via /api/Auth/me
+        
         let role = 'Driver';
         let haveUser = false;
         if (userInfoRaw) {
@@ -56,13 +56,13 @@ function CallbackContent() {
             haveUser = true;
             try { document.cookie = `role=${role}; path=/`; } catch {}
           } catch (e) {
-            // ignore parse error
+           
           }
         }
 
         if (!haveUser) {
           try {
-            // Use Next.js rewrite to BE; same-origin call
+            
             const resp = await fetch('/api/Auth/me', {
               headers: { Authorization: `Bearer ${token}` },
             });
@@ -79,11 +79,11 @@ function CallbackContent() {
               try { document.cookie = `role=${role}; path=/`; } catch {}
             }
           } catch {
-            // ignore, fallback to token only
+           
           }
         }
 
-        // Ensure httpOnly cookies are set for middleware by calling our session endpoint
+        
         try {
           await fetch('/api/auth/session', {
             method: 'POST',

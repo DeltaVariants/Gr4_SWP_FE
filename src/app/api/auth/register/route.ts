@@ -11,7 +11,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, message: 'name, email, password are required' }, { status: 400 });
     }
 
-    // Map FE fields to BE expected payload (send both casings to maximize compatibility)
+    
     const payload = {
       Username: name,
       username: name,
@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
       body: JSON.stringify(payload),
-      // Do not forward cookies/credentials by default
+      
     });
 
     const contentType = response.headers.get('content-type') || '';
@@ -37,14 +37,14 @@ export async function POST(req: NextRequest) {
 
     if (!response.ok) {
       let message = (data && (data.message || data.error)) || (data as any)?.raw || 'Register failed';
-      // Chuẩn hóa thông báo 409 thành tiếng Việt thân thiện
+      
       if (response.status === 409) {
         message = 'Email đã tồn tại, vui lòng sử dụng email khác';
       }
       return NextResponse.json({ success: false, message }, { status: response.status });
     }
 
-    // Some backends wrap response inside { data: {...} }
+
     const normalized = (data && ((data as any).data || (data as any).Data)) || data;
     return NextResponse.json({ success: true, data: normalized });
   } catch (error: any) {

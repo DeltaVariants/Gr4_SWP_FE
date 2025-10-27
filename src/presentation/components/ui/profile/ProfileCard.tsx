@@ -40,7 +40,7 @@ export function ProfileCard() {
           if (!cancelled) setProfile(ctxUser);
         }
 
-        // Fetch via Next API using httpOnly cookie
+        
         const resp = await fetch('/api/auth/me', { cache: 'no-store' });
         if (!resp.ok) {
           const payload = await resp.json().catch(() => ({}));
@@ -114,12 +114,7 @@ export function ProfileCard() {
         <div className="font-medium text-gray-900">{profile.role || '-'} </div>
       </div>
 
-      <button
-        onClick={logout}
-        className="w-full bg-[#295E9C] text-white py-2.5 rounded-md font-medium hover:bg-[#1C4078] transition-colors"
-      >
-        Đăng xuất
-      </button>
+     
     </div>
   );
 }

@@ -31,6 +31,12 @@ export function middleware(req: NextRequest) {
 
   // Nếu đã đăng nhập mà vào /login, /register, ... thì đẩy về homepage
   if (inPublicAuth && hasAuth) {
+    // Trong môi trường phát triển cho phép truy cập trang login/register
+    // ngay cả khi cookie auth tồn tại để thuận tiện cho việc dev/testing.
+    if (process.env.NODE_ENV === 'development') {
+      return NextResponse.next();
+    }
+
     const url = req.nextUrl.clone();
     url.pathname = '/';
     return NextResponse.redirect(url);

@@ -10,7 +10,7 @@ export async function POST(req: NextRequest) {
     const res = NextResponse.json({ success: true });
     const cookieMaxAge = typeof maxAge === 'number' ? maxAge : 60 * 60; // default 1h
 
-    // Set cookies server-side to avoid client race conditions
+    
     res.cookies.set('token', token, {
       path: '/',
       sameSite: 'lax',

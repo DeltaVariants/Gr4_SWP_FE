@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
       cache: 'no-store',
     });
 
-    // Try parse JSON; if fail, capture text
+    
     const contentType = resp.headers.get('content-type') || '';
     let data: any = {};
     let raw = '';

@@ -7,7 +7,7 @@ export const SocialLogin = () => {
   const { loading, googleLogin } = useAuth();
 
   const handleGoogleLogin = () => {
-    // Start OAuth flow via backend endpoint
+    
     googleLogin();
   };
 

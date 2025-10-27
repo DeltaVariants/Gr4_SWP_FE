@@ -22,8 +22,9 @@ export const ResetPasswordForm = ({ email }: ResetPasswordFormProps) => {
       setError('Please enter the code');
       return;
     }
-    if (code.length !== 6) {
-      setError('Code must be exactly 6 digits');
+    
+    if (!/^[0-9]{6}$/.test(code)) {
+      setError('Code must be exactly 6 digits (numbers only)');
       return;
     }
 
@@ -31,22 +32,13 @@ export const ResetPasswordForm = ({ email }: ResetPasswordFormProps) => {
     setError('');
 
     try {
-      if (!STRICT_VERIFY) {
-        // Non-strict mode: skip backend verify here; verify will happen on reset-password step
-        if (typeof window !== 'undefined') {
-          sessionStorage.setItem('reset_code', code);
-        }
-        router.push(`/newpassword?email=${encodeURIComponent(email)}`);
-        return;
-      }
-
-      // Strict mode: verify code with backend before proceeding
+      
       const res = await fetch('/api/auth/verify-code', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, code }),
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
 
       if (!res.ok || data?.success === false) {
         const msg = data?.message || 'Invalid or expired code. Please try again.';
@@ -54,6 +46,7 @@ export const ResetPasswordForm = ({ email }: ResetPasswordFormProps) => {
         return;
       }
 
+      
       if (typeof window !== 'undefined') {
         sessionStorage.setItem('reset_code', code);
       }

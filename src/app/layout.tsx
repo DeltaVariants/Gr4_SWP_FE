@@ -3,6 +3,7 @@ import Script from "next/script";
 import "./globals.css";
 import { ReduxProvider } from "../application/providers/ReduxProvider";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { ToastProvider } from '@/presentation/components/ui/Notification';
 
 export const metadata: Metadata = {
   title: "eSwap - Driver Portal",
@@ -44,7 +45,9 @@ export default function RootLayout({
           strategy="beforeInteractive"
         />
         <AuthProvider>
-          <ReduxProvider>{children}</ReduxProvider>
+          <ToastProvider>
+            <ReduxProvider>{children}</ReduxProvider>
+          </ToastProvider>
         </AuthProvider>
       </body>
     </html>

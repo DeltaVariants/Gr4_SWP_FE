@@ -9,11 +9,11 @@ export default function LogoutPage() {
   useEffect(() => {
     (async () => {
       try {
-        // Clear cookies server-side
+        
         await fetch('/api/auth/logout-local', { method: 'POST' });
       } catch {}
       try {
-        // Clear local storage tokens
+        
         localStorage.removeItem('accessToken');
         localStorage.removeItem('refreshToken');
       } catch {}

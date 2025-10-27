@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL;
+// Use same fallback as other routes so local dev works when env var missing
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://gr4-swp-be2-sp25.onrender.com';
 const STRICT_VERIFY = process.env.NEXT_PUBLIC_STRICT_VERIFY === 'true';
 const VERIFY_CODE_PATH = process.env.NEXT_PUBLIC_AUTH_VERIFY_CODE_PATH || '/api/Auth/verifyCode';
 

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useToast } from '@/presentation/components/ui/Notification';
 
 interface NewPasswordFormProps {
   email: string;
@@ -10,6 +11,7 @@ interface NewPasswordFormProps {
 
 export default function NewPasswordForm({ email }: NewPasswordFormProps) {
   const router = useRouter();
+  const { showToast } = useToast();
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [errors, setErrors] = useState({ newPassword: '', confirmPassword: '' });
@@ -37,7 +39,7 @@ export default function NewPasswordForm({ email }: NewPasswordFormProps) {
     if (newPwdError || confirmPwdError) return;
 
     if (!email) {
-      alert('Email is missing. Please start the reset process again.');
+      showToast({ title: 'Error', message: 'Email is missing. Please start the reset process again.', type: 'error' });
       router.push('/forgotpassword');
       return;
     }
@@ -46,7 +48,7 @@ export default function NewPasswordForm({ email }: NewPasswordFormProps) {
     try {
       const code = typeof window !== 'undefined' ? sessionStorage.getItem('reset_code') : null;
       if (!code) {
-        alert('Verification code not found. Please request a new code.');
+        showToast({ title: 'Error', message: 'Verification code not found. Please request a new code.', type: 'error' });
         router.push('/forgotpassword');
         return;
       }
@@ -67,13 +69,13 @@ export default function NewPasswordForm({ email }: NewPasswordFormProps) {
         if (typeof window !== 'undefined') {
           sessionStorage.removeItem('reset_code');
         }
-        alert('Password reset successfully!');
+        showToast({ title: 'Success', message: 'Password reset successfully!', type: 'success' });
         router.push('/login');
       } else {
-        alert(data.message || 'Error resetting password');
+        showToast({ title: 'Error', message: data?.message || 'Error resetting password', type: 'error' });
       }
     } catch (err) {
-      alert('Error resetting password');
+      showToast({ title: 'Error', message: 'Error resetting password', type: 'error' });
     } finally {
       setLoading(false);
     }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL;
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://gr4-swp-be2-sp25.onrender.com';
 
 interface ResetPasswordRequest {
   email: string;
@@ -13,7 +14,7 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     
-    // Validate request body
+    
     if (!body.email || !body.code || !body.newPassword || !body.confirmNewPassword) {
       return NextResponse.json({ 
         success: false, 
@@ -28,7 +29,7 @@ export async function POST(req: NextRequest) {
       confirmNewPassword: body.confirmNewPassword
     };
 
-    // Backend reset password endpoint mới
+    
     const response = await fetch(`${API_URL}/api/Auth/reset-password`, {
       method: 'POST',
       headers: {
