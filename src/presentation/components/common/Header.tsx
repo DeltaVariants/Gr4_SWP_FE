@@ -8,7 +8,6 @@ export interface WeatherInfo {
 
 export interface HeaderUIProps {
   title: string;
-  subtitle: string;
   weather?: WeatherInfo;
   hasNotifications?: boolean;
   onNotificationClick?: () => void;
@@ -18,7 +17,6 @@ export interface HeaderUIProps {
 
 export default function Header({
   title,
-  subtitle,
   weather,
   hasNotifications = false,
   onNotificationClick,
@@ -27,12 +25,11 @@ export default function Header({
 }: HeaderUIProps) {
   return (
     <header
-      className={`bg-white border-b border-gray-200 px-12 py-2 shadow-sm h-[10vh] ${className}`}
+      className={`bg-white border-b border-gray-200 px-6 py-2 shadow-sm h-[8vh] ${className}`}
     >
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold text-[#1E1E1E]">{title}</h1>
-          <p className="text-sm text-[#B3B3B3] mt-1">{subtitle}</p>
         </div>
 
         {/* Weather and Notifications */}
