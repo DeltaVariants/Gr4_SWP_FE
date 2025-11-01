@@ -1,4 +1,4 @@
-// Danh sách các trạm hoán đổi pin tại TP.HCM
+// Danh sách các trạm hoán đổi pin tại TP.HCM (mock data)
 export interface Station {
   id: string;
   name: string;
