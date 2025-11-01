@@ -33,7 +33,7 @@ export default function Header({
         </div>
 
         {/* Weather and Notifications */}
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center space-x-2">
           {/* Weather Widget */}
           {weather && (
             <WeatherWidget
