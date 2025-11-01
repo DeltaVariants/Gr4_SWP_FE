@@ -1,11 +1,9 @@
 import React from "react";
 
-const Booking = () => {
+const BookingPage = () => {
   return (
-    <>
-      <div>Booking</div>
-    </>
+    <div className="p-6">{/* Nội dung trang Booking sẽ được thêm sau */}</div>
   );
 };
 
-export default Booking;
+export default BookingPage;

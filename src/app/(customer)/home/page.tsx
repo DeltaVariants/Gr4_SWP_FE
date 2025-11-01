@@ -1,11 +1,11 @@
 "use client";
 import React from "react";
-import CarInfoCard from "../components/CarInfoCard";
-import BatteryStatusCard from "../components/BatteryStatusCard";
-import BookingInfoCard from "../components/BookingInfoCard";
-import StatsSummaryCard from "../components/StatsSummaryCard";
-import ActivitiesLog from "../components/ActivitiesLog";
-import RecentStationsList from "../components/RecentStationsList";
+import CarInfoCard from "./components/CarInfoCard";
+import BatteryStatusCard from "./components/BatteryStatusCard";
+import BookingInfoCard from "./components/BookingInfoCard";
+import StatsSummaryCard from "./components/StatsSummaryCard";
+import ActivitiesLog from "./components/ActivitiesLog";
+import RecentStationsList from "./components/RecentStationsList";
 import { MapSection } from "@/presentation/components/features";
 
 export default function CustomerHomePage() {

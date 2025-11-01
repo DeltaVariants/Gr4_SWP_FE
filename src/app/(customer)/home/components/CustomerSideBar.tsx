@@ -25,11 +25,11 @@ const navigationItems: NavigationItem[] = [
     path: "/findstation",
     icon: <FaMapMarkerAlt size={24} />,
   },
-  { name: "My Bookings", path: "/bookings", icon: <FaCalendarAlt size={24} /> },
+  { name: "My Bookings", path: "/booking", icon: <FaCalendarAlt size={24} /> },
   { name: "Swap History", path: "/history", icon: <FaHistory size={24} /> },
   {
     name: "Billing & Plans",
-    path: "/billing",
+    path: "/billing-plan",
     icon: <FaCreditCard size={24} />,
   },
   { name: "Support", path: "/support", icon: <FaQuestionCircle size={24} /> },
