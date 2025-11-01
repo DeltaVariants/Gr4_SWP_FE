@@ -1,13 +1,82 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { codeDB } from '../fakeDB';
+
+// Use a sensible fallback like other API routes so local dev still works
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://gr4-swp-be2-sp25.onrender.com';
+
+interface ForgotPasswordRequest {
+  email: string;
+}
 
 export async function POST(req: NextRequest) {
-  const { email } = await req.json();
-  if (!email) return NextResponse.json({ success: false, message: 'Email missing' });
+  try {
+    const body = await req.json();
 
-  const code = '12345'; // code cứng
-  codeDB.set(email, code);
-  console.log(`[FAKE DB] Code for ${email}: ${code}`);
+    // DEV DEBUG: log incoming request body and some headers to help trace 500s.
+    try {
+      // Avoid logging full cookie/header values in prod; this is dev-only.
+      const headersToShow: Record<string, string> = {};
+      [ 'content-type', 'user-agent', 'referer', 'origin' ].forEach((h) => {
+        const v = req.headers.get(h);
+        if (v) headersToShow[h] = v;
+      });
+      console.log('[send-reset] incoming', { body, headers: headersToShow });
+    } catch (e) {
+      console.warn('[send-reset] failed to log incoming request', e);
+    }
+    
+    // Validate request body
+    if (!body.email) {
+      return NextResponse.json({ 
+        success: false, 
+        message: 'Email is required' 
+      }, { status: 400 });
+    }
 
-  return NextResponse.json({ success: true });
+    const forgotRequest: ForgotPasswordRequest = {
+      email: body.email
+    };
+
+    if (!API_URL) {
+      console.error('[send-reset] NEXT_PUBLIC_API_URL not set');
+      return NextResponse.json({ success: false, message: 'Backend API URL not configured' }, { status: 500 });
+    }
+
+    const url = `${API_URL}/api/Auth/forgot-password`;
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    });
+
+    let data: any = null;
+    try {
+      data = await response.json();
+    } catch (e) {
+      // backend returned non-json body
+      try {
+        data = { raw: await response.text() };
+      } catch (e2) {
+        data = { raw: '<unreadable response body>' };
+      }
+    }
+
+    if (!response.ok) {
+      // Log full backend response for dev troubleshooting
+      console.error('[send-reset] backend error', { url, status: response.status, data });
+      return NextResponse.json({ 
+        success: false, 
+        message: data?.message || 'Error sending reset code',
+        backend: data,
+      }, { status: response.status });
+    }
+
+    return NextResponse.json({ success: true, data });
+  } catch (error) {
+    return NextResponse.json({ 
+      success: false, 
+      message: 'Error connecting to server' 
+    }, { status: 500 });
+  }
 }

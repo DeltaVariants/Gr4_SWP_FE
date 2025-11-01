@@ -1,6 +1,12 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 
 export default function Home() {
+  // When developing locally, redirect to the login page so `npm run dev` shows login.
+  if (process.env.NODE_ENV === "development") {
+    redirect("/login");
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-sky-50 to-blue-100 flex items-center justify-center p-4">
       <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 text-center">
