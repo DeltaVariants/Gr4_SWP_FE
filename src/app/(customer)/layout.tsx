@@ -2,6 +2,8 @@
 import React from "react";
 import { usePathname } from "next/navigation";
 import MainLayout from "../../presentation/layouts/MainLayout";
+import CustomerHeader from "./home/components/CustomerHeader";
+import CustomerSideBar from "./home/components/CustomerSideBar";
 
 interface CustomerLayoutProps {
   children: React.ReactNode;
@@ -56,9 +58,10 @@ export default function CustomerLayout({ children }: CustomerLayoutProps) {
 
   return (
     <MainLayout
-      currentPath={pathname}
-      headerTitle={pageInfo.title}
-      headerSubtitle={pageInfo.subtitle}
+      sidebar={<CustomerSideBar currentPath={pathname} />}
+      header={
+        <CustomerHeader title={pageInfo.title} subtitle={pageInfo.subtitle} />
+      }
     >
       {children}
     </MainLayout>
