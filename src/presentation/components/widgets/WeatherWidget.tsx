@@ -24,7 +24,7 @@ const WeatherWidget: React.FC<WeatherWidgetProps> = ({
   };
 
   return (
-    <div className="bg-indigo-100 h-9 rounded-lg px-3 py-2 flex items-center">
+    <div className="bg-indigo-100 h-9 rounded-lg px-3 py-2 flex items-center gap-2">
       {renderWeatherIcon()}
       <span className="text-sm font-medium text-gray-800">{temperature}</span>
       <span className="text-sm font-medium text-gray-800">{condition}</span>

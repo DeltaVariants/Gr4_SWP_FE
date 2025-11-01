@@ -6,8 +6,6 @@ interface MarkerPopupProps {
   status: boolean;
   availableSlots: number;
   totalSlots: number;
-  onDirection: () => void;
-  onClearRoute: () => void;
 }
 
 const MarkerPopup: React.FC<MarkerPopupProps> = ({
@@ -16,8 +14,6 @@ const MarkerPopup: React.FC<MarkerPopupProps> = ({
   status,
   availableSlots,
   totalSlots,
-  onDirection,
-  onClearRoute,
 }) => {
   return (
     <div className="p-3 min-w-[200px]">
@@ -32,20 +28,7 @@ const MarkerPopup: React.FC<MarkerPopupProps> = ({
         Còn trống: {availableSlots}/{totalSlots} chỗ
       </p>
 
-      <div className="flex gap-2">
-        <button
-          onClick={onDirection}
-          className="px-3 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600 transition-colors"
-        >
-          Direction
-        </button>
-        <button
-          onClick={onClearRoute}
-          className="px-3 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600 transition-colors"
-        >
-          Cancel
-        </button>
-      </div>
+      {/* Directional controls removed */}
     </div>
   );
 };
