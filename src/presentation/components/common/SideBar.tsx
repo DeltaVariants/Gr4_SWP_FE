@@ -24,6 +24,7 @@ export interface SideBarUIProps {
   onToggle: () => void;
   user?: UserInfo;
   className?: string;
+  isAdmin?: boolean;
 }
 
 const SideBar: React.FC<SideBarUIProps> = ({
@@ -33,6 +34,7 @@ const SideBar: React.FC<SideBarUIProps> = ({
   onToggle,
   user,
   className = "",
+  isAdmin = false,
 }) => {
   return (
     <div
@@ -54,6 +56,17 @@ const SideBar: React.FC<SideBarUIProps> = ({
               className="w-full h-full object-contain"
             />
           </div>
+          {isAdmin && (
+            <span
+              className={`text-2xl font-semibold text-gray-800 pl-10 whitespace-nowrap transition-opacity duration-200 ${
+                isExpanded
+                  ? "opacity-100 delay-150"
+                  : "opacity-0 absolute left-full"
+              }`}
+            >
+              Admin
+            </span>
+          )}
         </div>
       </div>
 
