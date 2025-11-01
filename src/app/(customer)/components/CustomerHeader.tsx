@@ -9,7 +9,6 @@ interface CustomerHeaderProps {
 
 export default function CustomerHeader({
   title = "Home",
-  subtitle = "Welcome back! Monitor your EV battery status and find nearby swap stations.",
 }: CustomerHeaderProps) {
   // Mock weather data - in real app, this would come from an API or context
   const weather = {
@@ -34,7 +33,6 @@ export default function CustomerHeader({
   return (
     <Header
       title={title}
-      subtitle={subtitle}
       weather={weather}
       hasNotifications={hasNotifications}
       onNotificationClick={handleNotificationClick}

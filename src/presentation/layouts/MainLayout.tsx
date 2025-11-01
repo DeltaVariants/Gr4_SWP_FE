@@ -24,7 +24,7 @@ export default function MainLayout({
         <CustomerHeader title={headerTitle} subtitle={headerSubtitle} />
 
         {/* Main Dashboard Content */}
-        <main className="flex-1 p-6 space-y-6 max-w-full overflow-x-auto">
+        <main className="flex-1 p-[3vh] max-w-full overflow-x-auto">
           {children}
         </main>
       </div>
