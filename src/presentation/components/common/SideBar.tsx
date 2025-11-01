@@ -2,7 +2,6 @@
 import React from "react";
 import Link from "next/link";
 import { FaBars } from "react-icons/fa";
-import Image from "next/image";
 
 export type NavigationItem = {
   name: string;

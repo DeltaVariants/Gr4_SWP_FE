@@ -4,10 +4,89 @@ import { usePathname } from "next/navigation";
 import MainLayout from "../../presentation/layouts/MainLayout";
 import AdminHeader from "./components/AdminHeader";
 import AdminSidebar from "./components/AdminSidebar";
+import { BreadcrumbItem } from "@/presentation/components/common/Header";
 
 interface AdminLayoutProps {
   children: React.ReactNode;
 }
+
+// Map paths to breadcrumbs
+const getBreadcrumbs = (pathname: string): BreadcrumbItem[] | undefined => {
+  // Station Management breadcrumbs
+  if (pathname.startsWith("/station-management")) {
+    if (pathname === "/station-management") {
+      return undefined; // No breadcrumbs for main page
+    }
+
+    const base: BreadcrumbItem = {
+      label: "Station Management",
+      path: "/station-management",
+    };
+
+    if (pathname === "/station-management/add") {
+      return [base, { label: "Add", path: "/station-management/add" }];
+    }
+
+    if (pathname === "/station-management/monitor") {
+      return [base, { label: "Monitor", path: "/station-management/monitor" }];
+    }
+
+    if (pathname === "/station-management/battery-distribute") {
+      return [
+        base,
+        {
+          label: "Battery Distribute",
+          path: "/station-management/battery-distribute",
+        },
+      ];
+    }
+
+    // Match /station-management/[id]
+    const detailMatch = pathname.match(/^\/station-management\/(\d+)$/);
+    if (detailMatch) {
+      return [base, { label: "Detail", path: pathname }];
+    }
+
+    // Match /station-management/[id]/edit
+    const editMatch = pathname.match(/^\/station-management\/(\d+)\/edit$/);
+    if (editMatch) {
+      const id = editMatch[1];
+      return [
+        base,
+        { label: "Detail", path: `/station-management/${id}` },
+        { label: "Edit", path: pathname },
+      ];
+    }
+  }
+
+  // Battery Management breadcrumbs
+  if (
+    pathname.startsWith("/battery-management") &&
+    pathname !== "/battery-management"
+  ) {
+    const base: BreadcrumbItem = {
+      label: "Battery Management",
+      path: "/battery-management",
+    };
+    // Add more battery management sub-routes here
+    return [base];
+  }
+
+  // User Management breadcrumbs
+  if (
+    pathname.startsWith("/user-management") &&
+    pathname !== "/user-management"
+  ) {
+    const base: BreadcrumbItem = {
+      label: "User Management",
+      path: "/user-management",
+    };
+    // Add more user management sub-routes here
+    return [base];
+  }
+
+  return undefined;
+};
 
 // Map paths to header titles and subtitles
 const getPageInfo = (pathname: string) => {
@@ -54,12 +133,17 @@ const getPageInfo = (pathname: string) => {
 export default function AdminLayout({ children }: AdminLayoutProps) {
   const pathname = usePathname();
   const pageInfo = getPageInfo(pathname);
+  const breadcrumbs = getBreadcrumbs(pathname);
 
   return (
     <MainLayout
       sidebar={<AdminSidebar currentPath={pathname} />}
       header={
-        <AdminHeader title={pageInfo.title} subtitle={pageInfo.subtitle} />
+        <AdminHeader
+          title={pageInfo.title}
+          subtitle={pageInfo.subtitle}
+          breadcrumbs={breadcrumbs}
+        />
       }
     >
       {children}
