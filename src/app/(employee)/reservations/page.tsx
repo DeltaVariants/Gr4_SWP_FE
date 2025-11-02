@@ -60,11 +60,7 @@ export default function ReservationsPage() {
           } catch (e) {}
         }
 
-        if (!stationID) {
-          showToast({ type: 'error', message: 'Không có stationID. Vui lòng kiểm tra tài khoản.' });
-          return;
-        }
-
+        // Không có stationID vẫn tiếp tục: proxy sẽ tự fallback theo stationName nếu có
         const list = await bookingService.getAllBookingOfStation(stationID);
         const rows = (list || []).map((b: any) => ({
           id: b.bookingID || b.id || b.BookingID || b.bookingId,

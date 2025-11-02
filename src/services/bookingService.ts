@@ -30,12 +30,10 @@ const bookingService = {
       }
     }
 
-    if (!finalStationID) {
-      // Avoid calling global GetAllBooking (Admin-only). Require stationID for staff flows.
-      throw new Error('stationID is required to fetch bookings for staff');
-    }
-
-    const url = `${API.getAllOfStation}?stationID=${encodeURIComponent(finalStationID)}`;
+    // If không có stationID, gọi endpoint không có query để proxy tự fallback theo stationName
+    const url = finalStationID
+      ? `${API.getAllOfStation}?stationID=${encodeURIComponent(finalStationID)}`
+      : `${API.getAllOfStation}`;
     const res = await fetch(url, { headers, credentials: 'same-origin' });
     const payload = await res.json().catch(() => ({}));
     if (!res.ok) {
