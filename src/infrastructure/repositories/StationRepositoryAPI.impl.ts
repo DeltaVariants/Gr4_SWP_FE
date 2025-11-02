@@ -20,7 +20,7 @@ class StationRepositoryAPI implements IStationRepository {
    * Triển khai cụ thể getAll() để fetch từ API
    */
   async getAll(): Promise<Station[]> {
-    const endpoint = "/Station/AllStations";
+    const endpoint = "/stations";
     const url = `${this.baseURL}${endpoint}`;
 
     try {
