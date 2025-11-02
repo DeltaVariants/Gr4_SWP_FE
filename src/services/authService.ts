@@ -43,6 +43,7 @@ export interface User {
   role: string;
   phone?: string;
   avatar?: string;
+  stationId?: string;
 }
 
 export interface ApiResponse<T> {
@@ -61,11 +62,28 @@ export const authService = {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(credentials)
       });
-      const json = await res.json();
-      if (!res.ok || !json.success) {
-        throw new Error(json.message || 'Đăng nhập thất bại');
+
+      // Try to parse JSON safely
+      const contentType = res.headers.get('content-type') || '';
+      let json: any = {};
+      let rawText = '';
+      try {
+        if (contentType.includes('application/json')) json = await res.json();
+        else rawText = await res.text();
+      } catch (e) {
+        // ignore parse errors
       }
-      return json;
+
+      // Always return an object describing the response so callers can handle different BE shapes
+      const result = {
+        status: res.status,
+        ok: res.ok,
+        success: json?.success ?? res.ok,
+        message: json?.message || json?.error || rawText || (res.ok ? 'OK' : 'Đăng nhập thất bại'),
+        ...json,
+      };
+
+      return result;
     } catch (error) {
       const err = error as ApiError;
       throw new Error(
@@ -265,8 +283,19 @@ export const authService = {
   // Lấy thông tin user hiện tại
   async getCurrentUser(): Promise<User> {
     try {
-      // Gọi qua Next API để dùng cookie httpOnly thay vì localStorage
-      const res = await fetch('/api/auth/me', { cache: 'no-store' });
+      // Gọi qua Next API để dùng cookie httpOnly nếu có.
+      // Nhưng khi đang ở client và token lưu trong localStorage, đính kèm header Authorization
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      try {
+        if (typeof window !== 'undefined') {
+          const t = localStorage.getItem('accessToken');
+          if (t) headers['Authorization'] = `Bearer ${t}`;
+        }
+      } catch (e) {
+        // ignore localStorage access errors
+      }
+
+      const res = await fetch('/api/auth/me', { cache: 'no-store', headers });
       const payload = await res.json();
       if (!res.ok || !payload?.success) {
         throw new Error(payload?.message || 'Không thể lấy thông tin người dùng');
@@ -281,7 +310,9 @@ export const authService = {
         name: userData.Username || userData.username || userData.name,
         role: userData.RoleName || userData.roleName || userData.role || 'Driver',
         phone: userData.PhoneNumber || userData.phoneNumber || userData.phone,
-        avatar: userData.Avatar || userData.avatar
+        avatar: userData.Avatar || userData.avatar,
+        // Backend may include station association under various names
+        stationId: userData.StationID || userData.stationID || userData.stationId || userData.StationId || undefined,
       };
     } catch (error: any) {
       console.error('Get current user error:', error);

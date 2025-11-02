@@ -9,18 +9,18 @@ interface BatteryStatusCardProps {
 }
 
 export default function BatteryStatusCard({
-  batteryLevel = 10,
+  batteryLevel = 20,
   remainingRange = 156,
   onFindStation,
 }: BatteryStatusCardProps) {
   const showAlert = batteryLevel <= 40;
 
   return (
-    <div className="flex justify-around">
+    <div className="flex justify-center items-center overflow-visible">
       {/* Left Section - Range and Alert */}
-      <div className="flex-col pl-6 p-5 space-y-4 ">
+      <div className="flex flex-col justify-center pr-6 p-5 gap-3 text-right">
         {/* Remaining Range */}
-        <div className="-mb-2">
+        <div className="flex flex-col items-end justify-center -mb-2">
           <div className="text-xs text-gray-500">Remaining Range</div>
           <div className="text-2xl font-bold text-gray-900 ">
             {remainingRange}
@@ -30,9 +30,9 @@ export default function BatteryStatusCard({
 
         {/* Alert Section - only show if battery <= 40% */}
         {showAlert && (
-          <div className="flex items-center gap-3 p-3 rounded-lg bg-yellow-50 border border-yellow-200">
+          <div className="flex items-center gap-3 p-3 rounded-lg bg-amber-100 ">
             <div className="flex-1">
-              <div className="text-sm font-bold text-yellow-700 uppercase">
+              <div className="text-sm font-bold text-amber-700 uppercase">
                 LOW BATTERY
               </div>
             </div>
@@ -47,7 +47,7 @@ export default function BatteryStatusCard({
       </div>
 
       {/* Right Section - Battery Circle */}
-      <div className=" ">
+      <div className="flex items-center scale-130">
         <BatteryCircle percentage={batteryLevel} />
       </div>
     </div>

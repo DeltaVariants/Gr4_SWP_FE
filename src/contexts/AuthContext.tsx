@@ -87,53 +87,73 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       // Gọi API đăng nhập
       const response = await authService.login(credentials);
-      
-      console.log('Login response:', response);
-      console.log('Response type:', typeof response);
-      
-      // Cast response to any để xử lý dynamic structure
-      const responseData = response as any;
-      console.log('authDTO exists (lowercase):', !!responseData.authDTO);
-      console.log('authDTO content:', responseData.authDTO);
-      
-      // Backend trả về lowercase fields: token, refreshToken, authDTO
-      if (!responseData.authDTO) {
-        console.error('authDTO is missing from response:', response);
-        throw new Error('Invalid response structure from server');
-      }
-      
-      // Extract data từ response thực tế
-      const accessToken = responseData.token;          // "token" 
-      const refreshToken = responseData.refreshToken;  // "refreshToken"
-      const user: User = {
-        id: responseData.authDTO.userID,         // "userID"
-        email: responseData.authDTO.email,       // "email"
-        name: responseData.authDTO.username,     // "username"
-        role: responseData.authDTO.roleName || 'EMPLOYEE',     // fallback role to avoid redirect errors
-        phone: responseData.authDTO.phoneNumber  // "phoneNumber"
-      };
 
-      console.log('Processed user:', user);
-      console.log('Access token:', accessToken ? 'EXISTS' : 'MISSING');
-      
-      // Lưu tokens vào localStorage
-      localStorage.setItem('accessToken', accessToken);
-      localStorage.setItem('refreshToken', refreshToken);
+      // Normalize response to accept various BE shapes
+      const res: any = response || {};
+      console.log('Login response (normalized):', res);
+
+      // Try multiple paths for token/refresh/authDTO
+      const accessToken = res.token ?? res.Token ?? res.data?.token ?? res.data?.Token ?? res.accessToken ?? res.data?.accessToken;
+      const refreshToken = res.refreshToken ?? res.RefreshToken ?? res.data?.refreshToken ?? res.data?.RefreshToken ?? res.refreshToken;
+      const rawAuth = res.authDTO ?? res.AuthDTO ?? res.data?.authDTO ?? res.data?.AuthDTO ?? res.user ?? res.User ?? res.data?.user ?? null;
+
+      if (!accessToken) {
+        console.error('Login did not return access token:', res);
+        throw new Error(res?.message || 'Đăng nhập thất bại: không nhận được token');
+      }
+
+      // Save tokens to localStorage
+      try {
+        localStorage.setItem('accessToken', accessToken);
+        if (refreshToken) localStorage.setItem('refreshToken', refreshToken);
+      } catch (e) {
+        console.warn('Failed to write tokens to localStorage', e);
+      }
+
+      // If backend returned auth info in response, use it; otherwise call refreshUser to populate
+      let user: User | null = null;
+      if (rawAuth) {
+        user = {
+          id: rawAuth.userID ?? rawAuth.UserID ?? rawAuth.id ?? rawAuth.Id ?? rawAuth.ID,
+          email: rawAuth.email ?? rawAuth.Email,
+          name: rawAuth.username ?? rawAuth.Username ?? rawAuth.name ?? rawAuth.Name,
+          role: rawAuth.roleName ?? rawAuth.RoleName ?? rawAuth.role ?? rawAuth.Role ?? 'EMPLOYEE',
+          phone: rawAuth.phoneNumber ?? rawAuth.PhoneNumber ?? rawAuth.phone ?? rawAuth.Phone,
+          // attempt to capture station association when backend includes it in login response
+          stationId: rawAuth.stationId ?? rawAuth.StationID ?? rawAuth.stationID ?? rawAuth.StationId ?? undefined,
+        };
+      }
       // Thiết lập cookie server-side để tránh race condition với middleware
       try {
         await fetch('/api/auth/session', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ token: accessToken, role: user.role, maxAge: 60 * 60 }), // 1h
+          body: JSON.stringify({ token: accessToken, role: user?.role ?? 'EMPLOYEE', maxAge: 60 * 60 }), // 1h
         });
-      } catch {}
-      
-      // Set user data
-      setUser(user);
-      setIsAuthenticated(true);
+      } catch (e) {
+        console.warn('Setting server session failed (non-fatal):', e);
+      }
+
+      // If we parsed user from response use it, otherwise refresh from /api/auth/me
+      if (user) {
+        setUser(user);
+        setIsAuthenticated(true);
+      } else {
+        try {
+          await refreshUser();
+        } catch (e) {
+          console.warn('refreshUser failed after login:', e);
+        }
+      }
       
       // Redirect dựa vào role
-      const redirectPath = getRedirectPathByRole(user.role);
+      const redirectRole = (user && user.role) || (typeof window !== 'undefined' && (() => {
+        try {
+          const p = JSON.parse(atob(accessToken.split('.')[1]));
+          return p.role || p.RoleName || p.roleName || p.unique_name;
+        } catch { return null; }
+      })()) || 'EMPLOYEE';
+      const redirectPath = getRedirectPathByRole(redirectRole);
       // Dùng replace để tránh quay lại trang login khi Back
       try {
         router.replace(redirectPath);
@@ -265,8 +285,24 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   // Helper function để xác định redirect path dựa vào role
   const getRedirectPathByRole = (_role?: string): string => {
-    // Theo yêu cầu: luôn chuyển về trang /home sau khi đăng nhập
-    return '/home';
+    if (!_role) return '/home';
+    const role = String(_role).trim().toUpperCase();
+    // Map role names (case-insensitive) to application routes
+    switch (role) {
+      case 'ADMIN':
+      case 'ADMINISTRATOR':
+        return '/admin';
+      case 'EMPLOYEE':
+      case 'STAFF':
+        return '/dashboardstaff';
+      case 'DRIVER':
+      case 'CUSTOMER':
+      case 'CLIENT':
+        // Redirect drivers/customers to the public home page
+        return '/home';
+      default:
+        return '/home';
+    }
   };
 
   // Google Login handler - Use existing backend API

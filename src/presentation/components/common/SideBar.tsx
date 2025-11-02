@@ -24,6 +24,7 @@ export interface SideBarUIProps {
   onToggle: () => void;
   user?: UserInfo;
   className?: string;
+  isAdmin?: boolean;
 }
 
 const SideBar: React.FC<SideBarUIProps> = ({
@@ -33,7 +34,43 @@ const SideBar: React.FC<SideBarUIProps> = ({
   onToggle,
   user,
   className = "",
+  isAdmin = false,
 }) => {
+  const { user: authUser, loading: authLoading } = useAuth();
+
+  // Prefer explicit prop `user`, then auth context, then try decoding token for an immediate name
+  const tokenNameFallback = (() => {
+    try {
+      if (typeof window !== 'undefined') {
+        const t = localStorage.getItem('accessToken');
+        if (t) {
+          const parts = t.split('.');
+          if (parts.length >= 2) {
+            const p = JSON.parse(atob(parts[1]));
+            return p.unique_name || p.name || p.email || p.username || null;
+          }
+        }
+      }
+    } catch (e) {
+      // ignore
+    }
+    return null;
+  })();
+
+  const displayedName = user?.name || authUser?.name || tokenNameFallback || authUser?.email || "";
+  const displayedAvatar = user?.avatarUrl || authUser?.avatar || undefined;
+  const displayedInitials =
+    user?.initials ||
+    (displayedName
+      ? displayedName
+          .split(" ")
+          .filter(Boolean)
+          .slice(0, 2)
+          .map((s: string) => s[0].toUpperCase())
+          .join("")
+      : authLoading
+      ? ''
+      : 'NA');
   return (
     <div
       className={`h-screen flex flex-col sticky top-0 z-10 transition-all duration-300 ease-in-out bg-white shadow-[0_4px_4px_rgba(0,0,0,0.1)] ${
@@ -45,10 +82,26 @@ const SideBar: React.FC<SideBarUIProps> = ({
         className={`p-4 pl-6 flex items-center flex-shrink-0 border-b border-gray-200`}
       >
         <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+          <div className="w-10 h-10  rounded-full flex items-center justify-center flex-shrink-0">
             {/* Logo */}
-            <div className="w-8 h-8 bg-gray-700 rounded-full"></div>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/logo/eSwap_Logo_1.png"
+              alt="eSwap Logo"
+              className="w-full h-full object-contain"
+            />
           </div>
+          {isAdmin && (
+            <span
+              className={`text-2xl font-semibold text-gray-800 pl-10 whitespace-nowrap transition-opacity duration-200 ${
+                isExpanded
+                  ? "opacity-100 delay-150"
+                  : "opacity-0 absolute left-full"
+              }`}
+            >
+              Admin
+            </span>
+          )}
         </div>
       </div>
 
@@ -66,7 +119,11 @@ const SideBar: React.FC<SideBarUIProps> = ({
       {/* Menu Items */}
       <nav className="flex-1 py-4 flex flex-col gap-2">
         {navigationItems.map((item) => {
-          const isActive = currentPath === item.path;
+          // normalize currentPath: strip query and trailing slash
+          const raw = (currentPath || '').toString();
+          const normalized = raw.split('?')[0].replace(/\/+$/, '');
+          const isProfilePage = normalized.toLowerCase().startsWith('/profile');
+          const isActive = !isProfilePage && normalized === item.path.replace(/\/+$/, '');
           return (
             <Link href={item.path} key={item.name}>
               <div
@@ -103,16 +160,16 @@ const SideBar: React.FC<SideBarUIProps> = ({
           }`}
         >
           <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
-            {user?.avatarUrl ? (
+            {displayedAvatar ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
-                src={user.avatarUrl}
-                alt={user.name || "User"}
+                src={displayedAvatar}
+                alt={displayedName || "User"}
                 className="w-full h-full object-cover"
               />
             ) : (
               <span className="text-sm font-medium text-gray-700">
-                {user?.initials || "NA"}
+                {displayedInitials || "NA"}
               </span>
             )}
           </div>
@@ -123,12 +180,15 @@ const SideBar: React.FC<SideBarUIProps> = ({
                 : "opacity-0 absolute left-full"
             }`}
           >
-            {user?.name && (
+            {displayedName && (
               <div className="flex items-center gap-2">
-                <p className="text-sm font-medium text-gray-800 whitespace-nowrap">
-                  {user.name}
-                </p>
-                {/* Small logout button next to name */}
+                <Link
+                  href="/profile"
+                  className="text-sm font-medium text-gray-800 whitespace-nowrap hover:underline"
+                >
+                  {displayedName}
+                </Link>
+
                 <LogoutButton />
               </div>
             )}

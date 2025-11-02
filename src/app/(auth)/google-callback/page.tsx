@@ -63,7 +63,7 @@ function CallbackContent() {
         if (!haveUser) {
           try {
             
-            const resp = await fetch('/api/Auth/me', {
+            const resp = await fetch('/api/auth/me', {
               headers: { Authorization: `Bearer ${token}` },
             });
             if (resp.ok) {
