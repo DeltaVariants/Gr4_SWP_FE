@@ -60,15 +60,13 @@ export default function SwapPage() {
         } catch (e) {}
       }
 
-      if (!stationId) {
-        showToast({ type: 'error', message: 'Không tìm thấy stationId. Vui lòng kiểm tra tài khoản.' });
-        return;
-      }
+      // Không có stationId vẫn tiếp tục: proxy /api/transfer/create sẽ tự fallback bằng stationName -> stationId
 
       const payload = {
         oldBatteryId: oldId,
         newBatteryId: newId,
-        stationId,
+        // Truyền stationId nếu có; nếu không, proxy sẽ cố gắng map từ stationName của tài khoản
+        ...(stationId ? { stationId } : {}),
       };
 
       const created = await transferService.createTransfer(payload) as Record<string, unknown> | null;

@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import SideBar, { NavigationItem, UserInfo } from '@/presentation/components/common/SideBar';
-import CustomerSideBar from '@/app/(customer)/components/CustomerSideBar';
+import { CustomerSideBar } from '@/app/(customer)/home/components';
 import { ProfileLayout } from '@/presentation/components/ui/profile/ProfileLayout';
 import { usePathname } from 'next/navigation';
 

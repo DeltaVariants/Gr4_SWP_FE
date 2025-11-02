@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://gr4-swp-be2-sp25.onrender.com'
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://gr4-swp-be2-sp25.onrender.com/api'
 
 export async function GET(req: NextRequest) {
   try {
     const stationID = req.nextUrl.searchParams.get('stationID');
     const url = stationID
-      ? `${API_URL}/api/BatterySlot/getAllBatterySlotsByStationID/${encodeURIComponent(stationID)}`
-      : `${API_URL}/api/BatterySlot/getAllBatterySlotsByStationID/`;
+      ? `${API_URL}/BatterySlot/getAllBatterySlotsByStationID/${encodeURIComponent(stationID)}`
+      : `${API_URL}/BatterySlot/getAllBatterySlotsByStationID/`;
 
     const forwardHeaders: Record<string, string> = { 'Content-Type': 'application/json' };
     const incomingAuth = req.headers.get('authorization');

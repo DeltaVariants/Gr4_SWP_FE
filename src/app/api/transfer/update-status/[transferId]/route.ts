@@ -1,14 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://gr4-swp-be2-sp25.onrender.com'
+// Keep user's structure: env base + '/api' in path
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://gr4-swp-be2-sp25.onrender.com';
 
 export async function PUT(req: NextRequest, context: any) {
   try {
     const { params } = context || {};
     const { transferId } = params || {};
     const body = await req.text();
-    const url = `${API_URL}/api/BatteryTransfer/UpdateTransferStatus/${encodeURIComponent(transferId)}`;
-    const forwardHeaders: Record<string, string> = { 'Content-Type': 'application/json' };
+  const url = `${API_URL}/api/BatteryTransfer/UpdateTransferStatus/${encodeURIComponent(transferId)}`;
+    const forwardHeaders: Record<string, string> = { 'Content-Type': 'application/json', 'Accept': 'application/json' };
     const incomingAuth = req.headers.get('authorization');
     const incomingCookie = req.headers.get('cookie');
     if (incomingAuth) forwardHeaders['Authorization'] = incomingAuth;

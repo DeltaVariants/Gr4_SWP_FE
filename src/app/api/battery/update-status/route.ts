@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://gr4-swp-be2-sp25.onrender.com'
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://gr4-swp-be2-sp25.onrender.com/api'
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.text();
-    const url = `${API_URL}/api/Battery/updateBatteryStatus`;
+    const url = `${API_URL}/Battery/updateBatteryStatus`;
     const forwardHeaders: Record<string, string> = { 'Content-Type': 'application/json' };
     const incomingAuth = req.headers.get('authorization');
     const incomingCookie = req.headers.get('cookie');

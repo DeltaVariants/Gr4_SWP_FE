@@ -4,7 +4,6 @@ import "./globals.css";
 import { ReduxProvider } from "../application/providers/ReduxProvider";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ToastProvider } from '@/presentation/components/ui/Notification';
-import Providers from "./provider";
 
 export const metadata: Metadata = {
   title: "eSwap - Driver Portal",
@@ -50,7 +49,6 @@ export default function RootLayout({
             <ReduxProvider>{children}</ReduxProvider>
           </ToastProvider>
         </AuthProvider>
-        <Providers>{children}</Providers>
       </body>
     </html>
   );

@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 // Use same fallback as other routes so local dev works when env var missing
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://gr4-swp-be2-sp25.onrender.com';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://gr4-swp-be2-sp25.onrender.com/api';
 const STRICT_VERIFY = process.env.NEXT_PUBLIC_STRICT_VERIFY === 'true';
-const VERIFY_CODE_PATH = process.env.NEXT_PUBLIC_AUTH_VERIFY_CODE_PATH || '/api/Auth/verifyCode';
+const VERIFY_CODE_PATH = process.env.NEXT_PUBLIC_AUTH_VERIFY_CODE_PATH || '/Auth/verifyCode';
 
 export async function POST(req: NextRequest) {
   try {
@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
 
     // Non-strict: Try common verify-only endpoints on backend, fallback if needed
     const endpoints = [
-      `${API_URL}/api/Auth/verifyCode`,
+      `${API_URL}/Auth/verifyCode`,
     ];
 
     let lastError: { status: number; message: string } | null = null;
@@ -64,7 +64,7 @@ export async function POST(req: NextRequest) {
         if (
           resp.status === 400 && (
             /password|newpassword|confirm/i.test(String(data?.message || '')) ||
-            new URL(url).pathname.toLowerCase().endsWith('/api/auth/verify-reset-password')
+            new URL(url).pathname.toLowerCase().endsWith('/auth/verify-reset-password')
           )
         ) {
           return NextResponse.json({ success: true, data: { requiresPassword: true } });

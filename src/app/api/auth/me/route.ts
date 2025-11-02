@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://gr4-swp-be2-sp25.onrender.com';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://gr4-swp-be2-sp25.onrender.com/api';
 
 export async function GET(req: NextRequest) {
   try {
@@ -32,7 +32,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
     }
 
-    const resp = await fetch(`${API_URL}/api/Auth/me`, {
+    const resp = await fetch(`${API_URL}/Auth/me`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${token}`,
