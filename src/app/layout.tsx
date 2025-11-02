@@ -3,7 +3,7 @@ import Script from "next/script";
 import "./globals.css";
 import { ReduxProvider } from "../application/providers/ReduxProvider";
 import { AuthProvider } from "@/contexts/AuthContext";
-import { ToastProvider } from '@/presentation/components/ui/Notification';
+import { ToastProvider } from "@/presentation/components/ui/Notification";
 import Providers from "./provider";
 
 export const metadata: Metadata = {
@@ -17,7 +17,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-  <html lang="en" suppressHydrationWarning data-scroll-behavior="smooth">
+    <html lang="en" suppressHydrationWarning data-scroll-behavior="smooth">
       <head>
         {/* Leaflet CSS */}
         <link
@@ -45,12 +45,13 @@ export default function RootLayout({
           src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"
           strategy="lazyOnload"
         />
-        <AuthProvider>
-          <ToastProvider>
-            <ReduxProvider>{children}</ReduxProvider>
-          </ToastProvider>
-        </AuthProvider>
-        <Providers>{children}</Providers>
+        <Providers>
+          <AuthProvider>
+            <ToastProvider>
+              <ReduxProvider>{children}</ReduxProvider>
+            </ToastProvider>
+          </AuthProvider>
+        </Providers>
       </body>
     </html>
   );
