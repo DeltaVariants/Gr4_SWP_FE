@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import { useAuth } from '@/contexts/AuthContext';
 import {
   HiMenu,
   HiHome,
@@ -16,6 +17,9 @@ import {
 
 const Sidebar = () => {
   const [isExpanded, setIsExpanded] = useState(true);
+  const { user: authUser } = useAuth();
+  const displayedName = authUser?.name || authUser?.email || "User";
+  const displayedPlan = authUser?.role || "Premium Plan";
 
   const menuItems = [
     { icon: HiHome, label: "Home", href: "/home", isActive: true },
@@ -93,8 +97,10 @@ const Sidebar = () => {
           </div>
           {isExpanded && (
             <div>
-              <div className="font-medium">Nguyen Van A</div>
-              <div className="text-sm text-blue-200">Premium Plan</div>
+              <Link href="/profile" className="font-medium hover:underline">
+                {displayedName}
+              </Link>
+              <div className="text-sm text-blue-200">{displayedPlan}</div>
             </div>
           )}
         </div>

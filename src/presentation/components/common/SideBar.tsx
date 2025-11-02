@@ -1,5 +1,6 @@
 "use client";
 import React from "react";
+import { useAuth } from '@/contexts/AuthContext';
 import Link from "next/link";
 import { FaBars } from "react-icons/fa";
 
@@ -35,6 +36,41 @@ const SideBar: React.FC<SideBarUIProps> = ({
   className = "",
   isAdmin = false,
 }) => {
+  const { user: authUser, loading: authLoading } = useAuth();
+
+  // Prefer explicit prop `user`, then auth context, then try decoding token for an immediate name
+  const tokenNameFallback = (() => {
+    try {
+      if (typeof window !== 'undefined') {
+        const t = localStorage.getItem('accessToken');
+        if (t) {
+          const parts = t.split('.');
+          if (parts.length >= 2) {
+            const p = JSON.parse(atob(parts[1]));
+            return p.unique_name || p.name || p.email || p.username || null;
+          }
+        }
+      }
+    } catch (e) {
+      // ignore
+    }
+    return null;
+  })();
+
+  const displayedName = user?.name || authUser?.name || tokenNameFallback || authUser?.email || "";
+  const displayedAvatar = user?.avatarUrl || authUser?.avatar || undefined;
+  const displayedInitials =
+    user?.initials ||
+    (displayedName
+      ? displayedName
+          .split(" ")
+          .filter(Boolean)
+          .slice(0, 2)
+          .map((s: string) => s[0].toUpperCase())
+          .join("")
+      : authLoading
+      ? ''
+      : 'NA');
   return (
     <div
       className={`h-screen flex flex-col sticky top-0 z-10 transition-all duration-300 ease-in-out bg-white shadow-[0_4px_4px_rgba(0,0,0,0.1)] ${
@@ -83,7 +119,11 @@ const SideBar: React.FC<SideBarUIProps> = ({
       {/* Menu Items */}
       <nav className="flex-1 py-4 flex flex-col gap-2">
         {navigationItems.map((item) => {
-          const isActive = currentPath === item.path;
+          // normalize currentPath: strip query and trailing slash
+          const raw = (currentPath || '').toString();
+          const normalized = raw.split('?')[0].replace(/\/+$/, '');
+          const isProfilePage = normalized.toLowerCase().startsWith('/profile');
+          const isActive = !isProfilePage && normalized === item.path.replace(/\/+$/, '');
           return (
             <Link href={item.path} key={item.name}>
               <div
@@ -120,16 +160,16 @@ const SideBar: React.FC<SideBarUIProps> = ({
           }`}
         >
           <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
-            {user?.avatarUrl ? (
+            {displayedAvatar ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
-                src={user.avatarUrl}
-                alt={user.name || "User"}
+                src={displayedAvatar}
+                alt={displayedName || "User"}
                 className="w-full h-full object-cover"
               />
             ) : (
               <span className="text-sm font-medium text-gray-700">
-                {user?.initials || "NA"}
+                {displayedInitials || "NA"}
               </span>
             )}
           </div>
@@ -140,10 +180,17 @@ const SideBar: React.FC<SideBarUIProps> = ({
                 : "opacity-0 absolute left-full"
             }`}
           >
-            {user?.name && (
-              <p className="text-sm font-medium text-gray-800 whitespace-nowrap">
-                {user.name}
-              </p>
+            {displayedName && (
+              <div className="flex items-center gap-2">
+                <Link
+                  href="/profile"
+                  className="text-sm font-medium text-gray-800 whitespace-nowrap hover:underline"
+                >
+                  {displayedName}
+                </Link>
+
+                <LogoutButton />
+              </div>
             )}
             {user?.plan && (
               <p className="text-xs text-gray-500 whitespace-nowrap">
@@ -158,3 +205,26 @@ const SideBar: React.FC<SideBarUIProps> = ({
 };
 
 export default SideBar;
+
+function LogoutButton() {
+  const { logout } = useAuth();
+  return (
+    <button
+      onClick={async () => {
+        try {
+          await logout();
+        } catch (e) {
+          // ignore
+        }
+      }}
+      title="Logout"
+      className="w-7 h-7 flex items-center justify-center rounded-md text-gray-600 hover:bg-gray-100"
+    >
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+        <path d="M16 17l5-5-5-5" />
+        <path d="M21 12H9" />
+      </svg>
+    </button>
+  );
+}
