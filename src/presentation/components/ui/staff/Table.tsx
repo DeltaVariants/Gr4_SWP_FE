@@ -7,8 +7,8 @@ export function Table({
   data,
   empty,
 }: {
-  columns: { key: string; header: string; render?: (row: any) => ReactNode }[];
-  data: any[];
+  columns: { key: string; header: string; render?: (row: Record<string, unknown>) => ReactNode }[];
+  data: Record<string, unknown>[];
   empty?: ReactNode;
 }) {
   return (
@@ -47,7 +47,7 @@ export function Table({
                 >
                   {columns.map((c) => (
                     <td key={c.key} className="px-5 py-3 border-b border-gray-100 text-gray-900">
-                      {c.render ? c.render(row) : row[c.key]}
+                      {c.render ? c.render(row) : String(row[c.key] ?? '')}
                     </td>
                   ))}
                 </tr>

@@ -2,7 +2,10 @@
 import { StatCard } from '@/presentation/components/ui/staff/StatCard';
 import { Table } from '@/presentation/components/ui/staff/Table';
 import Link from 'next/link';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
+import bookingService from '@/services/bookingService';
+import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/presentation/components/ui/Notification';
 
 function StatusBadge({ value }: { value: string }) {
   const map: Record<string, string> = {
@@ -36,22 +39,79 @@ const columns = [
   },
 ];
 
-const data = [
-  { id: 'r1', name: 'Nguyen A', plate: '59A-123.45', eta: '09:20', status: 'Booked' },
-  { id: 'r2', name: 'Tran B', plate: '60B-678.90', eta: '09:35', status: 'Queue' },
-  { id: 'r3', name: 'Le C', plate: '51C-246.80', eta: '09:50', status: 'Booked' },
-  { id: 'r4', name: 'Pham D', plate: '50F-112.21', eta: '10:05', status: 'Queue' },
-];
+const initialData: any[] = [];
 
 export default function StaffDashboard() {
   const [q, setQ] = useState('');
+  const [data, setData] = useState<any[]>(initialData);
+  const [loading, setLoading] = useState(false);
+  const { showToast } = useToast();
+
+  const { user, isAuthenticated } = useAuth();
+
+  useEffect(() => {
+    let mounted = true;
+    const load = async () => {
+      setLoading(true);
+      try {
+        // Pass stationId when available; some backend endpoints require station-scoped requests
+        let stationID = (user as any)?.stationId;
+        // If user object doesn't have stationId yet, try to get it from /api/auth/me
+        if (!stationID && typeof window !== 'undefined') {
+          try {
+            const meRes = await fetch('/api/auth/me', { cache: 'no-store' });
+            const mePayload = await meRes.json().catch(() => ({}));
+            // backend shape may vary; try multiple possible paths
+            const src = mePayload?.data ?? mePayload?.user ?? mePayload ?? {};
+            const candidate = src?.data ?? src; // sometimes payload.data.data
+            stationID =
+              candidate?.stationId || candidate?.StationID || candidate?.stationID || candidate?.StationId ||
+              candidate?.station || candidate?.station_id || candidate?.Station || candidate?.Station_Id || undefined;
+            if (!stationID && process.env.NODE_ENV === 'development') {
+              // surface payload for debugging in dev
+              // eslint-disable-next-line no-console
+              console.log('[dashboardstaff] /api/auth/me payload:', mePayload);
+            }
+          } catch (e) {
+            // ignore network/parse errors
+          }
+        }
+
+        if (!stationID) {
+          showToast({ type: 'error', message: 'Không có stationID. Vui lòng kiểm tra tài khoản hoặc liên hệ quản trị.' });
+          return;
+        }
+
+        const list = await bookingService.getAllBookingOfStation(stationID);
+        const rows = (list || []).map((b: any) => ({
+          id: b.bookingID || b.id || b.BookingID || b.bookingId,
+          name: b.customerName || b.username || b.customer || b.driver || '—',
+          plate: b.vehicleId || b.vehicle || b.plate || '—',
+          eta: b.bookingTime || b.time || b.bookingHour || '--',
+          status: b.bookingStatus || b.status || 'Booked',
+          raw: b,
+        }));
+        if (mounted) setData(rows);
+      } catch (e: any) {
+        showToast({ type: 'error', message: e?.message || 'Không thể load dữ liệu' });
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    };
+    // Only load when auth state is known; if not authenticated yet, skip and let AuthProvider refresh
+    if (isAuthenticated || (typeof window !== 'undefined' && localStorage.getItem('accessToken'))) {
+      load();
+    }
+    return () => { mounted = false; };
+  }, [showToast, user, isAuthenticated]);
+
   const filtered = useMemo(() => {
     const s = q.trim().toLowerCase();
     if (!s) return data;
     return data.filter(d =>
-      d.name.toLowerCase().includes(s) || d.plate.toLowerCase().includes(s) || d.id.toLowerCase().includes(s)
+      (d.name || '').toLowerCase().includes(s) || (d.plate || '').toLowerCase().includes(s) || (d.id || '').toLowerCase().includes(s)
     );
-  }, [q]);
+  }, [q, data]);
   return (
     <div>
       {/* KPIs */}

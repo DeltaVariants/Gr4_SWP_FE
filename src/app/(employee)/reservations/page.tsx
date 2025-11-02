@@ -1,6 +1,9 @@
 "use client";
 import { Table } from '@/presentation/components/ui/staff/Table';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
+import bookingService from '@/services/bookingService';
+import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/presentation/components/ui/Notification';
 
 function StatusBadge({ value }: { value: string }) {
   const map: Record<string, string> = {
@@ -31,20 +34,68 @@ const columns = [
   )},
 ];
 
-const data = [
-  { id: 'r1', time: '09:20', driver: 'Nguyen A', vehicle: 'Yamaha', battery: '48V-20Ah', status: 'Booked' },
-  { id: 'r2', time: '09:35', driver: 'Tran B', vehicle: 'Honda', battery: '60V-26Ah', status: 'Queue' },
-];
+const initialData: any[] = [];
 
 export default function ReservationsPage() {
   const [q, setQ] = useState('');
+  const [data, setData] = useState<any[]>(initialData);
+  const [loading, setLoading] = useState(false);
+  const { showToast } = useToast();
+
+  const { user, isAuthenticated } = useAuth();
+
+  useEffect(() => {
+    let mounted = true;
+    const load = async () => {
+      setLoading(true);
+      try {
+        let stationID = (user as any)?.stationId;
+        if (!stationID && typeof window !== 'undefined') {
+          try {
+            const meRes = await fetch('/api/auth/me', { cache: 'no-store' });
+            const mePayload = await meRes.json().catch(() => ({}));
+            if (meRes.ok && mePayload?.success && mePayload.data) {
+              stationID = mePayload.data.stationId || mePayload.data.StationID || mePayload.data.stationID || mePayload.data.StationId;
+            }
+          } catch (e) {}
+        }
+
+        if (!stationID) {
+          showToast({ type: 'error', message: 'Không có stationID. Vui lòng kiểm tra tài khoản.' });
+          return;
+        }
+
+        const list = await bookingService.getAllBookingOfStation(stationID);
+        const rows = (list || []).map((b: any) => ({
+          id: b.bookingID || b.id || b.BookingID || b.bookingId,
+          time: b.bookingTime || b.time || b.bookingHour || '--',
+          driver: b.customerName || b.username || b.customer || b.driver || '—',
+          vehicle: b.vehicleId || b.vehicle || b.plate || '—',
+          battery: b.batteryType || b.batteryTypeName || '—',
+          status: b.bookingStatus || b.status || 'Booked',
+          raw: b,
+        }));
+        if (mounted) setData(rows);
+      } catch (e: any) {
+        showToast({ type: 'error', message: e?.message || 'Không thể load đặt chỗ' });
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    };
+    if (isAuthenticated || (typeof window !== 'undefined' && localStorage.getItem('accessToken'))) {
+      load();
+    }
+    return () => { mounted = false; };
+  }, [showToast, user, isAuthenticated]);
+
   const filtered = useMemo(() => {
     const s = q.trim().toLowerCase();
     if (!s) return data;
     return data.filter(d =>
-      d.driver.toLowerCase().includes(s) || d.vehicle.toLowerCase().includes(s) || d.id.toLowerCase().includes(s)
+      (d.driver || '').toLowerCase().includes(s) || (d.vehicle || '').toLowerCase().includes(s) || (d.id || '').toLowerCase().includes(s)
     );
-  }, [q]);
+  }, [q, data]);
+
   return (
     <div>
       <div className="mb-4 flex items-center justify-between">
@@ -59,7 +110,11 @@ export default function ReservationsPage() {
           <button className="h-9 px-3 rounded-md border text-sm">Filter</button>
         </div>
       </div>
-      <Table columns={columns} data={filtered} />
+      {loading ? (
+        <div className="p-6 bg-white rounded-xl shadow-sm text-center">Loading reservations...</div>
+      ) : (
+        <Table columns={columns} data={filtered} />
+      )}
     </div>
   );
 }

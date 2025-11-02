@@ -1,29 +1,33 @@
-'use client';
+"use client";
 
 import Image from 'next/image';
 import { ProfileCard } from './ProfileCard';
+import { User } from 'lucide-react';
 
 export const ProfileLayout = () => {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#E6F4FE] p-4">
-      <div className="flex w-full max-w-4xl bg-white rounded-lg shadow-lg overflow-hidden">
-        
-        <div className="hidden md:flex md:w-2/5 bg-gradient-to-b from-[#295E9C] to-[#1C4078] text-white p-6 flex-col justify-between min-h-[420px]">
-          <div>
-            <h2 className="text-lg font-semibold">Your Profile</h2>
-            <p className="mt-1 text-xs opacity-90">Quản lý thông tin cá nhân của bạn một cách gọn gàng và nhất quán.</p>
-          </div>
-          <div className="relative h-48 mt-6">
-            <Image src="/profile-illustration.svg" alt="Profile" fill className="object-contain" />
-          </div>
+    <div className="w-full">
+      <div className="max-w-5xl mx-auto">
+        <div className="mb-6">
+          <h1 className="text-3xl font-extrabold text-gray-900">Hồ sơ cá nhân</h1>
+          <p className="text-sm text-gray-600 mt-1">Quản lý thông tin tài khoản, bảo mật và liên hệ</p>
         </div>
 
+        <div className="bg-gradient-to-r from-white to-slate-50 rounded-xl shadow-xl p-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
+            <div className="col-span-1 flex flex-col items-center md:items-start">
+              <div className="w-36 h-36 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center shadow-lg text-white text-3xl font-bold">
+                <User className="w-10 h-10" />
+              </div>
+              <h2 className="mt-4 text-xl font-semibold text-gray-900">Thông tin của bạn</h2>
+              <p className="mt-1 text-sm text-gray-600">Cập nhật hồ sơ, thay đổi mật khẩu và tuỳ chỉnh thông tin cá nhân.</p>
+            </div>
 
-        <div className="w-full md:w-3/5 p-8 flex items-center justify-center">
-          <div className="w-full max-w-md">
-            <h1 className="text-xl font-semibold text-gray-900 text-center mb-2">Hồ sơ</h1>
-            <p className="text-sm text-gray-600 text-center mb-6">Thông tin tài khoản và liên hệ</p>
-            <ProfileCard />
+            <div className="col-span-2">
+              <div className="bg-white rounded-lg p-6 shadow-md">
+                <ProfileCard />
+              </div>
+            </div>
           </div>
         </div>
       </div>
