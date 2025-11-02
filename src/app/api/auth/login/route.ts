@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://gr4-swp-be2-sp25.onrender.com';
+// Normalize env base to avoid '/api/api' when joining
+const RAW_API_URL = process.env.NEXT_PUBLIC_API_URL || process.env.API_URL || 'https://gr4-swp-be2-sp25.onrender.com';
+const API_BASE = RAW_API_URL.replace(/\/+$/,'').replace(/\/api\/?$/,'');
 
 export async function POST(request: NextRequest) {
   try {
@@ -16,13 +18,22 @@ export async function POST(request: NextRequest) {
     }
 
     
-    const response = await fetch(`${API_URL}/api/Auth/login`, {
+  const response = await fetch(`${API_BASE}/api/Auth/login`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Accept': 'application/json',
       },
-      
-      body: JSON.stringify({ Email: email, Password: password }),
+      // Be generous with payload keys to match various BE binders
+      // Primary: Email/Password. Fallbacks: email/password, Username/UserName when user inputs a non-email.
+      body: JSON.stringify({
+        Email: email,
+        email: email,
+        Username: email,
+        UserName: email,
+        Password: password,
+        password: password,
+      }),
     });
 
     

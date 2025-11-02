@@ -4,7 +4,6 @@ import "./globals.css";
 import { ReduxProvider } from "../application/providers/ReduxProvider";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ToastProvider } from '@/presentation/components/ui/Notification';
-import Providers from "./provider";
 
 export const metadata: Metadata = {
   title: "eSwap - Driver Portal",
@@ -45,12 +44,12 @@ export default function RootLayout({
           src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"
           strategy="lazyOnload"
         />
+        {/* Wrap children ONCE with all providers in a single tree */}
         <AuthProvider>
           <ToastProvider>
             <ReduxProvider>{children}</ReduxProvider>
           </ToastProvider>
         </AuthProvider>
-        <Providers>{children}</Providers>
       </body>
     </html>
   );

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://gr4-swp-be2-sp25.onrender.com';
+// Normalize env base to avoid '/api/api' when joining
+const RAW_API_URL = process.env.NEXT_PUBLIC_API_URL || process.env.API_URL || 'https://gr4-swp-be2-sp25.onrender.com';
+const API_BASE = RAW_API_URL.replace(/\/+$/,'').replace(/\/api\/?$/,'');
 
 export async function GET(req: NextRequest) {
   try {
@@ -32,7 +34,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
     }
 
-    const resp = await fetch(`${API_URL}/api/Auth/me`, {
+  const resp = await fetch(`${API_BASE}/api/Auth/me`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${token}`,
