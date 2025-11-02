@@ -24,6 +24,7 @@ export interface SideBarUIProps {
   onToggle: () => void;
   user?: UserInfo;
   className?: string;
+  isAdmin?: boolean;
 }
 
 const SideBar: React.FC<SideBarUIProps> = ({
@@ -33,6 +34,7 @@ const SideBar: React.FC<SideBarUIProps> = ({
   onToggle,
   user,
   className = "",
+  isAdmin = false,
 }) => {
   const { user: authUser, loading: authLoading } = useAuth();
 
@@ -80,10 +82,26 @@ const SideBar: React.FC<SideBarUIProps> = ({
         className={`p-4 pl-6 flex items-center flex-shrink-0 border-b border-gray-200`}
       >
         <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+          <div className="w-10 h-10  rounded-full flex items-center justify-center flex-shrink-0">
             {/* Logo */}
-            <div className="w-8 h-8 bg-gray-700 rounded-full"></div>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/logo/eSwap_Logo_1.png"
+              alt="eSwap Logo"
+              className="w-full h-full object-contain"
+            />
           </div>
+          {isAdmin && (
+            <span
+              className={`text-2xl font-semibold text-gray-800 pl-10 whitespace-nowrap transition-opacity duration-200 ${
+                isExpanded
+                  ? "opacity-100 delay-150"
+                  : "opacity-0 absolute left-full"
+              }`}
+            >
+              Admin
+            </span>
+          )}
         </div>
       </div>
 

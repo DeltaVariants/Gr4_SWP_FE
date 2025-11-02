@@ -1,4 +1,5 @@
 import React from "react";
+import Link from "next/link";
 import WeatherWidget from "../widgets/WeatherWidget";
 
 export interface WeatherInfo {
@@ -6,9 +7,14 @@ export interface WeatherInfo {
   condition: string;
 }
 
+export interface BreadcrumbItem {
+  label: string;
+  path: string;
+}
+
 export interface HeaderUIProps {
   title: string;
-  subtitle: string;
+  breadcrumbs?: BreadcrumbItem[];
   weather?: WeatherInfo;
   hasNotifications?: boolean;
   onNotificationClick?: () => void;
@@ -18,7 +24,7 @@ export interface HeaderUIProps {
 
 export default function Header({
   title,
-  subtitle,
+  breadcrumbs,
   weather,
   hasNotifications = false,
   onNotificationClick,
@@ -27,16 +33,42 @@ export default function Header({
 }: HeaderUIProps) {
   return (
     <header
-      className={`bg-white border-b border-gray-200 px-6 py-4 shadow-sm ${className}`}
+      className={`bg-white border-b border-gray-200 px-6 py-2 shadow-sm h-[8vh] ${className}`}
     >
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold text-[#1E1E1E]">{title}</h1>
-          <p className="text-sm text-[#B3B3B3] mt-1">{subtitle}</p>
+      <div className="flex items-center justify-between h-full">
+        {/* Left Section - Title/Breadcrumbs */}
+        <div className="flex items-center">
+          {breadcrumbs && breadcrumbs.length > 0 ? (
+            // Breadcrumb Navigation
+            <div className="flex items-center gap-1 text-2xl font-semibold">
+              {breadcrumbs.map((item, index) => (
+                <React.Fragment key={item.path}>
+                  {/* Separator */}
+                  {index > 0 && <span className="text-gray-700">{">"}</span>}
+                  {/* Breadcrumb Link */}
+                  <Link
+                    href={item.path}
+                    className={`${
+                      index === 0
+                        ? "text-gray-900"
+                        : "text-gray-500 hover:text-gray-900"
+                    } hover:bg-gray-100 px-2 py-1 rounded transition-all duration-200`}
+                  >
+                    {item.label}
+                  </Link>
+                </React.Fragment>
+              ))}
+            </div>
+          ) : (
+            // Regular Title
+            <h1 className="text-2xl font-semibold text-gray-900 px-2 py-1">
+              {title}
+            </h1>
+          )}
         </div>
 
-        {/* Weather and Notifications */}
-        <div className="flex items-center space-x-4">
+        {/* Right Section - Weather and Notifications */}
+        <div className="flex items-center space-x-2">
           {/* Weather Widget */}
           {weather && (
             <WeatherWidget
@@ -45,8 +77,9 @@ export default function Header({
             />
           )}
 
-          {/* Notification Icons */}
+          {/* Action Buttons */}
           <div className="flex items-center space-x-2">
+            {/* Notification Button */}
             <button
               onClick={onNotificationClick}
               className="w-9 h-9 bg-indigo-100 rounded-lg flex items-center justify-center cursor-pointer hover:bg-[#d1e9fe] relative"
@@ -64,6 +97,7 @@ export default function Header({
               )}
             </button>
 
+            {/* Settings Button */}
             <button
               onClick={onSettingsClick}
               className="w-9 h-9 bg-indigo-100 rounded-lg flex items-center justify-center cursor-pointer hover:bg-[#d1e9fe]"

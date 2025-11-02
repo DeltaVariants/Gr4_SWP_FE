@@ -2,6 +2,8 @@
 import React from "react";
 import { usePathname } from "next/navigation";
 import MainLayout from "../../presentation/layouts/MainLayout";
+import CustomerHeader from "./home/components/CustomerHeader";
+import CustomerSideBar from "./home/components/CustomerSideBar";
 
 interface CustomerLayoutProps {
   children: React.ReactNode;
@@ -21,7 +23,7 @@ const getPageInfo = (pathname: string) => {
         title: "Find Station",
         subtitle: "Locate nearby battery swap stations and check availability.",
       };
-    case "/bookings":
+    case "/booking":
       return {
         title: "My Bookings",
         subtitle: "View and manage your battery swap reservations.",
@@ -31,7 +33,7 @@ const getPageInfo = (pathname: string) => {
         title: "Swap History",
         subtitle: "Review your past battery swap transactions and activity.",
       };
-    case "/billing":
+    case "/billing-plan":
       return {
         title: "Billing & Plans",
         subtitle: "Manage your subscription plans and payment methods.",
@@ -56,9 +58,10 @@ export default function CustomerLayout({ children }: CustomerLayoutProps) {
 
   return (
     <MainLayout
-      currentPath={pathname}
-      headerTitle={pageInfo.title}
-      headerSubtitle={pageInfo.subtitle}
+      sidebar={<CustomerSideBar currentPath={pathname} />}
+      header={
+        <CustomerHeader title={pageInfo.title} subtitle={pageInfo.subtitle} />
+      }
     >
       {children}
     </MainLayout>

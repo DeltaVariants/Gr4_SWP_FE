@@ -1,65 +1,93 @@
 "use client";
-
 import React from "react";
-import { BatteryAlert, StatsGrid, CarsSection } from "../../../presentation";
+import CarInfoCard from "./components/CarInfoCard";
+import BatteryStatusCard from "./components/BatteryStatusCard";
+import BookingInfoCard from "./components/BookingInfoCard";
+import StatsSummaryCard from "./components/StatsSummaryCard";
+import ActivitiesLog from "./components/ActivitiesLog";
+import RecentStationsList from "./components/RecentStationsList";
+import { MapSection } from "@/presentation/components/features";
 
-export default function HomePage() {
-  // Mock data - in a real app, this would come from state management or API
-  const statsData = {
-    currentBattery: 28,
-    monthlySwaps: 8,
-    remainingSwaps: 22,
-    carbonSaved: 245,
-  };
-
-  const carsData = [
-    {
-      id: "1",
-      brand: "Vinfast",
-      model: "VF8",
-      batteryPercentage: 58,
-      range: 1576,
-    },
-    {
-      id: "2",
-      brand: "Vinfast",
-      model: "VF8",
-      batteryPercentage: 58,
-      range: 1576,
-    },
-  ];
-
-  // Event handlers
+export default function CustomerHomePage() {
   const handleFindStation = () => {
     console.log("Find station clicked");
-    // Navigate to find stations page
+    // TODO: Navigate to find station page
   };
 
-  const handleDismissAlert = () => {
-    console.log("Dismiss alert clicked");
-    // Hide the battery alert
+  const handleViewAllActivities = () => {
+    console.log("View all activities clicked");
+    // TODO: Navigate to activities page
   };
 
-  const handleAddCar = () => {
-    console.log("Add car clicked");
-    // Navigate to add car page or open modal
+  const handleSearchStations = () => {
+    console.log("Search stations clicked");
+    // TODO: Implement search functionality
+  };
+
+  const handleStationSelect = (station: {
+    id: string;
+    name: string;
+    address: string;
+    distance: string;
+  }) => {
+    console.log("Station selected:", station);
+    // TODO: Navigate to station details or booking
   };
 
   return (
-    <>
-      {/* Battery Alert */}
-      <BatteryAlert
-        batteryPercentage={28}
-        range={85}
-        onFindStation={handleFindStation}
-        onDismiss={handleDismissAlert}
-      />
+    <div>
+      {/* Main Content - Takes remaining height after header */}
+      <div className="flex-1">
+        {/* Top Section - 60% height */}
+        <div className="h-[60%] grid grid-cols-2 gap-6 mb-6">
+          {/* Left Column */}
+          <div className="flex flex-col">
+            {/* Car Info Card */}
+            <div>
+              <CarInfoCard />
+            </div>
 
-      {/* Stats Cards */}
-      <StatsGrid data={statsData} />
+            {/* Battery Status Card */}
+            <div className="h-full">
+              <BatteryStatusCard onFindStation={handleFindStation} />
+            </div>
+          </div>
 
-      {/* My Cars Section */}
-      <CarsSection cars={carsData} onAddCar={handleAddCar} />
-    </>
+          {/* Right Column */}
+          <div className="flex flex-col gap-2">
+            {/* Booking Info Card */}
+            <div>
+              <BookingInfoCard />
+            </div>
+
+            {/* Stats Summary Card */}
+            <div>
+              <StatsSummaryCard />
+            </div>
+
+            {/* Activities Log */}
+            <div>
+              <ActivitiesLog onViewAll={handleViewAllActivities} />
+            </div>
+          </div>
+        </div>
+
+        {/* Bottom Section - 40% height */}
+        <div className="h-[40%] grid grid-cols-2 gap-6">
+          {/* Recent Stations List */}
+          <div className="h-full">
+            <RecentStationsList
+              onSearch={handleSearchStations}
+              onStationSelect={handleStationSelect}
+            />
+          </div>
+
+          {/* Map Section */}
+          <div className="h-full">
+            <MapSection />
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }

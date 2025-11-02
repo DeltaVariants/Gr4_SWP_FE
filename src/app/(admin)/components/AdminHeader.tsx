@@ -1,16 +1,19 @@
 "use client";
 import React, { useState } from "react";
-import Header from "@/presentation/components/common/Header";
+import Header, {
+  BreadcrumbItem,
+} from "@/presentation/components/common/Header";
 
-interface CustomerHeaderProps {
+interface AdminHeaderProps {
   title?: string;
   subtitle?: string;
+  breadcrumbs?: BreadcrumbItem[];
 }
 
-export default function CustomerHeader({
-  title = "Home",
-  subtitle = "Welcome back! Monitor your EV battery status and find nearby swap stations.",
-}: CustomerHeaderProps) {
+export default function AdminHeader({
+  title = "Dashboard",
+  breadcrumbs,
+}: AdminHeaderProps) {
   // Mock weather data - in real app, this would come from an API or context
   const weather = {
     temperature: "24°C",
@@ -34,7 +37,7 @@ export default function CustomerHeader({
   return (
     <Header
       title={title}
-      subtitle={subtitle}
+      breadcrumbs={breadcrumbs}
       weather={weather}
       hasNotifications={hasNotifications}
       onNotificationClick={handleNotificationClick}
