@@ -3,51 +3,56 @@
 
 import { Station } from "@/domain/entities/Station";
 import { IStationRepository } from "@/domain/repositories/StationRepository";
+import api from "@/lib/api";
 
 // Lớp này "Triển khai" (implements) cái "Hợp đồng" IStationRepository
 class StationRepositoryAPI implements IStationRepository {
-  private readonly baseURL: string;
-
-  constructor() {
-    this.baseURL = process.env.NEXT_PUBLIC_API_URL || "";
-
-    if (!this.baseURL) {
-      console.error("Base URL is not defined");
-    }
-  }
-
   /**
    * Triển khai cụ thể getAll() để fetch từ API
+   * Sử dụng axios instance đã được config sẵn trong @/lib/api
+   * để tự động xử lý auth headers và CORS
    */
   async getAll(): Promise<Station[]> {
     const endpoint = "/stations";
-    const url = `${this.baseURL}${endpoint}`;
 
     try {
-      const response = await fetch(url, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        //Tối ưu cache của Next.js (ví dụ: cache 1 giờ)
-        next: { revalidate: 3600 },
-      });
+      // Sử dụng axios instance thay vì fetch để có auth headers và CORS config
+      const response = await api.get<Station[]>(endpoint);
 
-      if (!response.ok) {
-        // Xử lý lỗi nếu API trả về status code không phải 2xx
-        console.error(`API error: ${response.status} ${response.statusText}`);
-        throw new Error(`Failed to fetch stations from:' ${url}`);
-      }
-      // Parse JSON
-      const data: Station[] = await response.json();
-
-      //trả về mảng stations
-      //giả sử API trả về cấu trúc khác, cần xử lí thêm ở đây
-      return data as Station[];
+      // Axios tự động parse JSON, data có sẵn trong response.data
+      return response.data;
     } catch (error) {
-      console.error("Error fetching stations:", error);
-      //trả về mảnh rỗng hoặc ném lỗi tùy nghiệp vụ
-      throw error;
+      // Axios error có cấu trúc khác với fetch error
+      const axiosError = error as {
+        response?: { status: number; statusText: string; data: unknown };
+        request?: unknown;
+        message?: string;
+      };
+      if (axiosError.response) {
+        // Server trả về response với status code lỗi
+        console.error(
+          `API error: ${axiosError.response.status}`,
+          axiosError.response.data
+        );
+        throw new Error(
+          `Failed to fetch stations: ${axiosError.response.status} ${axiosError.response.statusText}`
+        );
+      } else if (axiosError.request) {
+        // Request được gửi nhưng không nhận được response (có thể do CORS)
+        console.error(
+          "Network error - no response received:",
+          axiosError.request
+        );
+        throw new Error(
+          "Failed to fetch stations: Network error. This might be a CORS issue."
+        );
+      } else {
+        // Lỗi khác khi setup request
+        console.error("Error setting up request:", axiosError.message);
+        throw new Error(
+          `Failed to fetch stations: ${axiosError.message || "Unknown error"}`
+        );
+      }
     }
   }
 }
