@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
   const proto = req.headers.get('x-forwarded-proto') || 'http';
   const host = req.headers.get('host') || 'localhost:3000';
   const currentOrigin = `${proto}://${host}`;
-  const target = new URL(`${base.replace(/\/$/, '')}/api/Auth/google-login`);
+  const target = new URL(`${base.replace(/\/$/, '')}/Auth/google-login`);
   target.searchParams.set('origin', currentOrigin);
 
   // Simple redirect: send browser straight to backend endpoint. This avoids server-side fetch and intermediate 301 caching issues.

@@ -1,4 +1,6 @@
 "use client";
+
+import { withCustomerAuth } from '@/hoc/withAuth';
 import React, { useEffect } from "react";
 import { MapSection } from "../../../presentation";
 
@@ -10,4 +12,4 @@ const FindStationPage = () => {
   );
 };
 
-export default FindStationPage;
+export default withCustomerAuth(FindStationPage);

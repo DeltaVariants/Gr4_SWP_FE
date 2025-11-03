@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
+import { getRedirectPathByRole } from '@/lib/roleUtils';
 
 function CallbackContent() {
   const router = useRouter();
@@ -84,13 +85,21 @@ function CallbackContent() {
         }
 
         
+        // Create server session
         try {
-          await fetch('/api/auth/session', {
+          const sessionResponse = await fetch('/auth/session', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ token, role, maxAge: 60 * 60 }), // 1h
           });
-        } catch {}
+          
+          if (!sessionResponse.ok) {
+            const sessionError = await sessionResponse.text().catch(() => 'Unknown error');
+            console.error('[GoogleCallback] Session creation failed:', sessionError);
+          }
+        } catch (error) {
+          console.error('[GoogleCallback] Session creation error:', error);
+        }
 
         setIsAuthenticated(true);
 
@@ -107,20 +116,6 @@ function CallbackContent() {
 
     handle();
   }, [error, router, setIsAuthenticated, setUser, token, userInfoRaw]);
-
-  const getRedirectPathByRole = (role: string): string => {
-    switch ((role || '').toUpperCase()) {
-      case 'ADMIN':
-        return '/admin';
-      case 'EMPLOYEE':
-        return '/dashboardstaff';
-      case 'DRIVER':
-      case 'CUSTOMER':
-        return '/customer';
-      default:
-        return '/dashboardstaff';
-    }
-  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">

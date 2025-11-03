@@ -74,8 +74,8 @@ const bookingService = {
       // ignore
     }
 
-    const body = JSON.stringify({ bookingID, bookingStatus });
-  const res = await fetch(API.updateStatus, { method: 'PUT', headers, body, credentials: 'same-origin' });
+    const body = JSON.stringify({ id: bookingID, bookingStatus });
+    const res = await fetch(API.updateStatus, { method: 'PUT', headers, body, credentials: 'same-origin' });
     const payload = await res.json().catch(() => ({}));
     if (!res.ok) {
       throw new Error(payload?.message || 'Failed to update booking status');

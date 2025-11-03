@@ -1,4 +1,6 @@
 "use client";
+
+import { withCustomerAuth } from '@/hoc/withAuth';
 import React from "react";
 import CarInfoCard from "./components/CarInfoCard";
 import BatteryStatusCard from "./components/BatteryStatusCard";
@@ -8,7 +10,7 @@ import ActivitiesLog from "./components/ActivitiesLog";
 import RecentStationsList from "./components/RecentStationsList";
 import { MapSection } from "@/presentation/components/features";
 
-export default function CustomerHomePage() {
+export default withCustomerAuth(function CustomerHomePage() {
   const handleFindStation = () => {
     console.log("Find station clicked");
     // TODO: Navigate to find station page
@@ -90,4 +92,4 @@ export default function CustomerHomePage() {
       </div>
     </div>
   );
-}
+});

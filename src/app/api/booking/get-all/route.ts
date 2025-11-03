@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-// Normalize env base to avoid '/api/api' when joining
-const RAW_API_URL = process.env.NEXT_PUBLIC_API_URL || process.env.API_URL || 'https://gr4-swp-be2-sp25.onrender.com';
-const API_BASE = RAW_API_URL.replace(/\/+$/,'').replace(/\/api\/?$/,'');
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://gr4-swp-be2-sp25.onrender.com/api';
 
 export async function GET(req: NextRequest) {
   try {
@@ -28,10 +26,9 @@ export async function GET(req: NextRequest) {
     }
 
     // Determine stationID to use: prefer explicit query param, fallback to token claim when role=Staff
-  let stationID = stationIDParam || null;
+    let stationID = stationIDParam || null;
     const tokenRole = decodedToken ? (decodedToken.role || decodedToken.RoleName || decodedToken.roleName || decodedToken.unique_name) : null;
     const tokenStationId = decodedToken ? (decodedToken.stationId || decodedToken.StationID || decodedToken.stationID || decodedToken.StationId) : null;
-  let tokenStationName = decodedToken ? (decodedToken.stationName || decodedToken.StationName) : null;
 
     if (!stationID && tokenRole && tokenRole.toString().toLowerCase() === 'staff' && tokenStationId) {
       stationID = tokenStationId;
@@ -41,7 +38,7 @@ export async function GET(req: NextRequest) {
   // to obtain station association (some setups don't embed station in JWT).
     if (!stationID && rawToken) {
       try {
-        const meResp = await fetch(`${API_BASE}/api/Auth/me`, {
+        const meResp = await fetch(`${API_URL}/Auth/me`, {
           method: 'GET',
           headers: {
             'Authorization': `Bearer ${rawToken}`,
@@ -54,42 +51,22 @@ export async function GET(req: NextRequest) {
         try { meJson = meText ? JSON.parse(meText) : null; } catch { meJson = null; }
         const userObj = meJson && meJson.success ? meJson.data : meJson;
         const fetchedStation = userObj ? (userObj.stationId || userObj.StationID || userObj.stationID || userObj.StationId) : null;
-        const fetchedStationName = userObj ? (userObj.stationName || userObj.StationName) : null;
         if (fetchedStation) {
           stationID = fetchedStation;
         }
-        if (!tokenStationName && fetchedStationName) tokenStationName = fetchedStationName;
       } catch (e) {
         // ignore errors from profile fetch; we'll fall back to global endpoint
       }
     }
 
-    // If the token role is Staff and we still don't have a stationID, attempt fallback by stationName filtering
-    const isStaff = tokenRole && tokenRole.toString().toLowerCase() === 'staff';
-    if ((!stationID) && isStaff && tokenStationName) {
-      // Fetch all bookings from backend then filter by stationName
-      const urlAll = `${API_BASE}/api/Booking/GetAllBooking`;
-      const forwardHeaders: Record<string, string> = { 'Content-Type': 'application/json' };
-      if (rawToken) forwardHeaders['Authorization'] = `Bearer ${rawToken}`;
-      const respAll = await fetch(urlAll, { method: 'GET', headers: forwardHeaders });
-      const textAll = await respAll.text().catch(() => '');
-      let dataAll: any = [];
-      try { dataAll = textAll ? JSON.parse(textAll) : []; } catch { dataAll = []; }
-      if (!respAll.ok) {
-        // If BE forbids global list for staff, return clear 403 with guidance
-        return NextResponse.json({ success: false, message: 'Cannot determine stationID; backend did not allow global bookings list for Staff', backend: dataAll }, { status: respAll.status || 403 });
-      }
-      const list = Array.isArray(dataAll?.data) ? dataAll.data : (Array.isArray(dataAll) ? dataAll : []);
-      const filtered = list.filter((b: any) => {
-        const name = b?.stationName || b?.StationName || b?.station?.name || '';
-        return name && tokenStationName && String(name).toLowerCase() === String(tokenStationName).toLowerCase();
-      });
-      return NextResponse.json({ success: true, data: filtered });
+    // If the token role is Staff and we still don't have a stationID, reject early with clear 403
+    if ((!stationID) && tokenRole && tokenRole.toString().toLowerCase() === 'staff') {
+      return NextResponse.json({ success: false, message: 'Staff users must specify stationID or have station assigned in profile/token' }, { status: 403 });
     }
 
     const url = stationID
-      ? `${API_BASE}/api/Booking/GetAllBookingOfStation?stationID=${encodeURIComponent(stationID)}`
-      : `${API_BASE}/api/Booking/GetAllBooking`;
+      ? `${API_URL}/stations/bookings?stationID=${encodeURIComponent(stationID)}`
+      : `${API_URL}/bookings`;
 
     const forwardHeaders: Record<string, string> = { 'Content-Type': 'application/json' };
     try {

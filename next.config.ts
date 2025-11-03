@@ -17,7 +17,7 @@ const nextConfig: NextConfig = {
     ];
   },
   async rewrites() {
-    const apiBase = process.env.NEXT_PUBLIC_API_URL || 'https://gr4-swp-be2-sp25.onrender.com';
+    const apiBase = process.env.NEXT_PUBLIC_API_URL || 'https://gr4-swp-be2-sp25.onrender.com/api';
     return [
       {
         source: '/api/:path*',

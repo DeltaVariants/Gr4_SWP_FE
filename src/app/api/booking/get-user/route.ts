@@ -1,14 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-// Normalize env base to avoid '/api/api' when joining
-const RAW_API_URL = process.env.NEXT_PUBLIC_API_URL || process.env.API_URL || 'https://gr4-swp-be2-sp25.onrender.com';
-const API_BASE = RAW_API_URL.replace(/\/+$/,'').replace(/\/api\/?$/,'');
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://gr4-swp-be2-sp25.onrender.com/api';
 
 export async function GET(req: NextRequest) {
   try {
     // forward all query params to backend
     const qs = req.nextUrl.searchParams.toString();
-  const url = `${API_BASE}/api/Booking/GetAllBookingOfUser${qs ? '?' + qs : ''}`;
+    const url = `${API_URL}/users/bookings${qs ? '?' + qs : ''}`;
 
     const forwardHeaders: Record<string, string> = { 'Content-Type': 'application/json' };
     const incomingAuth = req.headers.get('authorization');

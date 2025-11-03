@@ -1,75 +1,205 @@
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 
-const STAFF_PATHS = ['/dashboardstaff', '/reservations', '/check-in', '/swap', '/inventory', '/reports'];
-const ADMIN_PATHS = ['/admin'];
-const AUTH_USER_PATHS = ['/profile'];
-const PUBLIC_AUTH_PATHS = ['/login', '/register', '/forgotpassword', '/resetpassword'];
+/**
+ * Authentication Wrapper Middleware
+ * Kiểm tra xác thực và phân quyền cho các routes
+ */
 
-function isIn(paths: string[], pathname: string) {
-  return paths.some((p) => pathname === p || pathname.startsWith(p + '/'));
+// Route configurations
+const ROUTE_CONFIG = {
+  // Public routes - không cần authentication
+  PUBLIC: [
+    '/',
+    '/api/auth/login',
+    '/api/auth/register',
+    '/api/auth/verify-email',
+    '/api/auth/send-reset',
+    '/api/auth/reset-password',
+    '/google-callback',
+  ],
+  
+  // Auth pages - chỉ cho phép truy cập khi CHƯA đăng nhập
+  AUTH_PAGES: [
+    '/login',
+    '/register', 
+    '/forgotpassword',
+    '/resetpassword',
+    '/newpassword',
+    '/verify-email',
+  ],
+  
+  // Protected routes - cần đăng nhập
+  PROTECTED: {
+    ADMIN: ['/admin', '/dashboard', '/battery-management', '/station-management', '/user-management', '/transactions-reports', '/system-config'],
+    STAFF: ['/dashboardstaff', '/reservations', '/check-in', '/swap', '/inventory', '/reports'],
+    CUSTOMER: ['/home', '/booking', '/findstation', '/history', '/billing-plan', '/support'],
+    ANY_AUTHENTICATED: ['/profile', '/logout'],
+  }
+};
+
+/**
+ * Check if path matches any patterns in the list
+ */
+function matchesPath(patterns: string[], pathname: string): boolean {
+  return patterns.some(pattern => {
+    // Exact match
+    if (pathname === pattern) return true;
+    // Prefix match with /
+    if (pathname.startsWith(pattern + '/')) return true;
+    return false;
+  });
 }
 
+/**
+ * Get authentication info from cookies
+ */
+function getAuthInfo(req: NextRequest) {
+  const token = req.cookies.get('token')?.value || req.cookies.get('accessToken')?.value;
+  const role = (req.cookies.get('role')?.value || '').toUpperCase();
+  
+  return {
+    token,
+    role,
+    isAuthenticated: Boolean(token),
+    isAdmin: role === 'ADMIN',
+    isStaff: role === 'STAFF' || role === 'EMPLOYEE',
+    isCustomer: role === 'CUSTOMER' || role === 'DRIVER',
+  };
+}
+
+/**
+ * Create redirect response
+ */
+function redirectTo(req: NextRequest, path: string, reason?: string): NextResponse {
+  const url = req.nextUrl.clone();
+  url.pathname = path;
+  if (reason) {
+    url.searchParams.set('reason', reason);
+  }
+  
+  console.log(`[Middleware] Redirecting from ${req.nextUrl.pathname} to ${path}${reason ? ` (${reason})` : ''}`);
+  return NextResponse.redirect(url);
+}
+
+/**
+ * Main middleware function
+ */
 export function middleware(req: NextRequest) {
   const pathname = req.nextUrl.pathname;
+  const auth = getAuthInfo(req);
+  
+  // Log for debugging (only in development)
+  if (process.env.NODE_ENV === 'development') {
+    console.log(`[Middleware] ${pathname} | Auth: ${auth.isAuthenticated} | Role: ${auth.role || 'none'}`);
+  }
 
-  const token = req.cookies.get('token')?.value;
-  const role = (req.cookies.get('role')?.value || '').toUpperCase();
-  const hasAuth = Boolean(token && role);
-  // Optional dev flag to allow viewing staff UI with DRIVER role
-  const allowDriverStaff = process.env.NEXT_PUBLIC_ALLOW_DRIVER_STAFF === '1';
-
-  const inStaff = isIn(STAFF_PATHS, pathname);
-  const inAdmin = isIn(ADMIN_PATHS, pathname);
-  const inAuthUser = isIn(AUTH_USER_PATHS, pathname);
-  const inPublicAuth = isIn(PUBLIC_AUTH_PATHS, pathname);
-
-  // Cho phép truy cập công khai các route employee (STAFF_PATHS)
-  if (inStaff) {
+  // 1. Allow public routes
+  if (matchesPath(ROUTE_CONFIG.PUBLIC, pathname)) {
     return NextResponse.next();
   }
 
-  // Nếu đã đăng nhập mà vào /login, /register, ... thì đẩy về homepage
-  if (inPublicAuth && hasAuth) {
-    // Trong môi trường phát triển cho phép truy cập trang login/register
-    // ngay cả khi cookie auth tồn tại để thuận tiện cho việc dev/testing.
-    if (process.env.NODE_ENV === 'development') {
-      return NextResponse.next();
+  // 2. Handle auth pages (login, register, etc.)
+  if (matchesPath(ROUTE_CONFIG.AUTH_PAGES, pathname)) {
+    // Nếu đã đăng nhập, redirect về trang tương ứng với role
+    if (auth.isAuthenticated) {
+      if (auth.isAdmin) return redirectTo(req, '/admin/dashboard', 'already_authenticated');
+      if (auth.isStaff) return redirectTo(req, '/dashboardstaff', 'already_authenticated');
+      if (auth.isCustomer) return redirectTo(req, '/home', 'already_authenticated');
+      return redirectTo(req, '/', 'already_authenticated');
     }
-
-    const url = req.nextUrl.clone();
-    url.pathname = '/';
-    return NextResponse.redirect(url);
+    // Chưa đăng nhập thì cho phép truy cập
+    return NextResponse.next();
   }
 
-  if (inAdmin && role !== 'ADMIN') {
-    const url = req.nextUrl.clone();
-    url.pathname = '/';
-    return NextResponse.redirect(url);
+  // 3. Check protected routes - cần authentication
+  
+  // 3a. Admin routes
+  if (matchesPath(ROUTE_CONFIG.PROTECTED.ADMIN, pathname)) {
+    if (!auth.isAuthenticated) {
+      return redirectTo(req, '/login', 'authentication_required');
+    }
+    if (!auth.isAdmin) {
+      return redirectTo(req, '/', 'unauthorized_role');
+    }
+    return NextResponse.next();
   }
 
-  if (inAuthUser && !token) {
-    const url = req.nextUrl.clone();
-    url.pathname = '/login';
-    return NextResponse.redirect(url);
+  // 3b. Staff routes
+  if (matchesPath(ROUTE_CONFIG.PROTECTED.STAFF, pathname)) {
+    if (!auth.isAuthenticated) {
+      return redirectTo(req, '/login', 'authentication_required');
+    }
+    if (!auth.isStaff) {
+      return redirectTo(req, '/', 'unauthorized_role');
+    }
+    return NextResponse.next();
   }
 
+  // 3c. Customer routes
+  if (matchesPath(ROUTE_CONFIG.PROTECTED.CUSTOMER, pathname)) {
+    if (!auth.isAuthenticated) {
+      return redirectTo(req, '/login', 'authentication_required');
+    }
+    if (!auth.isCustomer) {
+      return redirectTo(req, '/', 'unauthorized_role');
+    }
+    return NextResponse.next();
+  }
+
+  // 3d. Any authenticated user routes
+  if (matchesPath(ROUTE_CONFIG.PROTECTED.ANY_AUTHENTICATED, pathname)) {
+    if (!auth.isAuthenticated) {
+      return redirectTo(req, '/login', 'authentication_required');
+    }
+    return NextResponse.next();
+  }
+
+  // 4. Default - allow access
   return NextResponse.next();
 }
 
+/**
+ * Middleware matcher configuration
+ * Chỉ chạy middleware cho các routes cần thiết
+ */
 export const config = {
   matcher: [
+    // Auth pages
+    '/login',
+    '/register',
+    '/forgotpassword',
+    '/resetpassword',
+    '/newpassword',
+    '/verify-email',
+    
+    // Admin routes
+    '/admin/:path*',
+    '/dashboard/:path*',
+    '/battery-management/:path*',
+    '/station-management/:path*',
+    '/user-management/:path*',
+    '/transactions-reports/:path*',
+    '/system-config/:path*',
+    
+    // Staff routes
     '/dashboardstaff/:path*',
     '/reservations/:path*',
     '/check-in/:path*',
     '/swap/:path*',
     '/inventory/:path*',
     '/reports/:path*',
-    '/admin/:path*',
+    
+    // Customer routes
+    '/home/:path*',
+    '/booking/:path*',
+    '/findstation/:path*',
+    '/history/:path*',
+    '/billing-plan/:path*',
+    '/support/:path*',
+    
+    // Common protected routes
     '/profile/:path*',
-    '/login',
-    '/register',
-    '/forgotpassword',
-    '/resetpassword',
+    '/logout',
   ],
 };

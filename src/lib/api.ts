@@ -2,11 +2,8 @@ import axios from 'axios';
 import { refreshAccessToken } from './refreshToken';
 
 // Tạo instance axios với cấu hình mặc định
-// Normalize baseURL to avoid double "/api" when services pass paths starting with "/api/..."
-const RAW_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://gr4-swp-be2-sp25.onrender.com';
-const NORMALIZED_BASE = RAW_BASE.replace(/\/+$/,'').replace(/\/api\/?$/,'');
 const api = axios.create({
-  baseURL: NORMALIZED_BASE,
+  baseURL: process.env.NEXT_PUBLIC_API_URL || 'https://gr4-swp-be2-sp25.onrender.com/api',
   headers: {
     'Content-Type': 'application/json',
   },

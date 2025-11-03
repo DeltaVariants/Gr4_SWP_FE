@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://gr4-swp-be2-sp25.onrender.com';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://gr4-swp-be2-sp25.onrender.com/api';
 
 interface ResetPasswordRequest {
   email: string;
@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
     };
 
     
-    const response = await fetch(`${API_URL}/api/Auth/reset-password`, {
+    const response = await fetch(`${API_URL}/Auth/reset-password`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

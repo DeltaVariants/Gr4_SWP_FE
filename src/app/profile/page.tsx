@@ -1,13 +1,15 @@
 "use client";
 
+
+import { withAuth } from '@/hoc/withAuth';
 import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import SideBar, { NavigationItem, UserInfo } from '@/presentation/components/common/SideBar';
-import { CustomerSideBar } from '../(customer)/home/components';
+import CustomerSideBar from '@/app/(customer)/home/components/CustomerSideBar';
 import { ProfileLayout } from '@/presentation/components/ui/profile/ProfileLayout';
 import { usePathname } from 'next/navigation';
 
-export default function ProfilePage() {
+export default withAuth(function ProfilePage() {
   const { user } = useAuth();
   const pathname = usePathname();
   const [isExpanded, setIsExpanded] = useState(true);
@@ -53,4 +55,4 @@ export default function ProfilePage() {
       </div>
     </div>
   );
-}
+});

@@ -55,7 +55,7 @@ export function ProfileCard() {
         const resp = await fetch('/api/auth/me', { cache: 'no-store' });
         if (!resp.ok) {
           const payload = await resp.json().catch(() => ({}));
-          const message = payload?.message || 'Phiên đăng nhập đã hết hạn';
+          const message = payload?.message || 'Your session has expired.';
           if (!cancelled) setError(message);
           return;
         }
@@ -76,7 +76,7 @@ export function ProfileCard() {
           setPhoneInput(normalized.phone || '');
         }
       } catch (e: unknown) {
-        const message = e instanceof Error ? e.message : 'Lỗi không xác định';
+        const message = e instanceof Error ? e.message : 'Unknown error';
         if (!cancelled) setError(message);
       } finally {
         if (!cancelled) setLoading(false);
@@ -107,22 +107,22 @@ export function ProfileCard() {
   if (!profile) {
     return (
       <div className="p-3 rounded-md bg-yellow-50 text-yellow-800 border border-yellow-200 text-sm">
-        Không có dữ liệu hồ sơ
+        No profile data available
       </div>
     );
   }
 
   return (
     <div className="space-y-4">
-      <div className="bg-white rounded-lg p-4 shadow-sm">
+      <div className="bg-white rounded-lg p-6 shadow-md border border-gray-100">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-full bg-slate-100 flex items-center justify-center text-xl font-semibold text-slate-700">{String(profile.name || '').split(' ').map(n=>n[0]).slice(0,2).join('').toUpperCase()}</div>
+            
             <div>
-              <div className="text-lg font-semibold text-gray-900">{profile.name || '-'}</div>
-              <div className="text-sm text-gray-500">{profile.email || '-'}</div>
+              <div className="text-xl font-bold text-gray-900">{profile.name || '-'}</div>
+              <div className="text-sm font-medium text-gray-600">{profile.email || '-'}</div>
               {((profile.stationName && profile.stationName !== '') || profile.stationId) && (
-                <div className="text-xs text-gray-400 mt-1 flex items-center gap-2">
+                <div className="text-xs text-gray-500 font-medium mt-1 flex items-center gap-2">
                   <span className="inline-block">Trạm: {profile.stationName || profile.stationId}</span>
                   {/* show stationId copy for staff/admin */}
                   {(() => {
@@ -152,28 +152,28 @@ export function ProfileCard() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <button onClick={() => setEditing(true)} title="Edit profile" className="inline-flex items-center gap-2 px-3 py-2 rounded-md bg-blue-600 text-white hover:bg-blue-700">
+          <div className="flex items-center gap-3">
+            <button onClick={() => setEditing(true)} title="Edit profile" className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-gradient-to-r from-blue-500 to-blue-600 text-white font-medium shadow-md hover:from-blue-600 hover:to-blue-700 transition-all duration-200 hover:shadow-lg">
               <Edit2 className="w-4 h-4" /> <span className="text-sm">Edit</span>
             </button>
-            <button onClick={() => setPwdOpen(true)} title="Change password" className="inline-flex items-center gap-2 px-3 py-2 rounded-md bg-rose-500 text-white hover:bg-rose-600">
+            <button onClick={() => setPwdOpen(true)} title="Change password" className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-medium shadow-md hover:from-emerald-600 hover:to-teal-700 transition-all duration-200 hover:shadow-lg">
               <Lock className="w-4 h-4" /> <span className="text-sm">Change</span>
             </button>
           </div>
         </div>
 
-        <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-5">
           <div>
-            <label className="block text-xs text-gray-500">Họ tên</label>
-            <input value={nameInput} onChange={(e) => setNameInput(e.target.value)} readOnly={!editing} className={`mt-1 p-2 rounded-md w-full ${editing ? 'border-gray-300' : 'bg-transparent border-0'}`} />
+            <label className="block text-sm font-semibold text-gray-700 mb-2">Name</label>
+            <input value={nameInput} onChange={(e) => setNameInput(e.target.value)} readOnly={!editing} className={`mt-1 p-3 rounded-lg w-full text-gray-900 font-medium ${editing ? 'border-2 border-blue-300 bg-blue-50 focus:border-blue-500 focus:ring-2 focus:ring-blue-200' : 'bg-gray-50 border-0'}`} />
           </div>
           <div>
-            <label className="block text-xs text-gray-500">Số điện thoại</label>
-            <input value={phoneInput} onChange={(e) => setPhoneInput(e.target.value)} readOnly={!editing} className={`mt-1 p-2 rounded-md w-full ${editing ? 'border-gray-300' : 'bg-transparent border-0'}`} />
+            <label className="block text-sm font-semibold text-gray-700 mb-2">Phone Number</label>
+            <input value={phoneInput} onChange={(e) => setPhoneInput(e.target.value)} readOnly={!editing} className={`mt-1 p-3 rounded-lg w-full text-gray-900 font-medium ${editing ? 'border-2 border-blue-300 bg-blue-50 focus:border-blue-500 focus:ring-2 focus:ring-blue-200' : 'bg-gray-50 border-0'}`} />
           </div>
         </div>
 
-        <div className="mt-4 flex items-center gap-2">
+        <div className="mt-6 flex items-center gap-3">
           {editing ? (
             <>
               <button onClick={async () => {
@@ -190,44 +190,49 @@ export function ProfileCard() {
                   const msg = err && typeof err === 'object' && 'message' in (err as Record<string, unknown>) ? String((err as Record<string, unknown>)['message']) : String(err || 'Failed to update');
                   toast.showToast({ type: 'error', message: msg });
                 } finally { setLoading(false); }
-              }} className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-emerald-600 text-white">
+              }} className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-semibold shadow-md hover:from-emerald-600 hover:to-teal-700 transition-all">
                 <Check className="w-4 h-4" /> Save
               </button>
-              <button onClick={() => { setEditing(false); setNameInput(profile.name || ''); setPhoneInput(profile.phone || ''); }} className="inline-flex items-center gap-2 px-3 py-2 rounded-md bg-gray-100">
+              <button onClick={() => { setEditing(false); setNameInput(profile.name || ''); setPhoneInput(profile.phone || ''); }} className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-gray-200 text-gray-700 font-semibold hover:bg-gray-300 transition-all">
                 <X className="w-4 h-4" /> Cancel
               </button>
             </>
           ) : (
-            <div className="text-sm text-gray-500">Đã cập nhật lần cuối: <span className="font-medium text-gray-700">—</span></div>
+            <div className="text-sm text-gray-600 font-medium">Đã cập nhật lần cuối: <span className="font-semibold text-gray-800">—</span></div>
           )}
         </div>
       </div>
 
       {/* Change password modal */}
       {pwdOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div className="absolute inset-0 bg-black/40" onClick={() => setPwdOpen(false)} />
-          <div className="relative bg-white rounded-xl p-6 w-[480px] shadow-lg">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold">Thay đổi mật khẩu</h3>
-              <button onClick={() => setPwdOpen(false)} className="text-sm text-gray-500">Close</button>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setPwdOpen(false)} />
+          <div className="relative bg-white rounded-2xl p-8 w-full max-w-md shadow-2xl border border-gray-100">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                <Lock className="w-6 h-6 text-emerald-600" />
+                Thay đổi mật khẩu
+              </h3>
+              <button onClick={() => setPwdOpen(false)} className="text-gray-400 hover:text-gray-600 transition-colors">
+                <X className="w-5 h-5" />
+              </button>
             </div>
-            <div className="mt-4 space-y-3">
+            <div className="space-y-5">
               <div>
-                <label className="block text-xs text-gray-600">Mật khẩu hiện tại</label>
-                <input type="password" value={currentPwd} onChange={(e) => setCurrentPwd(e.target.value)} className="mt-2 w-full p-2 border rounded-md" />
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Mật khẩu hiện tại</label>
+                <input type="password" value={currentPwd} onChange={(e) => setCurrentPwd(e.target.value)} className="w-full p-3 border-2 border-gray-200 rounded-lg focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all" placeholder="Nhập mật khẩu hiện tại" />
               </div>
               <div>
-                <label className="block text-xs text-gray-600">Mật khẩu mới</label>
-                <input type="password" value={newPwd} onChange={(e) => setNewPwd(e.target.value)} className="mt-2 w-full p-2 border rounded-md" />
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Mật khẩu mới</label>
+                <input type="password" value={newPwd} onChange={(e) => setNewPwd(e.target.value)} className="w-full p-3 border-2 border-gray-200 rounded-lg focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all" placeholder="Nhập mật khẩu mới" />
               </div>
               <div>
-                <label className="block text-xs text-gray-600">Xác nhận mật khẩu mới</label>
-                <input type="password" value={confirmPwd} onChange={(e) => setConfirmPwd(e.target.value)} className="mt-2 w-full p-2 border rounded-md" />
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Xác nhận mật khẩu mới</label>
+                <input type="password" value={confirmPwd} onChange={(e) => setConfirmPwd(e.target.value)} className="w-full p-3 border-2 border-gray-200 rounded-lg focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all" placeholder="Nhập lại mật khẩu mới" />
               </div>
             </div>
-            <div className="mt-6 flex justify-end gap-2">
-              <button onClick={() => setPwdOpen(false)} className="px-4 py-2 rounded-md bg-gray-100">Hủy</button>
+            <div className="mt-8 flex justify-end gap-3">
+              <button onClick={() => setPwdOpen(false)} className="px-5 py-2.5 rounded-lg bg-gray-200 text-gray-700 font-semibold hover:bg-gray-300 transition-all">Hủy</button>
               <button onClick={async () => {
                 if (!newPwd || newPwd !== confirmPwd) { toast.showToast({ type: 'error', message: 'Mật khẩu mới không khớp' }); return; }
                 try {
@@ -243,7 +248,7 @@ export function ProfileCard() {
                   const msg = err && typeof err === 'object' && 'message' in (err as Record<string, unknown>) ? String((err as Record<string, unknown>)['message']) : String(err || 'Failed');
                   toast.showToast({ type: 'error', message: msg });
                 } finally { setLoading(false); }
-              }} className="px-4 py-2 rounded-md bg-rose-600 text-white">Đổi mật khẩu</button>
+              }} className="px-6 py-2.5 rounded-lg bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-semibold shadow-lg hover:from-emerald-600 hover:to-teal-700 transition-all hover:shadow-xl">Đổi mật khẩu</button>
             </div>
           </div>
         </div>
