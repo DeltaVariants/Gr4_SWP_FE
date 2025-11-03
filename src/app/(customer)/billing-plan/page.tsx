@@ -1,3 +1,7 @@
+'use client';
+
+
+import { withCustomerAuth } from '@/hoc/withAuth';
 import React from "react";
 
 const BillingPlanPage = () => {
@@ -8,4 +12,4 @@ const BillingPlanPage = () => {
   );
 };
 
-export default BillingPlanPage;
+export default withCustomerAuth(BillingPlanPage);

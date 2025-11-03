@@ -154,7 +154,7 @@ export const authService = {
   // Đăng xuất
   async logout(): Promise<void> {
     try {
-      await api.post('/api/Auth/logout');
+      await api.post('/Auth/logout');
     } catch (error: any) {
       // Không cần throw error cho logout
       console.error('Logout error:', error);
@@ -164,7 +164,7 @@ export const authService = {
   // Quên mật khẩu
   async forgotPassword(email: string): Promise<ApiResponse<any>> {
     try {
-      const response = await api.post('/api/Auth/forgot-password', { email });
+      const response = await api.post('/Auth/forgot-password', { email });
       return {
         success: true,
         data: response.data,
@@ -183,7 +183,7 @@ export const authService = {
   // Reset mật khẩu
   async resetPassword(token: string, newPassword: string): Promise<ApiResponse<any>> {
     try {
-      const response = await api.post('/api/Auth/reset-password', {
+      const response = await api.post('/Auth/reset-password', {
         token,
         newPassword
       });
@@ -205,7 +205,7 @@ export const authService = {
   // Xác thực email
   async verifyEmail(token: string): Promise<ApiResponse<any>> {
     try {
-      const response = await api.post('/api/Auth/verify-email', { token });
+      const response = await api.post('/Auth/verify-email', { token });
       return {
         success: true,
         data: response.data,
@@ -229,7 +229,7 @@ export const authService = {
         throw new Error('No refresh token available');
       }
 
-      const response = await api.post('/api/Auth/refresh', {
+      const response = await api.post('/Auth/refresh', {
         refreshToken: refreshToken
       });
       
@@ -252,7 +252,7 @@ export const authService = {
   async revokeToken(): Promise<ApiResponse<any>> {
     try {
       const token = localStorage.getItem('accessToken');
-      const response = await api.post('/api/Auth/revoke', {}, {
+      const response = await api.post('/Auth/revoke', {}, {
         headers: {
           'Authorization': `Bearer ${token}`
         }

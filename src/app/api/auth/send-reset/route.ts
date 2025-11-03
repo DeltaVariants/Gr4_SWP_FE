@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 // Use a sensible fallback like other API routes so local dev still works
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://gr4-swp-be2-sp25.onrender.com';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://gr4-swp-be2-sp25.onrender.com/api';
 
 interface ForgotPasswordRequest {
   email: string;
@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, message: 'Backend API URL not configured' }, { status: 500 });
     }
 
-    const url = `${API_URL}/api/Auth/forgot-password`;
+    const url = `${API_URL}/Auth/forgot-password`;
     const response = await fetch(url, {
       method: 'POST',
       headers: {

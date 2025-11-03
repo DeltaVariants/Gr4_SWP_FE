@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://gr4-swp-be2-sp25.onrender.com';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://gr4-swp-be2-sp25.onrender.com/api';
 
 export const refreshAccessToken = async () => {
   try {
@@ -9,7 +9,7 @@ export const refreshAccessToken = async () => {
       throw new Error('No refresh token found');
     }
 
-    const response = await axios.post(`${API_URL}/api/Auth/refresh`, {
+    const response = await axios.post(`${API_URL}/Auth/refresh`, {
       refreshToken,
     });
 

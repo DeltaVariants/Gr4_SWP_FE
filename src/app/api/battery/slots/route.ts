@@ -1,13 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://gr4-swp-be2-sp25.onrender.com'
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://gr4-swp-be2-sp25.onrender.com/api';
 
 export async function GET(req: NextRequest) {
   try {
     const stationID = req.nextUrl.searchParams.get('stationID');
-    const url = stationID
-      ? `${API_URL}/api/BatterySlot/getAllBatterySlotsByStationID/${encodeURIComponent(stationID)}`
-      : `${API_URL}/api/BatterySlot/getAllBatterySlotsByStationID/`;
+    
+    if (!stationID) {
+      return NextResponse.json({ success: false, message: 'stationID is required' }, { status: 400 });
+    }
+    
+    const url = `${API_URL}/battery-slots/${encodeURIComponent(stationID)}/battery-slots`;
 
     const forwardHeaders: Record<string, string> = { 'Content-Type': 'application/json' };
     const incomingAuth = req.headers.get('authorization');

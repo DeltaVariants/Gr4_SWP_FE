@@ -1,3 +1,7 @@
+'use client';
+
+
+import { withCustomerAuth } from '@/hoc/withAuth';
 import React from "react";
 
 const BookingPage = () => {
@@ -6,4 +10,4 @@ const BookingPage = () => {
   );
 };
 
-export default BookingPage;
+export default withCustomerAuth(BookingPage);

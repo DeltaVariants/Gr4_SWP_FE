@@ -1,7 +1,11 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://gr4-swp-be2-sp25.onrender.com';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://gr4-swp-be2-sp25.onrender.com/api';
+
+if (!process.env.NEXT_PUBLIC_API_URL) {
+  console.warn('[auth/login] NEXT_PUBLIC_API_URL not set, using fallback');
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -16,7 +20,7 @@ export async function POST(request: NextRequest) {
     }
 
     
-    const response = await fetch(`${API_URL}/api/Auth/login`, {
+    const response = await fetch(`${API_URL}/Auth/login`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

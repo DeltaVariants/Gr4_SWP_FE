@@ -1,11 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://gr4-swp-be2-sp25.onrender.com';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://gr4-swp-be2-sp25.onrender.com/api';
 
 export async function PUT(req: NextRequest) {
   try {
     const body = await req.json().catch(() => ({}));
-    const url = `${API_URL}/api/Booking/UpdateBookingStatus`;
+    const bookingId = body.id || body.bookingId || body.BookingID;
+    
+    if (!bookingId) {
+      return NextResponse.json({ success: false, message: 'Booking ID is required' }, { status: 400 });
+    }
+    
+    const url = `${API_URL}/bookings/${bookingId}`;
 
     const forwardHeaders: Record<string, string> = { 'Content-Type': 'application/json' };
     try {
@@ -22,7 +28,7 @@ export async function PUT(req: NextRequest) {
       if (incomingCookie) forwardHeaders['Cookie'] = incomingCookie;
     } catch (e) {}
 
-    const response = await fetch(url, { method: 'PUT', headers: forwardHeaders, body: JSON.stringify(body) });
+    const response = await fetch(url, { method: 'PATCH', headers: forwardHeaders, body: JSON.stringify(body) });
     let data: any = null;
     try { data = await response.json(); } catch (e) { data = { raw: await response.text().catch(() => '') }; }
 

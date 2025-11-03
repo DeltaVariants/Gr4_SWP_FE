@@ -1,4 +1,8 @@
-export default function UserManagement() {
+'use client';
+
+
+import { withAdminAuth } from '@/hoc/withAuth';
+export default withAdminAuth(function UserManagement() {
   return (
     <div className="p-6">
       <div className="bg-white rounded-lg shadow-sm p-6">
@@ -9,4 +13,4 @@ export default function UserManagement() {
       </div>
     </div>
   );
-}
+});

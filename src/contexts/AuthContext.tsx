@@ -2,7 +2,8 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
-import { authService, LoginRequest, User, RegisterRequest } from '@/services/authService';
+import { authService, LoginRequest, User, RegisterRequest } from '@/application/services/authService';
+import { getRedirectPathByRole } from '@/lib/roleUtils';
 
 // Định nghĩa kiểu dữ liệu cho context
 interface AuthContextType {
@@ -85,6 +86,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const login = async (credentials: LoginRequest) => {
     setLoading(true);
     try {
+      // Clear old tokens first to prevent conflicts
+      try {
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
+      } catch (e) {
+        console.warn('Failed to clear old tokens', e);
+      }
+
       // Gọi API đăng nhập
       const response = await authService.login(credentials);
 
@@ -280,28 +289,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       };
     } finally {
       setLoading(false);
-    }
-  };
-
-  // Helper function để xác định redirect path dựa vào role
-  const getRedirectPathByRole = (_role?: string): string => {
-    if (!_role) return '/home';
-    const role = String(_role).trim().toUpperCase();
-    // Map role names (case-insensitive) to application routes
-    switch (role) {
-      case 'ADMIN':
-      case 'ADMINISTRATOR':
-        return '/admin';
-      case 'EMPLOYEE':
-      case 'STAFF':
-        return '/dashboardstaff';
-      case 'DRIVER':
-      case 'CUSTOMER':
-      case 'CLIENT':
-        // Redirect drivers/customers to the public home page
-        return '/home';
-      default:
-        return '/home';
     }
   };
 

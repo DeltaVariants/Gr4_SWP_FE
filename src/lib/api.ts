@@ -3,7 +3,7 @@ import { refreshAccessToken } from './refreshToken';
 
 // Tạo instance axios với cấu hình mặc định
 const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || 'https://gr4-swp-be2-sp25.onrender.com',
+  baseURL: process.env.NEXT_PUBLIC_API_URL || 'https://gr4-swp-be2-sp25.onrender.com/api',
   headers: {
     'Content-Type': 'application/json',
   },

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://gr4-swp-be2-sp25.onrender.com';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://gr4-swp-be2-sp25.onrender.com/api';
 
 export async function GET(req: NextRequest) {
   try {
@@ -38,7 +38,7 @@ export async function GET(req: NextRequest) {
   // to obtain station association (some setups don't embed station in JWT).
     if (!stationID && rawToken) {
       try {
-        const meResp = await fetch(`${API_URL}/api/Auth/me`, {
+        const meResp = await fetch(`${API_URL}/Auth/me`, {
           method: 'GET',
           headers: {
             'Authorization': `Bearer ${rawToken}`,
@@ -65,8 +65,8 @@ export async function GET(req: NextRequest) {
     }
 
     const url = stationID
-      ? `${API_URL}/api/Booking/GetAllBookingOfStation?stationID=${encodeURIComponent(stationID)}`
-      : `${API_URL}/api/Booking/GetAllBooking`;
+      ? `${API_URL}/stations/bookings?stationID=${encodeURIComponent(stationID)}`
+      : `${API_URL}/bookings`;
 
     const forwardHeaders: Record<string, string> = { 'Content-Type': 'application/json' };
     try {
