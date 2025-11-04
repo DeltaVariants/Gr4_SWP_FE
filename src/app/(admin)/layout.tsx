@@ -4,6 +4,7 @@ import { usePathname } from "next/navigation";
 import MainLayout from "../../presentation/layouts/MainLayout";
 import AdminHeader from "./components/AdminHeader";
 import AdminSidebar from "./components/AdminSidebar";
+import AdminAuthGuard from "./components/AdminAuthGuard";
 import { BreadcrumbItem } from "@/presentation/components/common/Header";
 
 interface AdminLayoutProps {
@@ -136,17 +137,19 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   const breadcrumbs = getBreadcrumbs(pathname);
 
   return (
-    <MainLayout
-      sidebar={<AdminSidebar currentPath={pathname} />}
-      header={
-        <AdminHeader
-          title={pageInfo.title}
-          subtitle={pageInfo.subtitle}
-          breadcrumbs={breadcrumbs}
-        />
-      }
-    >
-      {children}
-    </MainLayout>
+    <AdminAuthGuard>
+      <MainLayout
+        sidebar={<AdminSidebar currentPath={pathname} />}
+        header={
+          <AdminHeader
+            title={pageInfo.title}
+            subtitle={pageInfo.subtitle}
+            breadcrumbs={breadcrumbs}
+          />
+        }
+      >
+        {children}
+      </MainLayout>
+    </AdminAuthGuard>
   );
 }
