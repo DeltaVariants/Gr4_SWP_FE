@@ -32,14 +32,19 @@ export default withStaffAuth(function ReportsPage() {
         const list = raw ? JSON.parse(raw) : [];
         setTransfers(list as Record<string, unknown>[]);
 
-        // Load revenue data
+        // TODO: Load revenue data - Currently disabled due to 403 permission
+        // Backend requires Admin role for /reports/daily-revenue endpoint
+        // Uncomment when backend grants Staff access or provides separate endpoint
+        /*
         try {
           const today = new Date().toISOString().split('T')[0];
           const revenue = await reportsService.getRevenueReportInDay({ date: today });
           setRevenueData(revenue);
-        } catch (e) {
-          console.error('Failed to load revenue:', e);
+        } catch (e: any) {
+          console.warn('[Reports] ⚠️ Could not load revenue data:', e?.message);
+          setRevenueData(null);
         }
+        */
 
         // Load battery data
         try {
@@ -129,19 +134,12 @@ export default withStaffAuth(function ReportsPage() {
             <h2 className="text-3xl font-bold mb-2">Daily Summary Report</h2>
             <p className="text-purple-100">Báo cáo tổng hợp hoạt động hôm nay</p>
           </div>
-          <button
-            onClick={exportReport}
-            disabled={filtered.length === 0}
-            className="h-12 px-6 rounded-xl bg-white text-purple-600 font-semibold shadow-lg hover:bg-purple-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2"
-          >
-            <Download className="w-5 h-5" />
-            Export CSV
-          </button>
+          
         </div>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-xl p-6 border border-emerald-200">
           <div className="flex items-center justify-between mb-4">
             <div>
@@ -155,18 +153,20 @@ export default withStaffAuth(function ReportsPage() {
           <div className="text-xs text-emerald-700">Total logged: {transfers.length}</div>
         </div>
 
-        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-6 border border-blue-200">
+        {/* TODO: Revenue card - Hidden until backend grants Staff permission 
+        <div className="bg-gradient-to-br from-gray-50 to-slate-50 rounded-xl p-6 border-2 border-dashed border-gray-300 opacity-60">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <div className="text-sm text-blue-700 font-medium mb-1">Doanh thu</div>
-              <div className="text-3xl font-bold text-blue-900">{totalRevenue.toLocaleString()}</div>
+              <div className="text-sm text-gray-600 font-medium mb-1">Doanh thu</div>
+              <div className="text-2xl font-bold text-gray-400">🔒 Chưa khả dụng</div>
             </div>
-            <div className="w-12 h-12 rounded-full bg-blue-500 flex items-center justify-center text-white">
+            <div className="w-12 h-12 rounded-full bg-gray-300 flex items-center justify-center text-white">
               <DollarSign className="w-6 h-6" />
             </div>
           </div>
-          <div className="text-xs text-blue-700">VND</div>
+          <div className="text-xs text-gray-500">Yêu cầu quyền Admin</div>
         </div>
+        */}
 
         <div className="bg-gradient-to-br from-rose-50 to-red-50 rounded-xl p-6 border border-rose-200">
           <div className="flex items-center justify-between mb-4">

@@ -3,10 +3,20 @@
 import { withStaffAuth } from '@/hoc/withAuth';
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useSearchParams } from 'next/navigation';
-import transferService from '@/application/services/transferService';
+import { useSearchParams, useRouter } from 'next/navigation';
+import swapTransactionService from '@/application/services/swapTransactionService';
+import batteryService from '@/application/services/batteryService';
 import { useToast } from '@/presentation/components/ui/Notification';
 import { Battery, BatteryCharging, Scan, ArrowRight, CheckCircle2, AlertTriangle, Loader2, XCircle, Info } from 'lucide-react';
+
+// Simple UUID v4 generator (no external library needed)
+function generateUUID(): string {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0;
+    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+}
 
 // Local storage key for transient events/logs so UI can show history without backend list endpoint
 const LOCAL_TRANSFERS_KEY = 'localTransfers_v1';
@@ -33,6 +43,8 @@ function updateLocalTransferStatus(transferId: string, patch: Record<string, unk
 
 export default withStaffAuth(function SwapPage() {
   const params = useSearchParams();
+  const router = useRouter();
+  const { showToast } = useToast();
   const reservationId = params.get('reservationId');
   const bookingId = params.get('bookingId');
   
@@ -40,7 +52,6 @@ export default withStaffAuth(function SwapPage() {
   const [newId, setNewId] = useState('');
   const [step, setStep] = useState<'scan-old' | 'scan-new' | 'confirm' | 'processing' | 'completed'>('scan-old');
   const { user } = useAuth();
-  const { showToast } = useToast();
   const [reportOpen, setReportOpen] = useState(false);
   const [reportReason, setReportReason] = useState('');
   const [reportType, setReportType] = useState('Issue');
@@ -48,6 +59,8 @@ export default withStaffAuth(function SwapPage() {
   const [isScanning, setIsScanning] = useState(false);
   const [manualStationId, setManualStationId] = useState('');
   const [showStationIdInput, setShowStationIdInput] = useState(false);
+  const [stationBatteryIds, setStationBatteryIds] = useState<string[]>([]);
+  const [loadingStationBatteries, setLoadingStationBatteries] = useState(false);
 
   const handleScanOld = () => {
     if (!oldId.trim()) {
@@ -73,34 +86,165 @@ export default withStaffAuth(function SwapPage() {
     }, 800);
   };
 
+  // ENFORCE: Block direct access if no booking (MANDATORY BOOKING FLOW)
+  useEffect(() => {
+    if (!bookingId) {
+      console.warn('[Swap] ⚠️ BLOCKED - Direct access denied. No booking found.');
+      showToast({ 
+        type: 'error', 
+        message: 'Truy cập bị từ chối! Vui lòng sử dụng Check-in & Swap thay thế.',
+        duration: 4000
+      });
+      router.replace('/check-in');
+    } else {
+      console.log('[Swap] ✅ Access granted - Booking:', bookingId);
+    }
+  }, [bookingId, router, showToast]);
+
+  // Block rendering if no bookingId
+  if (!bookingId) {
+    return (
+      <div className="max-w-2xl mx-auto mt-20 text-center">
+        <div className="bg-red-50 rounded-2xl p-12 border-2 border-red-200">
+          <XCircle className="w-20 h-20 text-red-500 mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-gray-900 mb-3">Truy cập bị từ chối</h2>
+          <p className="text-gray-600 mb-6">
+            Trang này chỉ được truy cập thông qua flow <strong>Check-in & Swap</strong>.
+            <br />
+            Vui lòng sử dụng menu Check-in & Swap để thực hiện giao dịch.
+          </p>
+          <button
+            onClick={() => router.push('/check-in')}
+            className="px-6 py-3 bg-blue-500 text-white rounded-lg font-semibold hover:bg-blue-600"
+          >
+            ← Quay về Check-in & Swap
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Load station battery IDs for dropdowns
+  useEffect(() => {
+    let mounted = true;
+    const loadStationBatteries = async () => {
+      try {
+        setLoadingStationBatteries(true);
+        const u = user as Record<string, unknown> | null;
+        let stationId: string | undefined;
+        if (u) {
+          stationId = (
+            u['stationId'] || 
+            u['StationID'] || 
+            u['stationID'] || 
+            u['StationId'] ||
+            u['stationName'] ||
+            u['StationName']
+          ) as string | undefined;
+        }
+
+        // If no stationId from user, try /api/auth/me
+        if (!stationId && typeof window !== 'undefined') {
+          try {
+            const token = localStorage.getItem('accessToken');
+            const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+            if (token) headers['Authorization'] = `Bearer ${token}`;
+            const meRes = await fetch('/api/auth/me', { cache: 'no-store', headers });
+            const mePayload = await meRes.json().catch(() => ({}));
+            if (meRes.ok && mePayload?.success && mePayload.data) {
+              const d = mePayload.data as Record<string, unknown>;
+              stationId = (d['stationId'] || d['StationID'] || d['stationID'] || d['StationId'] || d['stationName'] || d['StationName']) as string | undefined;
+            }
+          } catch (e) {
+            // ignore
+          }
+        }
+
+        if (stationId) {
+          try {
+            const ids = await batteryService.getBatteryIdsByStation(stationId);
+            if (mounted) setStationBatteryIds(ids || []);
+          } catch (e) {
+            console.error('[Swap] Failed to load station batteries:', e);
+          }
+        }
+      } finally {
+        if (mounted) setLoadingStationBatteries(false);
+      }
+    };
+    loadStationBatteries();
+    return () => { mounted = false; };
+  }, [user]);
+
   const confirmSwap = async () => {
     try {
       setStep('processing');
       
-      // get stationId from user or fallback to /api/auth/me
+      const guidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
       let stationId = undefined as string | undefined;
+      let stationNameValue = undefined as string | undefined;
       const u = user as Record<string, unknown> | null;
       
-      // Try multiple variations of stationId field names, including stationName
+      console.log('[Swap] User object:', u);
+      
+      // Step 1: Lấy stationId và stationName từ user
       if (u) {
-        stationId = (
+        // Ưu tiên lấy stationId nếu có và là GUID
+        const possibleId = (
           u['stationId'] || 
           u['StationID'] || 
           u['stationID'] || 
           u['StationId'] ||
           u['station_id'] ||
           u['station'] ||
-          u['Station'] ||
-          u['stationName'] ||  // Try stationName as fallback
+          u['Station']
+        ) as string | undefined;
+        
+        // Lấy stationName riêng
+        stationNameValue = (
+          u['stationName'] || 
           u['StationName']
         ) as string | undefined;
         
-        console.log('[Swap] User object:', u);
-        console.log('[Swap] Extracted stationId from user:', stationId);
+        // Nếu possibleId là GUID thì dùng luôn
+        if (possibleId && guidPattern.test(possibleId)) {
+          stationId = possibleId;
+          console.log('[Swap] Found valid GUID from user.stationId:', stationId);
+        } else if (possibleId) {
+          // Nếu possibleId không phải GUID, có thể là tên
+          stationNameValue = possibleId;
+          console.log('[Swap] stationId is not GUID, treating as name:', possibleId);
+        }
       }
       
-      // If still no stationId, fetch from /api/auth/me
-      if (!stationId && typeof window !== 'undefined') {
+      // Step 2: Nếu chưa có GUID nhưng có tên, fetch từ API
+      if (!stationId && stationNameValue) {
+        console.log('[Swap] Attempting to fetch stationId from name:', stationNameValue);
+        
+        try {
+          const { getStationIdByName } = await import('@/application/services/stationService');
+          const fetchedStationId = await getStationIdByName(stationNameValue);
+          
+          if (fetchedStationId && guidPattern.test(fetchedStationId)) {
+            stationId = fetchedStationId;
+            console.log('[Swap] Successfully fetched stationId:', stationId);
+            showToast({ 
+              type: 'success', 
+              message: `Đã tìm thấy trạm: ${stationNameValue}`,
+              duration: 2000
+            });
+          } else {
+            console.warn('[Swap] API returned invalid stationId:', fetchedStationId);
+          }
+        } catch (error) {
+          console.error('[Swap] Error fetching stationId from API:', error);
+        }
+      }
+      
+      // Step 3: Nếu vẫn chưa có, thử fetch từ /api/auth/me
+      if (!stationId && !stationNameValue && typeof window !== 'undefined') {
+        console.log('[Swap] No station info from user, fetching from /api/auth/me');
+        
         try {
           const token = localStorage.getItem('accessToken');
           const headers: Record<string, string> = { 'Content-Type': 'application/json' };
@@ -112,77 +256,123 @@ export default withStaffAuth(function SwapPage() {
           });
           const mePayload = await meRes.json().catch(() => ({}));
           
-          console.log('[Swap] /api/auth/me response:', mePayload);
-          
           if (meRes.ok && mePayload?.success && mePayload.data) {
             const d = mePayload.data as Record<string, unknown>;
-            stationId = (
-              d['stationId'] || 
-              d['StationID'] || 
-              d['stationID'] || 
-              d['StationId'] ||
-              d['station_id'] ||
-              d['station'] ||
-              d['Station'] ||
-              d['stationName'] ||  // Try stationName as fallback
+            
+            // Lấy stationName từ /api/auth/me
+            stationNameValue = (
+              d['stationName'] || 
               d['StationName']
             ) as string | undefined;
             
-            console.log('[Swap] Extracted stationId from /api/auth/me:', stationId);
-            console.log('[Swap] Full data object:', d);
+            console.log('[Swap] Got stationName from /api/auth/me:', stationNameValue);
+            
+            // Thử fetch ID từ tên
+            if (stationNameValue) {
+              try {
+                const { getStationIdByName } = await import('@/application/services/stationService');
+                const fetchedStationId = await getStationIdByName(stationNameValue);
+                
+                if (fetchedStationId && guidPattern.test(fetchedStationId)) {
+                  stationId = fetchedStationId;
+                  console.log('[Swap] Fetched stationId from /api/auth/me name:', stationId);
+                }
+              } catch (error) {
+                console.error('[Swap] Error fetching stationId:', error);
+              }
+            }
           }
         } catch (e) {
           console.error('[Swap] Error fetching /api/auth/me:', e);
         }
       }
-
-      // If still no stationId, check manual input
+      
+      // Step 4: Check manual input
       if (!stationId && manualStationId.trim()) {
-        stationId = manualStationId.trim();
-        console.log('[Swap] Using manual stationId:', stationId);
+        const manualValue = manualStationId.trim();
+        
+        if (guidPattern.test(manualValue)) {
+          stationId = manualValue;
+          console.log('[Swap] Using manual GUID:', stationId);
+        } else {
+          // Manual input là tên, thử fetch
+          console.log('[Swap] Manual input is name, fetching ID:', manualValue);
+          try {
+            const { getStationIdByName } = await import('@/application/services/stationService');
+            const fetchedStationId = await getStationIdByName(manualValue);
+            
+            if (fetchedStationId && guidPattern.test(fetchedStationId)) {
+              stationId = fetchedStationId;
+              console.log('[Swap] Fetched from manual name:', stationId);
+            }
+          } catch (error) {
+            console.error('[Swap] Error with manual input:', error);
+          }
+        }
       }
 
+      // Step 5: Final validation
       if (!stationId) {
-        console.error('[Swap] No stationId found. User object:', u);
-        showToast({ type: 'error', message: 'Không tìm thấy stationId. Vui lòng nhập Station ID thủ công.' });
+        console.error('[Swap] No valid stationId found after all attempts');
+        console.error('[Swap] - User object:', u);
+        console.error('[Swap] - Station name:', stationNameValue);
+        console.error('[Swap] - Manual input:', manualStationId);
+        
+        showToast({ 
+          type: 'error', 
+          message: stationNameValue 
+            ? `Không tìm thấy trạm "${stationNameValue}" trong hệ thống. Vui lòng nhập Station ID (GUID) thủ công.`
+            : 'Không tìm thấy thông tin trạm. Vui lòng nhập Station ID (GUID) thủ công.'
+        });
         setShowStationIdInput(true);
         setStep('confirm');
         return;
       }
       
-      console.log('[Swap] Using stationId:', stationId);
+      console.log('[Swap] Final stationId:', stationId);
+      console.log('[Swap] Station name:', stationNameValue || 'N/A');
 
+      // NEW: Use swapTransactionService with /api/swap-transactions/{id}/completed
+      const swapTransactionId = generateUUID();
+      
       const payload = {
+        oldBatteryID: oldId,       // Note: capital ID to match backend schema
+        newBatteryID: newId,       // Note: capital ID to match backend schema
+        stationID: stationId,      // Note: capital ID to match backend schema
+        bookingID: bookingId || undefined,
+        customerID: undefined,     // Will be inferred from booking if needed
+      };
+
+      console.log('[Swap] 📤 Creating swap transaction:', {
+        id: swapTransactionId,
+        payload
+      });
+      console.log('[Swap] Token:', localStorage.getItem('accessToken')?.substring(0, 20) + '...');
+      
+      // Backend auto-handles:
+      // - Create battery-transfers (OUT old, IN new)
+      // - Update battery-slots
+      // - Update batteries status
+      const result = await swapTransactionService.completeSwapTransaction(swapTransactionId, payload);
+      
+      console.log('[Swap] ✅ Swap completed:', result);
+      
+      // Persist to local log for UI reporting
+      const log = {
+        transferId: swapTransactionId,
         oldBatteryId: oldId,
         newBatteryId: newId,
         stationId,
+        bookingId,
+        status: 'Completed',
+        createdAt: new Date().toISOString(),
+        raw: result,
       };
-
-      const created = await transferService.createTransfer(payload) as Record<string, unknown> | null;
-      // Optionally immediately mark as completed if backend requires
-      if (created && (created['transferId'] as string | undefined)) {
-        try {
-          await transferService.updateTransferStatus(String(created['transferId']), { status: 'Completed' });
-          // persist to local log for UI reporting
-          const log = {
-            transferId: created['transferId'],
-            oldBatteryId: oldId,
-            newBatteryId: newId,
-            stationId,
-            status: 'Completed',
-            createdAt: new Date().toISOString(),
-            raw: created,
-          };
-          try { pushLocalTransfer(log); setLastCreatedTransferId(String(created['transferId'])); } catch (e) {}
-        } catch (e) {
-          // ignore update error but inform user
-          let msg = 'Unknown error';
-          if (e && typeof e === 'object' && 'message' in (e as Record<string, unknown>)) msg = String((e as Record<string, unknown>)['message']);
-          else msg = String(e);
-          showToast({ type: 'info', message: 'Swap created but failed to update status: ' + msg });
-          setStep('completed');
-          return;
-        }
+      try { 
+        pushLocalTransfer(log); 
+        setLastCreatedTransferId(swapTransactionId); 
+      } catch (e) {
+        console.error('[Swap] Failed to save to local storage:', e);
       }
 
       showToast({ type: 'success', message: 'Đổi pin hoàn tất thành công!' });
@@ -219,14 +409,12 @@ export default withStaffAuth(function SwapPage() {
       }
       const exception = { type: reportType, reason: reportReason, createdAt: new Date().toISOString() };
       updateLocalTransferStatus(transferId, { status: 'Exception', exception });
-      // Optionally rollback immediately (call backend to cancel)
-      try {
-        await transferService.updateTransferStatus(transferId, { status: 'Cancelled' });
-        updateLocalTransferStatus(transferId, { status: 'Cancelled' });
-        showToast({ type: 'success', message: 'Exception recorded and transfer rolled back' });
-      } catch (e) {
-        showToast({ type: 'info', message: 'Exception recorded locally but rollback failed: ' + (e as Error).message });
-      }
+      
+      // TODO: Implement rollback for swap transactions
+      // Currently swap transactions are completed in one call
+      // May need backend support for cancellation/rollback
+      showToast({ type: 'success', message: 'Exception đã được ghi nhận' });
+      
       setReportOpen(false);
     } catch (e) {
       showToast({ type: 'error', message: 'Failed to record exception' });
@@ -235,14 +423,63 @@ export default withStaffAuth(function SwapPage() {
 
   return (
     <div className="max-w-5xl mx-auto">
-      {/* Reservation Info Banner (if coming from check-in) */}
-      {reservationId && (
-        <div className="mb-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-200">
-          <div className="flex items-center gap-3">
-            <Info className="w-5 h-5 text-blue-600" />
-            <div>
-              <div className="text-sm font-semibold text-blue-900">Reservation ID: {reservationId}</div>
-              {bookingId && <div className="text-xs text-blue-700">Booking: {bookingId}</div>}
+      {/* Booking Status Banner */}
+      {bookingId ? (
+        <div className="mb-6 bg-gradient-to-r from-emerald-50 to-green-50 rounded-xl p-5 border-2 border-emerald-200 shadow-sm">
+          <div className="flex items-start gap-4">
+            <div className="flex-shrink-0">
+              <div className="w-12 h-12 rounded-full bg-emerald-500 flex items-center justify-center">
+                <CheckCircle2 className="w-7 h-7 text-white" />
+              </div>
+            </div>
+            <div className="flex-1">
+              <h3 className="text-lg font-bold text-emerald-900 mb-1">
+                ✅ Swap với Booking
+              </h3>
+              <p className="text-sm text-emerald-700 mb-2">
+                Giao dịch này được liên kết với booking của khách hàng. 
+                Thông tin sẽ được lưu vào lịch sử.
+              </p>
+              <div className="flex items-center gap-4 text-xs">
+                <div className="flex items-center gap-1">
+                  <span className="font-semibold text-emerald-800">Booking ID:</span>
+                  <code className="px-2 py-0.5 bg-white rounded border border-emerald-300 text-emerald-900 font-mono">
+                    {bookingId}
+                  </code>
+                </div>
+                {reservationId && (
+                  <div className="flex items-center gap-1">
+                    <span className="font-semibold text-emerald-800">Reservation:</span>
+                    <code className="px-2 py-0.5 bg-white rounded border border-emerald-300 text-emerald-900 font-mono">
+                      {reservationId}
+                    </code>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="mb-6 bg-gradient-to-r from-amber-50 to-orange-50 rounded-xl p-5 border-2 border-amber-200 shadow-sm">
+          <div className="flex items-start gap-4">
+            <div className="flex-shrink-0">
+              <div className="w-12 h-12 rounded-full bg-amber-500 flex items-center justify-center">
+                <AlertTriangle className="w-7 h-7 text-white" />
+              </div>
+            </div>
+            <div className="flex-1">
+              <h3 className="text-lg font-bold text-amber-900 mb-1">
+                ⚠️ Walk-in Swap (Không có Booking)
+              </h3>
+              <p className="text-sm text-amber-700 mb-2">
+                Giao dịch này KHÔNG liên kết với booking. 
+                Thông tin khách hàng sẽ không được lưu.
+              </p>
+              <div className="flex items-center gap-3 text-xs">
+                <span className="px-3 py-1 bg-amber-100 border border-amber-300 rounded-full text-amber-900 font-semibold">
+                  💡 Tip: Nên check-in khách hàng trước khi swap
+                </span>
+              </div>
             </div>
           </div>
         </div>
@@ -297,7 +534,7 @@ export default withStaffAuth(function SwapPage() {
           </div>
 
           <div className="max-w-lg mx-auto space-y-6">
-            <div className="relative">
+              <div className="relative">
               <Scan className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
               <input
                 type="text"
@@ -308,6 +545,19 @@ export default withStaffAuth(function SwapPage() {
                 onKeyPress={(e) => e.key === 'Enter' && handleScanOld()}
                 disabled={isScanning}
               />
+              {/* Dropdown for selecting a valid battery from station (optional) */}
+              {stationBatteryIds.length > 0 && (
+                <select
+                  className="mt-2 w-full h-11 px-3 rounded-lg border-2 border-gray-200"
+                  value={oldId}
+                  onChange={(e) => setOldId(e.target.value)}
+                >
+                  <option value="">-- Chọn pin cũ từ trạm --</option>
+                  {stationBatteryIds.map((id) => (
+                    <option key={id} value={id}>{id}</option>
+                  ))}
+                </select>
+              )}
             </div>
 
             <button
@@ -354,18 +604,30 @@ export default withStaffAuth(function SwapPage() {
           </div>
 
           <div className="max-w-lg mx-auto space-y-6">
-            <div className="relative">
-              <Scan className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-              <input
-                type="text"
-                value={newId}
-                onChange={(e) => setNewId(e.target.value)}
-                placeholder="Scan hoặc nhập mã pin mới..."
-                className="w-full h-14 pl-12 pr-4 rounded-xl border-2 border-gray-200 text-black text-lg placeholder:text-gray-400 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 transition-all"
-                onKeyPress={(e) => e.key === 'Enter' && handleScanNew()}
-                disabled={isScanning}
-              />
-            </div>
+              <div className="relative">
+                <Scan className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <input
+                  type="text"
+                  value={newId}
+                  onChange={(e) => setNewId(e.target.value)}
+                  placeholder="Scan hoặc nhập mã pin mới..."
+                  className="w-full h-14 pl-12 pr-4 rounded-xl border-2 border-gray-200 text-black text-lg placeholder:text-gray-400 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 transition-all"
+                  onKeyPress={(e) => e.key === 'Enter' && handleScanNew()}
+                  disabled={isScanning}
+                />
+                {stationBatteryIds.length > 0 && (
+                  <select
+                    className="mt-2 w-full h-11 px-3 rounded-lg border-2 border-gray-200"
+                    value={newId}
+                    onChange={(e) => setNewId(e.target.value)}
+                  >
+                    <option value="">-- Chọn pin mới từ trạm --</option>
+                    {stationBatteryIds.map((id) => (
+                      <option key={id} value={id}>{id}</option>
+                    ))}
+                  </select>
+                )}
+              </div>
 
             <div className="flex gap-3">
               <button

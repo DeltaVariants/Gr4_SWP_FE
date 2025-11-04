@@ -13,9 +13,38 @@ const transferService = {
       }
     } catch (e) {}
 
+    console.log('[TransferService] Creating transfer:', {
+      url: TransferAPI.create,
+      payload,
+      hasToken: !!headers['Authorization']
+    });
+
     const res = await fetch(TransferAPI.create, { method: 'POST', headers, body: JSON.stringify(payload), credentials: 'same-origin' });
     const payloadRes = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(payloadRes?.message || 'Failed to create transfer');
+    
+    console.log('[TransferService] Response:', {
+      status: res.status,
+      ok: res.ok,
+      data: payloadRes
+    });
+    
+    if (!res.ok) {
+      console.error('[TransferService] ❌ Transfer failed:', {
+        status: res.status,
+        message: payloadRes?.message,
+        errors: payloadRes?.errors,
+        error: payloadRes?.error || payloadRes,
+        fullResponse: payloadRes
+      });
+      
+      // Show detailed error message
+      const errorMsg = payloadRes?.message 
+        || payloadRes?.errors?.[0]?.msg 
+        || payloadRes?.error 
+        || `HTTP ${res.status}: Failed to create transfer`;
+      
+      throw new Error(errorMsg);
+    }
     return payloadRes?.data || payloadRes;
   },
 

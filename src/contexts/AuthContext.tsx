@@ -54,21 +54,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const checkAuth = async () => {
       const token = localStorage.getItem('accessToken');
       if (!token) return;
+      
       try {
         await refreshUser();
       } catch (error) {
-        console.error('Error checking auth:', error);
-        // Token không hợp lệ, xóa tokens và reset state
+        // Silent fail - token không hợp lệ
         localStorage.removeItem('accessToken');
         localStorage.removeItem('refreshToken');
-        setUser(null);
-        setIsAuthenticated(false);
       }
     };
 
     checkAuth();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Chỉ chạy một lần khi component mount
+  }, []);
 
   // Lấy thông tin user từ API
   const refreshUser = async () => {
@@ -76,8 +74,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const userData = await authService.getCurrentUser();
       setUser(userData);
       setIsAuthenticated(true);
-    } catch (error) {
-      console.error('Error refreshing user:', error);
+    } catch (error: any) {
+      // Clear auth state nếu fail
+      setUser(null);
+      setIsAuthenticated(false);
       throw error;
     }
   };

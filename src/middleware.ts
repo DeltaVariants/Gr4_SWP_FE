@@ -17,6 +17,7 @@ const ROUTE_CONFIG = {
     '/api/auth/send-reset',
     '/api/auth/reset-password',
     '/google-callback',
+    '/callback', // Google OAuth callback handler
   ],
   
   // Auth pages - chỉ cho phép truy cập khi CHƯA đăng nhập
@@ -103,7 +104,13 @@ export function middleware(req: NextRequest) {
   if (matchesPath(ROUTE_CONFIG.AUTH_PAGES, pathname)) {
     // Nếu đã đăng nhập, redirect về trang tương ứng với role
     if (auth.isAuthenticated) {
-      if (auth.isAdmin) return redirectTo(req, '/admin/dashboard', 'already_authenticated');
+      // Tránh redirect loop nếu đã có query param reason=already_authenticated
+      const alreadyRedirected = req.nextUrl.searchParams.get('reason') === 'already_authenticated';
+      if (alreadyRedirected) {
+        return NextResponse.next();
+      }
+      
+      if (auth.isAdmin) return redirectTo(req, '/dashboard', 'already_authenticated');
       if (auth.isStaff) return redirectTo(req, '/dashboardstaff', 'already_authenticated');
       if (auth.isCustomer) return redirectTo(req, '/home', 'already_authenticated');
       return redirectTo(req, '/', 'already_authenticated');
@@ -114,8 +121,8 @@ export function middleware(req: NextRequest) {
 
   // 3. Check protected routes - cần authentication
   
-  // 3a. Admin routes
-  if (matchesPath(ROUTE_CONFIG.PROTECTED.ADMIN, pathname)) {
+  // 3a. Admin routes (skip API routes - they handle auth internally)
+  if (matchesPath(ROUTE_CONFIG.PROTECTED.ADMIN, pathname) && !pathname.startsWith('/api/')) {
     if (!auth.isAuthenticated) {
       return redirectTo(req, '/login', 'authentication_required');
     }
@@ -125,8 +132,8 @@ export function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  // 3b. Staff routes
-  if (matchesPath(ROUTE_CONFIG.PROTECTED.STAFF, pathname)) {
+  // 3b. Staff routes (skip API routes - they handle auth internally)
+  if (matchesPath(ROUTE_CONFIG.PROTECTED.STAFF, pathname) && !pathname.startsWith('/api/')) {
     if (!auth.isAuthenticated) {
       return redirectTo(req, '/login', 'authentication_required');
     }
@@ -136,8 +143,8 @@ export function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  // 3c. Customer routes
-  if (matchesPath(ROUTE_CONFIG.PROTECTED.CUSTOMER, pathname)) {
+  // 3c. Customer routes (skip API routes - they handle auth internally)
+  if (matchesPath(ROUTE_CONFIG.PROTECTED.CUSTOMER, pathname) && !pathname.startsWith('/api/')) {
     if (!auth.isAuthenticated) {
       return redirectTo(req, '/login', 'authentication_required');
     }
@@ -165,41 +172,13 @@ export function middleware(req: NextRequest) {
  */
 export const config = {
   matcher: [
-    // Auth pages
-    '/login',
-    '/register',
-    '/forgotpassword',
-    '/resetpassword',
-    '/newpassword',
-    '/verify-email',
-    
-    // Admin routes
-    '/admin/:path*',
-    '/dashboard/:path*',
-    '/battery-management/:path*',
-    '/station-management/:path*',
-    '/user-management/:path*',
-    '/transactions-reports/:path*',
-    '/system-config/:path*',
-    
-    // Staff routes
-    '/dashboardstaff/:path*',
-    '/reservations/:path*',
-    '/check-in/:path*',
-    '/swap/:path*',
-    '/inventory/:path*',
-    '/reports/:path*',
-    
-    // Customer routes
-    '/home/:path*',
-    '/booking/:path*',
-    '/findstation/:path*',
-    '/history/:path*',
-    '/billing-plan/:path*',
-    '/support/:path*',
-    
-    // Common protected routes
-    '/profile/:path*',
-    '/logout',
+    /*
+     * Match all request paths except for the ones starting with:
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     * - public folder
+     */
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 };

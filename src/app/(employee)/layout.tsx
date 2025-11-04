@@ -14,11 +14,12 @@ export default function EmployeeLayout({ children }: { children: React.ReactNode
   const navigationItems: NavigationItem[] = useMemo(
     () => [
       { name: 'Dashboard', path: '/dashboardstaff', icon: <HiHome size={18} /> },
-      { name: 'Check-in', path: '/check-in', icon: <HiClipboardCheck size={18} /> },
+      { name: 'Check-in & Swap', path: '/check-in', icon: <HiClipboardCheck size={18} /> },
       { name: 'Inventory', path: '/inventory', icon: <HiViewGrid size={18} /> },
       { name: 'Reports', path: '/reports', icon: <HiDocumentReport size={18} /> },
       { name: 'Reservations', path: '/reservations', icon: <HiCalendar size={18} /> },
-      { name: 'Swap', path: '/swap', icon: <HiSwitchHorizontal size={18} /> },
+      // Swap is now integrated into Check-in flow (removed from menu)
+      // { name: 'Swap', path: '/swap', icon: <HiSwitchHorizontal size={18} /> },
     ],
     []
   );

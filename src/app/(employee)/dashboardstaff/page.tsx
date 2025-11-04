@@ -79,25 +79,28 @@ export default withStaffAuth(function StaffDashboard() {
       setLoading(true);
       try {
         // Pass stationId when available; some backend endpoints require station-scoped requests
-        let stationID = (user as any)?.stationId;
+        let stationID = (user as any)?.stationId || (user as any)?.stationName;
         // If user object doesn't have stationId yet, try to get it from /api/auth/me
         if (!stationID && typeof window !== 'undefined') {
           try {
             const meRes = await fetch('/api/auth/me', { cache: 'no-store' });
             const mePayload = await meRes.json().catch(() => ({}));
-            // backend shape may vary; try multiple possible paths
+            
             const src = mePayload?.data ?? mePayload?.user ?? mePayload ?? {};
             const candidate = src?.data ?? src; // sometimes payload.data.data
             stationID =
               candidate?.stationId || candidate?.StationID || candidate?.stationID || candidate?.StationId ||
+              candidate?.stationName || candidate?.StationName ||
               candidate?.station || candidate?.station_id || candidate?.Station || candidate?.Station_Id || undefined;
-            if (!stationID && process.env.NODE_ENV === 'development') {
+            if (stationID) {
+              console.log('[dashboardstaff] Found stationID:', stationID);
+            } else if (process.env.NODE_ENV === 'development') {
               // surface payload for debugging in dev
-              // eslint-disable-next-line no-console
-              console.log('[dashboardstaff] /api/auth/me payload:', mePayload);
+              console.log('[dashboardstaff] No stationID found in /api/auth/me');
+              console.log('[dashboardstaff] Available keys:', Object.keys(candidate));
             }
           } catch (e) {
-            // ignore network/parse errors
+            console.error('[dashboardstaff] Error fetching /api/auth/me:', e);
           }
         }
 
@@ -121,14 +124,19 @@ export default withStaffAuth(function StaffDashboard() {
           console.error('Failed to load batteries:', e);
         }
 
-        // Load revenue report for today
+        // TODO: Load revenue report - Currently disabled due to 403 permission
+        // Backend requires Admin role for /reports/daily-revenue endpoint
+        // Uncomment when backend grants Staff access
+        /*
         try {
           const today = new Date().toISOString().split('T')[0];
           const revenueData = await reportsService.getRevenueReportInDay({ date: today });
           if (mounted) setRevenue(revenueData);
-        } catch (e) {
-          console.error('Failed to load revenue:', e);
+        } catch (e: any) {
+          console.warn('[Dashboard] ⚠️ Could not load revenue data:', e?.message);
+          if (mounted) setRevenue(null);
         }
+        */
 
       } catch (e: any) {
         showToast({ type: 'error', message: e?.message || 'Không thể load dữ liệu' });
@@ -174,7 +182,7 @@ export default withStaffAuth(function StaffDashboard() {
           </div>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="bg-white/10 backdrop-blur-sm rounded-xl p-5 border border-white/20">
             <div className="flex items-center gap-3 mb-2">
               <div className="w-10 h-10 rounded-full bg-emerald-500 flex items-center justify-center">
@@ -185,6 +193,7 @@ export default withStaffAuth(function StaffDashboard() {
             <div className="text-4xl font-bold">{todaySwaps}</div>
           </div>
 
+          {/* TODO: Revenue card - Hidden until backend grants Staff permission 
           <div className="bg-white/10 backdrop-blur-sm rounded-xl p-5 border border-white/20">
             <div className="flex items-center gap-3 mb-2">
               <div className="w-10 h-10 rounded-full bg-amber-500 flex items-center justify-center">
@@ -194,6 +203,7 @@ export default withStaffAuth(function StaffDashboard() {
             </div>
             <div className="text-4xl font-bold">{todayRevenue.toLocaleString()}</div>
           </div>
+          */}
 
           <div className="bg-white/10 backdrop-blur-sm rounded-xl p-5 border border-white/20">
             <div className="flex items-center gap-3 mb-2">

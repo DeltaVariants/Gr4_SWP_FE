@@ -53,15 +53,29 @@ export default withStaffAuth(function ReservationsPage() {
   const loadData = async () => {
     setLoading(true);
     try {
-      let stationID = (user as any)?.stationId;
+      let stationID = (user as any)?.stationId || (user as any)?.stationName;
       if (!stationID && typeof window !== 'undefined') {
         try {
           const meRes = await fetch('/api/auth/me', { cache: 'no-store' });
           const mePayload = await meRes.json().catch(() => ({}));
           if (meRes.ok && mePayload?.success && mePayload.data) {
-            stationID = mePayload.data.stationId || mePayload.data.StationID || mePayload.data.stationID || mePayload.data.StationId;
+            stationID = 
+              mePayload.data.stationId || 
+              mePayload.data.StationID || 
+              mePayload.data.stationID || 
+              mePayload.data.StationId ||
+              mePayload.data.stationName ||
+              mePayload.data.StationName;
+            
+            if (stationID) {
+              console.log('[reservations] Found stationID:', stationID);
+            } else {
+              console.log('[reservations] No stationID found in user data');
+            }
           }
-        } catch (e) {}
+        } catch (e) {
+          console.error('[reservations] Error fetching /api/auth/me:', e);
+        }
       }
 
       const list = await bookingService.getAllBookingOfStation(stationID);

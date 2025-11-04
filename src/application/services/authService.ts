@@ -44,6 +44,7 @@ export interface User {
   phone?: string;
   avatar?: string;
   stationId?: string;
+  stationName?: string;  // Tên trạm để hiển thị
 }
 
 export interface ApiResponse<T> {
@@ -283,27 +284,29 @@ export const authService = {
   // Lấy thông tin user hiện tại
   async getCurrentUser(): Promise<User> {
     try {
-      // Gọi qua Next API để dùng cookie httpOnly nếu có.
-      // Nhưng khi đang ở client và token lưu trong localStorage, đính kèm header Authorization
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-      try {
-        if (typeof window !== 'undefined') {
-          const t = localStorage.getItem('accessToken');
-          if (t) headers['Authorization'] = `Bearer ${t}`;
-        }
-      } catch (e) {
-        // ignore localStorage access errors
+      
+      // Đính kèm token nếu có
+      if (typeof window !== 'undefined') {
+        const token = localStorage.getItem('accessToken');
+        if (token) headers['Authorization'] = `Bearer ${token}`;
       }
 
       const res = await fetch('/api/auth/me', { cache: 'no-store', headers });
-      const payload = await res.json();
+      const payload = await res.json().catch(() => ({ success: false }));
+
       if (!res.ok || !payload?.success) {
+        // Clear token nếu unauthorized
+        if (res.status === 401 && typeof window !== 'undefined') {
+          localStorage.removeItem('accessToken');
+          localStorage.removeItem('refreshToken');
+        }
         throw new Error(payload?.message || 'Không thể lấy thông tin người dùng');
       }
 
       const userData = payload.data;
-      console.log('Get current user response:', userData);
-      
+      if (!userData) throw new Error('Dữ liệu người dùng không hợp lệ');
+
       return {
         id: userData.UserID || userData.userID || userData.id,
         email: userData.Email || userData.email,
@@ -311,16 +314,13 @@ export const authService = {
         role: userData.RoleName || userData.roleName || userData.role || 'Driver',
         phone: userData.PhoneNumber || userData.phoneNumber || userData.phone,
         avatar: userData.Avatar || userData.avatar,
-        // Backend may include station association under various names
-        stationId: userData.StationID || userData.stationID || userData.stationId || userData.StationId || undefined,
+        stationId: userData.StationID || userData.stationID || userData.stationId || userData.StationId,
       };
     } catch (error: any) {
-      console.error('Get current user error:', error);
-      throw new Error(
-        error.response?.data?.message || 
-        error.message || 
-        'Không thể lấy thông tin người dùng'
-      );
+      if (error.name === 'TypeError' || error.message?.includes('fetch')) {
+        throw new Error('Không thể kết nối đến server');
+      }
+      throw error;
     }
   },
 

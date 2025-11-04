@@ -32,16 +32,47 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
     }
 
-    const resp = await fetch(`${API_URL}/Auth/me`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      cache: 'no-store',
-    });
-
+    // Retry logic for 502 errors (backend cold start)
+    let resp;
+    let retries = 3;
+    let lastError;
     
+    for (let i = 0; i < retries; i++) {
+      try {
+        resp = await fetch(`${API_URL}/Auth/me`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          signal: AbortSignal.timeout(10000), // 10s timeout
+        });
+        
+        // If we get 502, retry after delay
+        if (resp.status === 502 && i < retries - 1) {
+          console.log(`[auth/me] Got 502, retrying (${i + 1}/${retries})...`);
+          await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1))); // Exponential backoff
+          continue;
+        }
+        
+        break; // Success or non-502 error, exit retry loop
+      } catch (error) {
+        lastError = error;
+        if (i < retries - 1) {
+          console.log(`[auth/me] Fetch error, retrying (${i + 1}/${retries})...`);
+          await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1)));
+        }
+      }
+    }
+    
+    if (!resp) {
+      console.error('[auth/me] All retries failed:', lastError);
+      return NextResponse.json(
+        { success: false, message: 'Backend temporarily unavailable' },
+        { status: 503 }
+      );
+    }
+
     const contentType = resp.headers.get('content-type') || '';
     let data: any = {};
     let raw = '';
@@ -73,8 +104,21 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ success: false, message }, { status });
     }
 
+    // Log stationId/stationName for debugging
+    if (process.env.NODE_ENV === 'development') {
+      const stationId = data?.stationId || data?.StationID || data?.stationID || data?.StationId;
+      const stationName = data?.stationName || data?.StationName;
+      console.log('[auth/me] User data received');
+      console.log('[auth/me] - stationId:', stationId || 'NOT FOUND');
+      console.log('[auth/me] - stationName:', stationName || 'NOT FOUND');
+      if (!stationId && !stationName && data) {
+        console.log('[auth/me] - Available keys:', Object.keys(data));
+      }
+    }
+
     return NextResponse.json({ success: true, data });
   } catch (e) {
+    console.error('[auth/me] Error:', e);
     return NextResponse.json({ success: false, message: 'Internal server error' }, { status: 500 });
   }
 }

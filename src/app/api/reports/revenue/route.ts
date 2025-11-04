@@ -12,11 +12,25 @@ export async function GET(req: NextRequest) {
     if (incomingAuth) forwardHeaders['Authorization'] = incomingAuth;
     if (incomingCookie) forwardHeaders['Cookie'] = incomingCookie;
 
+    console.log('[reports/revenue] Request:', {
+      url,
+      hasAuth: !!incomingAuth,
+      hasCookie: !!incomingCookie
+    });
+
     const resp = await fetch(url, { method: 'GET', headers: forwardHeaders });
     const text = await resp.text().catch(() => '');
     let data: any = null;
     try { data = text ? JSON.parse(text) : null; } catch { data = { raw: text }; }
-    if (!resp.ok) return NextResponse.json({ success: false, message: data?.message || 'Backend error', backend: data }, { status: resp.status });
+    
+    if (!resp.ok) {
+      console.error('[reports/revenue] Backend error:', {
+        status: resp.status,
+        data
+      });
+      return NextResponse.json({ success: false, message: data?.message || 'Backend error', backend: data }, { status: resp.status });
+    }
+    
     return NextResponse.json({ success: true, data });
   } catch (e) {
     console.error('[proxy reports revenue] error', e);

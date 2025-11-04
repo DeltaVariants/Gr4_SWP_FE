@@ -1,22 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-
 export async function GET(req: NextRequest) {
-  const apiBaseEnv = process.env.NEXT_PUBLIC_API_URL || process.env.API_URL;
-  // Prefer HTTPS backend as provided by the team
-  const fallbackBase = 'https://gr4-swp-be2-sp25.onrender.com';
-  // Normalize base to strip trailing '/api' and slashes
-  const base = ((apiBaseEnv && apiBaseEnv.trim().length > 0) ? apiBaseEnv : fallbackBase)
-    .replace(/\/+$/,'')
-    .replace(/\/api\/?$/,'');
+  // Backend URL - đảm bảo không có trailing /api
+  const backendBase = 'https://gr4-swp-be2-sp25.onrender.com';
 
-  // Build BE target URL (preserve origin via query param so BE can determine where to callback)
+  // Get current origin để backend biết redirect về đâu
   const proto = req.headers.get('x-forwarded-proto') || 'http';
   const host = req.headers.get('host') || 'localhost:3000';
   const currentOrigin = `${proto}://${host}`;
-  const target = new URL(`${base.replace(/\/$/, '')}/Auth/google-login`);
+  
+  // Backend endpoint: /api/Auth/google-login
+  const target = new URL(`${backendBase}/api/Auth/google-login`);
   target.searchParams.set('origin', currentOrigin);
 
-  // Simple redirect: send browser straight to backend endpoint. This avoids server-side fetch and intermediate 301 caching issues.
+  console.log('[GoogleLogin] Redirecting to:', target.toString());
+
+  // Redirect browser đến backend để xử lý Google OAuth
   return NextResponse.redirect(target.toString(), { status: 307 });
 }

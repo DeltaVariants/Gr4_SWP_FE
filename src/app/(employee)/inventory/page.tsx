@@ -203,14 +203,17 @@ export default withStaffAuth(function InventoryPage() {
         }));
         if (mounted) setData(rows);
 
-        // Load slots if we have stationId
+        // TODO: Load battery slots - Currently disabled due to backend permission/availability
+        // Uncomment when backend provides access to /battery-slots endpoint
+        /*
         if (stationId) {
           try {
             const slotsData = await batteryService.getAllBatterySlotsByStationID(stationId);
             console.log('[Inventory] Slots data:', slotsData);
             if (mounted) setSlots(Array.isArray(slotsData) ? slotsData : []);
-          } catch (e) {
-            console.error('Error loading slots:', e);
+          } catch (e: any) {
+            console.warn('[Inventory] ⚠️ Could not load slots:', e?.message);
+            if (mounted) setSlots([]);
           }
 
           // Load bookings to check which slots are booked
@@ -222,6 +225,7 @@ export default withStaffAuth(function InventoryPage() {
             console.error('Error loading bookings:', e);
           }
         }
+        */
       } catch (e: unknown) {
         console.error('Load batteries error:', e);
         if (mounted) {
