@@ -18,10 +18,10 @@ export default function MainLayout({
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col ml-0 lg:ml-0">
-        {/* Header */}
-        {header}
+        {/* Header - Fixed position */}
+        <div className="sticky top-0 z-40 bg-white shadow-sm">{header}</div>
 
-        {/* Main Dashboard Content */}
+        {/* Main Dashboard Content - Scrollable */}
         <main className="flex-1 p-[3vh] max-w-full overflow-x-auto">
           {children}
         </main>
