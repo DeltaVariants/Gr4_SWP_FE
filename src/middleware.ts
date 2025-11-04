@@ -137,6 +137,12 @@ export function middleware(req: NextRequest) {
   if (matchesPath(ROUTE_CONFIG.AUTH_PAGES, pathname)) {
     // Nếu đã đăng nhập, redirect về trang tương ứng với role
     if (auth.isAuthenticated) {
+      // Trong môi trường phát triển cho phép truy cập trang login/register
+      // ngay cả khi đã đăng nhập để thuận tiện cho việc dev/testing
+      if (process.env.NODE_ENV === "development") {
+        return NextResponse.next();
+      }
+
       if (auth.isAdmin)
         return redirectTo(req, "/dashboard", "already_authenticated");
       if (auth.isStaff)
