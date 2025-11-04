@@ -21,7 +21,7 @@ export default function StationDetail() {
 
   if (loading) {
     return (
-      <div className="p-6">
+      <div>
         <div className="bg-white rounded-lg shadow-sm p-8 text-center">
           <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
           <p className="mt-2 text-gray-600">Loading station details...</p>
@@ -32,7 +32,7 @@ export default function StationDetail() {
 
   if (error) {
     return (
-      <div className="p-6">
+      <div>
         <div className="bg-red-50 border border-red-200 rounded-lg p-4">
           <p className="text-red-800">Error: {error}</p>
           <Link
@@ -48,7 +48,7 @@ export default function StationDetail() {
 
   if (!station) {
     return (
-      <div className="p-6">
+      <div>
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
           <p className="text-yellow-800">Station not found</p>
           <Link
@@ -66,7 +66,7 @@ export default function StationDetail() {
   const isActive = station.batteryInSlots > 0 || station.batteryOutSlots > 0;
 
   return (
-    <div className="p-6">
+    <div>
       <div className="mb-6 flex items-center justify-between">
         <div>
           <Link

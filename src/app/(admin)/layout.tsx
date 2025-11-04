@@ -1,6 +1,7 @@
 "use client";
 import React from "react";
 import { usePathname } from "next/navigation";
+import { HeroUIProvider } from "@heroui/react";
 import MainLayout from "../../presentation/layouts/MainLayout";
 import AdminHeader from "./components/AdminHeader";
 import AdminSidebar from "./components/AdminSidebar";
@@ -138,18 +139,20 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
 
   return (
     <AdminAuthGuard>
-      <MainLayout
-        sidebar={<AdminSidebar currentPath={pathname} />}
-        header={
-          <AdminHeader
-            title={pageInfo.title}
-            subtitle={pageInfo.subtitle}
-            breadcrumbs={breadcrumbs}
-          />
-        }
-      >
-        {children}
-      </MainLayout>
+      <HeroUIProvider>
+        <MainLayout
+          sidebar={<AdminSidebar currentPath={pathname} />}
+          header={
+            <AdminHeader
+              title={pageInfo.title}
+              subtitle={pageInfo.subtitle}
+              breadcrumbs={breadcrumbs}
+            />
+          }
+        >
+          {children}
+        </MainLayout>
+      </HeroUIProvider>
     </AdminAuthGuard>
   );
 }

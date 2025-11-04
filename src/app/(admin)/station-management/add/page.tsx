@@ -5,17 +5,15 @@ import { useState } from "react";
 import { Station } from "@/domain/entities/Station";
 import { AdminInput } from "../../components/AdminInput";
 import { Modal } from "@/presentation/components/ui/Modal";
-
-interface CreateStationRequest {
-  stationName: string;
-  stationLocation: string;
-  latitude: number;
-  longitude: number;
-  slotNumber: number;
-}
+import { stationRepositoryAPI } from "@/infrastructure/repositories/StationRepositoryAPI.impl";
+import { CreateStationRequest } from "@/domain/repositories/StationRepository";
+import { createStationUseCase } from "@/application/usecases/station/CreateStation.usecase";
+import { useAppDispatch } from "@/application/hooks/useRedux";
+import { fetchAllStations } from "@/application/services/stationService";
 
 export default function AddStation() {
   const router = useRouter();
+  const dispatch = useAppDispatch();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string>("");
   const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -97,24 +95,30 @@ export default function AddStation() {
 
     setIsSubmitting(true);
 
-    // Tạm thời bỏ qua API, chỉ hiển thị modal với dữ liệu từ form
-    setTimeout(() => {
-      const mockStation: Station = {
-        stationID: `ST${Math.floor(Math.random() * 1000)}`, // ID giả
-        stationName: formData.stationName,
-        stationLocation: formData.stationLocation,
-        latitude: formData.latitude,
-        longitude: formData.longitude,
-        slotNumber: formData.slotNumber,
-        stationCapacity: 0,
-        batteryOutSlots: 0,
-        batteryInSlots: 0,
-      };
+    try {
+      // Gọi usecase để tạo trạm mới (theo Clean Architecture)
+      const newStation = await createStationUseCase(
+        stationRepositoryAPI,
+        formData
+      );
 
-      setCreatedStation(mockStation);
+      console.log("Station created successfully:", newStation);
+
+      // Invalidate cache và refresh danh sách stations
+      dispatch(fetchAllStations());
+
+      setCreatedStation(newStation);
       setShowSuccessModal(true);
+    } catch (err) {
+      console.error("Failed to create station:", err);
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Failed to create station. Please try again."
+      );
+    } finally {
       setIsSubmitting(false);
-    }, 500); // Delay nhẹ để giống thật
+    }
   };
 
   const handleModalClose = () => {
@@ -136,7 +140,7 @@ export default function AddStation() {
   };
 
   return (
-    <div className="p-6 max-h-screen overflow-y-auto">
+    <div className="max-h-screen overflow-y-auto">
       <div className="mb-4">
         <Link
           href="/station-management"

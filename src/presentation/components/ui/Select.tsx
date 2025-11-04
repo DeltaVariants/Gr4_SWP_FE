@@ -25,7 +25,7 @@ export const Select: React.FC<SelectProps> = ({
   ...props
 }) => {
   const baseSelectClasses =
-    "appearance-none px-4 py-2 pr-10 text-gray-800 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent cursor-pointer bg-white";
+    "w-full px-4 py-2 pr-10 text-gray-800 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent cursor-pointer bg-white [&::-ms-expand]:hidden";
 
   return (
     <div className={`relative ${containerClassName}`}>
@@ -33,6 +33,11 @@ export const Select: React.FC<SelectProps> = ({
         value={value}
         onChange={onChange}
         className={`${baseSelectClasses} ${className}`}
+        style={{
+          appearance: "none",
+          WebkitAppearance: "none",
+          MozAppearance: "none",
+        }}
         {...props}
       >
         {placeholder && <option value="">{placeholder}</option>}
@@ -42,7 +47,7 @@ export const Select: React.FC<SelectProps> = ({
           </option>
         ))}
       </select>
-      <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
+      <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-700">
         <svg
           className="fill-current h-4 w-4"
           xmlns="http://www.w3.org/2000/svg"

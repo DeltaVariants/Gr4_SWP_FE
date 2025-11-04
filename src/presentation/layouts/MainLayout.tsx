@@ -12,19 +12,17 @@ export default function MainLayout({
   header,
 }: MainLayoutProps) {
   return (
-    <div className="min-h-screen bg-[#f5f5f5] flex">
+    <div className="h-screen bg-[#f5f5f5] flex overflow-hidden">
       {/* Sidebar */}
       {sidebar}
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col ml-0 lg:ml-0">
+      <div className="flex-1 flex flex-col ml-0 lg:ml-0 overflow-hidden">
         {/* Header - Fixed position */}
-        <div className="sticky top-0 z-40 bg-white shadow-sm">{header}</div>
+        <div className="shrink-0 z-40 bg-white shadow-sm">{header}</div>
 
-        {/* Main Dashboard Content - Scrollable */}
-        <main className="flex-1 p-[3vh] max-w-full overflow-x-auto">
-          {children}
-        </main>
+        {/* Main Dashboard Content - No scroll, children control their own scroll */}
+        <main className="flex-1 p-[3vh] overflow-hidden">{children}</main>
       </div>
     </div>
   );

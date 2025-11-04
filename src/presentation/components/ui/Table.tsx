@@ -23,47 +23,68 @@ export function Table<T>({
 }: TableProps<T>) {
   return (
     <div
-      className={`bg-white rounded-lg shadow-sm overflow-hidden ${className}`}
+      className={`bg-white rounded-lg shadow-sm flex flex-col h-full ${className}`}
     >
-      <table className="w-full">
-        <thead className="bg-gray-50 border-b border-gray-200">
-          <tr>
-            {columns.map((column) => (
-              <th
-                key={column.key}
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-              >
-                {column.header}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-gray-200">
-          {data.length === 0 ? (
+      {/* Fixed Header */}
+      <div className="overflow-hidden border-b border-gray-200">
+        <table className="w-full table-fixed">
+          <thead className="bg-gray-50">
             <tr>
-              <td
-                colSpan={columns.length}
-                className="px-6 py-8 text-center text-gray-500"
-              >
-                {emptyMessage}
-              </td>
+              {columns.map((column) => (
+                <th
+                  key={column.key}
+                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                >
+                  {column.header}
+                </th>
+              ))}
             </tr>
-          ) : (
-            data.map((item) => (
-              <tr
-                key={keyExtractor(item)}
-                className="hover:bg-gray-50 transition-colors"
-              >
-                {columns.map((column) => (
-                  <td key={column.key} className="px-6 py-4">
-                    {column.render(item)}
-                  </td>
-                ))}
+          </thead>
+        </table>
+      </div>
+
+      {/* Scrollable Body */}
+      <div className="flex-1 overflow-auto">
+        <table className="w-full table-fixed">
+          <thead className="invisible">
+            <tr>
+              {columns.map((column) => (
+                <th
+                  key={column.key}
+                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                >
+                  {column.header}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-200">
+            {data.length === 0 ? (
+              <tr>
+                <td
+                  colSpan={columns.length}
+                  className="px-6 py-8 text-center text-gray-500"
+                >
+                  {emptyMessage}
+                </td>
               </tr>
-            ))
-          )}
-        </tbody>
-      </table>
+            ) : (
+              data.map((item) => (
+                <tr
+                  key={keyExtractor(item)}
+                  className="hover:bg-gray-50 transition-colors"
+                >
+                  {columns.map((column) => (
+                    <td key={column.key} className="px-6 py-4">
+                      {column.render(item)}
+                    </td>
+                  ))}
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

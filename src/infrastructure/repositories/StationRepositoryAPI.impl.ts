@@ -2,7 +2,10 @@
 // Nơi mà fetch thực sự được gọi
 
 import { Station } from "@/domain/entities/Station";
-import { IStationRepository } from "@/domain/repositories/StationRepository";
+import {
+  IStationRepository,
+  CreateStationRequest,
+} from "@/domain/repositories/StationRepository";
 import api from "@/lib/api";
 
 // Lớp này "Triển khai" (implements) cái "Hợp đồng" IStationRepository
@@ -63,6 +66,121 @@ class StationRepositoryAPI implements IStationRepository {
         console.error("Error setting up request:", axiosError.message);
         throw new Error(
           `Failed to fetch stations: ${axiosError.message || "Unknown error"}`
+        );
+      }
+    }
+  }
+
+  /**
+   * Triển khai cụ thể create() để tạo trạm mới qua API
+   */
+  async create(stationData: CreateStationRequest): Promise<Station> {
+    const endpoint = "/stations";
+
+    try {
+      const response = await api.post(endpoint, stationData);
+
+      console.log("Create Station Response:", response.data);
+
+      // Kiểm tra response có hợp lệ không
+      if (!response.data) {
+        throw new Error("Invalid API response: no data returned");
+      }
+
+      return response.data as Station;
+    } catch (error) {
+      const axiosError = error as {
+        response?: { status: number; statusText: string; data: unknown };
+        request?: unknown;
+        message?: string;
+      };
+
+      if (axiosError.response) {
+        console.error(
+          `API error: ${axiosError.response.status}`,
+          axiosError.response.data
+        );
+
+        // Trích xuất message từ response nếu có
+        const errorMessage =
+          typeof axiosError.response.data === "object" &&
+          axiosError.response.data !== null &&
+          "message" in axiosError.response.data
+            ? (axiosError.response.data as { message: string }).message
+            : JSON.stringify(axiosError.response.data);
+
+        throw new Error(
+          `Failed to create station: ${
+            errorMessage || axiosError.response.statusText
+          }`
+        );
+      } else if (axiosError.request) {
+        console.error(
+          "Network error - no response received:",
+          axiosError.request
+        );
+        throw new Error(
+          "Failed to create station: Network error. This might be a CORS issue."
+        );
+      } else {
+        console.error("Error setting up request:", axiosError.message);
+        throw new Error(
+          `Failed to create station: ${axiosError.message || "Unknown error"}`
+        );
+      }
+    }
+  }
+
+  /**
+   * Triển khai cụ thể delete() để xóa trạm qua API
+   * API yêu cầu xóa theo tên trạm (station name)
+   */
+  async delete(stationName: string): Promise<void> {
+    // Encode station name để xử lý các ký tự đặc biệt trong URL
+    const encodedName = encodeURIComponent(stationName);
+    const endpoint = `/stations/${encodedName}`;
+
+    try {
+      await api.delete(endpoint);
+      console.log("Station deleted successfully:", stationName);
+    } catch (error) {
+      const axiosError = error as {
+        response?: { status: number; statusText: string; data: unknown };
+        request?: unknown;
+        message?: string;
+      };
+
+      if (axiosError.response) {
+        console.error(
+          `API error: ${axiosError.response.status}`,
+          axiosError.response.data
+        );
+
+        // Trích xuất message từ response nếu có
+        const errorMessage =
+          typeof axiosError.response.data === "object" &&
+          axiosError.response.data !== null &&
+          "message" in axiosError.response.data
+            ? (axiosError.response.data as { message: string }).message
+            : JSON.stringify(axiosError.response.data);
+
+        throw new Error(
+          `Failed to delete station: ${
+            errorMessage || axiosError.response.statusText
+          }`
+        );
+      } else if (axiosError.request) {
+        console.error(
+          "Network error - no response received:",
+          axiosError.request
+        );
+        throw new Error(
+          "Failed to delete station: Network error. This might be a CORS issue."
+        );
+      } else {
+        console.error("Error setting up request:", axiosError.message);
+        throw new Error(
+          `Failed to delete station: ${axiosError.message || "Unknown error"}`
         );
       }
     }
