@@ -17,10 +17,22 @@ class StationRepositoryAPI implements IStationRepository {
 
     try {
       // Sử dụng axios instance thay vì fetch để có auth headers và CORS config
-      const response = await api.get<Station[]>(endpoint);
+      const response = await api.get(endpoint);
 
-      // Axios tự động parse JSON, data có sẵn trong response.data
-      return response.data;
+      console.log("Raw API Response:", response.data);
+
+      // Backend trả về trực tiếp array
+      if (!Array.isArray(response.data)) {
+        console.error(
+          "Expected array but got:",
+          typeof response.data,
+          response.data
+        );
+        throw new Error("Invalid API response: expected array of stations");
+      }
+
+      console.log("Stations count:", response.data.length);
+      return response.data as Station[];
     } catch (error) {
       // Axios error có cấu trúc khác với fetch error
       const axiosError = error as {

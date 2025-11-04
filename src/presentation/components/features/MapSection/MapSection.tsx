@@ -225,17 +225,24 @@ export default function MapSection() {
 
   // Initialize Leaflet map once
   useEffect(() => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const L = (window as any).L;
-    if (!L) {
-      console.error("Leaflet chưa được load!");
-      return;
-    }
+    // Wait for Leaflet to be loaded
+    const checkLeafletAndInitialize = () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const L = (window as any).L;
+      if (!L) {
+        console.warn("Leaflet chưa được load, đợi...");
+        // Retry after a short delay
+        setTimeout(checkLeafletAndInitialize, 100);
+        return;
+      }
 
-    // Only initialize if not already initialized
-    if (mapRef.current && !mapInstanceRef.current) {
-      initializeMapWithLocation();
-    }
+      // Only initialize if not already initialized
+      if (mapRef.current && !mapInstanceRef.current) {
+        initializeMapWithLocation();
+      }
+    };
+
+    checkLeafletAndInitialize();
 
     // Cleanup when component unmounts - IMPORTANT to prevent "already initialized" error
     return () => {
@@ -253,7 +260,14 @@ export default function MapSection() {
     const L = (window as any).L;
     const map = mapInstanceRef.current;
     const layer = stationsLayerRef.current;
-    if (!L || !map || !layer) return;
+
+    // Wait for Leaflet to be ready
+    if (!L) {
+      console.warn("Leaflet not ready yet for rendering stations");
+      return;
+    }
+
+    if (!map || !layer) return;
 
     // Clear existing station markers
     layer.clearLayers();
