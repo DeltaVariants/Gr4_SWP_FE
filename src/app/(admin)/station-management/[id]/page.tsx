@@ -4,7 +4,6 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useAppDispatch, useAppSelector } from "@/application/hooks/useRedux";
 import { fetchAllStations } from "@/application/services/stationService";
-import { Breadcrumb } from "@/presentation/components/ui/Breadcrumb";
 
 export default function StationDetail() {
   const params = useParams();
@@ -69,13 +68,18 @@ export default function StationDetail() {
   return (
     <div>
       {/* Breadcrumb */}
-      <Breadcrumb
-        items={[
-          { label: "Station Management", href: "/station-management" },
-          { label: station.stationName },
-        ]}
-        className="mb-4"
-      />
+      <div className="mb-4">
+        <div className="flex items-center gap-2 text-sm">
+          <Link
+            href="/station-management"
+            className="text-indigo-600 hover:text-indigo-700"
+          >
+            Station Management
+          </Link>
+          <span className="text-gray-400">&gt;</span>
+          <span className="text-gray-600">{station.stationName}</span>
+        </div>
+      </div>
 
       <div className="mb-6 flex items-center justify-between">
         <div>

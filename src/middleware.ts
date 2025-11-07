@@ -1,5 +1,6 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
+import { UserRole } from "@/domain/entities/Auth";
 
 const STAFF_PATHS = [
   "/dashboardstaff",
@@ -33,11 +34,17 @@ export function middleware(req: NextRequest) {
   const pathname = req.nextUrl.pathname;
 
   const token = req.cookies.get("token")?.value;
-  const role = (req.cookies.get("role")?.value || "").toUpperCase();
-  const hasAuth = Boolean(token && role);
+  const roleStr = (req.cookies.get("role")?.value || "").toUpperCase();
+  const hasAuth = Boolean(token && roleStr);
+
+  console.log("[Middleware]", {
+    pathname,
+    hasToken: Boolean(token),
+    role: roleStr || "none",
+    hasAuth,
+  });
 
   // DEV MODE: Bypass authentication nếu có NEXT_PUBLIC_API_TOKEN trong .env
-  // Điều này cho phép test với token thủ công mà không cần đăng nhập
   const devToken = process.env.NEXT_PUBLIC_API_TOKEN;
   const allowDevBypass = Boolean(devToken);
 
@@ -69,7 +76,8 @@ export function middleware(req: NextRequest) {
       return NextResponse.redirect(url);
     }
 
-    if (role !== "ADMIN") {
+    // Check if role is Admin
+    if (roleStr !== UserRole.ADMIN.toUpperCase()) {
       // Không phải admin -> redirect về home
       const url = req.nextUrl.clone();
       url.pathname = "/home";
@@ -80,7 +88,6 @@ export function middleware(req: NextRequest) {
   // Nếu đã đăng nhập mà vào /login, /register, ... thì đẩy về homepage
   if (inPublicAuth && hasAuth) {
     // Trong môi trường phát triển cho phép truy cập trang login/register
-    // ngay cả khi cookie auth tồn tại để thuận tiện cho việc dev/testing.
     if (process.env.NODE_ENV === "development") {
       return NextResponse.next();
     }

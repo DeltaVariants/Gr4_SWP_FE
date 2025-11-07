@@ -1,12 +1,12 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import Link from 'next/link';
-import { useAuth } from '@/contexts/AuthContext';
-import { EmailInput } from './EmailInput';
-import { PasswordInput } from './PasswordInput';
-import { RememberForgot } from './RememberForgot';
-import { SocialLogin } from './SocialLogin';
+import { useState } from "react";
+import Link from "next/link";
+import { useAuth } from "@/presentation/contexts/AuthContext";
+import { EmailInput } from "./EmailInput";
+import { PasswordInput } from "./PasswordInput";
+import { RememberForgot } from "./RememberForgot";
+import { SocialLogin } from "./SocialLogin";
 
 interface LoginFormData {
   email: string;
@@ -22,32 +22,33 @@ interface LoginFormErrors {
 export const LoginForm = () => {
   const { login, loading } = useAuth();
   const [formData, setFormData] = useState<LoginFormData>({
-    email: '',
-    password: '',
+    email: "",
+    password: "",
     rememberMe: false,
   });
   const [errors, setErrors] = useState<LoginFormErrors>({});
-  const [apiError, setApiError] = useState<string>('');
+  const [apiError, setApiError] = useState<string>("");
 
-  const validateEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  const validateEmail = (email: string) =>
+    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setApiError('');
-    
+    setApiError("");
+
     // Validation
     const newErrors: LoginFormErrors = {};
-    
+
     if (!formData.email) {
-      newErrors.email = 'Email là bắt buộc';
+      newErrors.email = "Email là bắt buộc";
     } else if (!validateEmail(formData.email)) {
-      newErrors.email = 'Vui lòng nhập địa chỉ email hợp lệ';
+      newErrors.email = "Vui lòng nhập địa chỉ email hợp lệ";
     }
 
     if (!formData.password) {
-      newErrors.password = 'Mật khẩu là bắt buộc';
+      newErrors.password = "Mật khẩu là bắt buộc";
     } else if (formData.password.length < 6) {
-      newErrors.password = 'Mật khẩu phải có ít nhất 6 ký tự';
+      newErrors.password = "Mật khẩu phải có ít nhất 6 ký tự";
     }
 
     setErrors(newErrors);
@@ -69,7 +70,7 @@ export const LoginForm = () => {
     const { name, value, type, checked } = e.target;
     setFormData((prev) => ({
       ...prev,
-      [name]: type === 'checkbox' ? checked : value,
+      [name]: type === "checkbox" ? checked : value,
     }));
 
     // Clear errors khi user đang type
@@ -83,16 +84,18 @@ export const LoginForm = () => {
 
   const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    let fieldError = '';
+    let fieldError = "";
 
-    if (name === 'email') {
-      if (!value) fieldError = 'Email là bắt buộc';
-      else if (!validateEmail(value)) fieldError = 'Vui lòng nhập địa chỉ email hợp lệ';
+    if (name === "email") {
+      if (!value) fieldError = "Email là bắt buộc";
+      else if (!validateEmail(value))
+        fieldError = "Vui lòng nhập địa chỉ email hợp lệ";
     }
 
-    if (name === 'password') {
-      if (!value) fieldError = 'Mật khẩu là bắt buộc';
-      else if (value.length < 6) fieldError = 'Mật khẩu phải có ít nhất 6 ký tự';
+    if (name === "password") {
+      if (!value) fieldError = "Mật khẩu là bắt buộc";
+      else if (value.length < 6)
+        fieldError = "Mật khẩu phải có ít nhất 6 ký tự";
     }
 
     setErrors((prev) => ({ ...prev, [name]: fieldError }));
@@ -146,12 +149,12 @@ export const LoginForm = () => {
               Đang đăng nhập...
             </div>
           ) : (
-            'Đăng nhập'
+            "Đăng nhập"
           )}
         </button>
 
         <p className="text-center text-sm text-gray-600">
-          Chưa có tài khoản?{' '}
+          Chưa có tài khoản?{" "}
           <Link
             href="/register"
             className="font-medium text-[#0062FF] hover:text-[#0055E0] transition-colors"

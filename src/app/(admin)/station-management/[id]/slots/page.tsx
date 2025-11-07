@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState, useMemo } from "react";
 import { useParams } from "next/navigation";
+import Link from "next/link";
 import { useAppDispatch, useAppSelector } from "@/application/hooks/useRedux";
 import { fetchSlotsByStation } from "@/application/services/slotService";
 import { fetchAllStations } from "@/application/services/stationService";
@@ -8,7 +9,6 @@ import { fetchBatteriesByStation } from "@/application/services/stationBatterySe
 import { updateBattery } from "@/application/services/batteryUpdateService";
 import { Slot } from "@/domain/entities/Slot";
 import { FaBatteryFull, FaBatteryEmpty, FaSyncAlt } from "react-icons/fa";
-import { Breadcrumb } from "@/presentation/components/ui/Breadcrumb";
 import { AssignBatteryModal } from "@/app/(admin)/components/slot/AssignBatteryModal";
 import { Toast } from "@/presentation/components/ui/Toast";
 
@@ -213,17 +213,18 @@ export default function StationSlotsPage() {
     return (
       <div className="h-full flex flex-col">
         {/* Breadcrumb */}
-        <Breadcrumb
-          items={[
-            { label: "Station Management", href: "/station-management" },
-            {
-              label: "Station Information",
-              href: `/station-management/${stationId}`,
-            },
-            { label: "Slots" },
-          ]}
-          className="mb-4"
-        />
+        <div className="mb-4">
+          <div className="flex items-center gap-2 text-sm">
+            <Link
+              href="/station-management"
+              className="text-indigo-600 hover:text-indigo-700"
+            >
+              Station Management
+            </Link>
+            <span className="text-gray-400">&gt;</span>
+            <span className="text-gray-600">Station Details</span>
+          </div>
+        </div>
         <div className="bg-white rounded-lg shadow-sm p-8 text-center">
           <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
           <p className="mt-2 text-gray-600">Loading slots...</p>
@@ -236,17 +237,18 @@ export default function StationSlotsPage() {
     return (
       <div className="h-full flex flex-col">
         {/* Breadcrumb */}
-        <Breadcrumb
-          items={[
-            { label: "Station Management", href: "/station-management" },
-            {
-              label: "Station Information",
-              href: `/station-management/${stationId}`,
-            },
-            { label: "Slots" },
-          ]}
-          className="mb-4"
-        />
+        <div className="mb-4">
+          <div className="flex items-center gap-2 text-sm">
+            <Link
+              href="/station-management"
+              className="text-indigo-600 hover:text-indigo-700"
+            >
+              Station Management
+            </Link>
+            <span className="text-gray-400">&gt;</span>
+            <span className="text-gray-600">Station Details</span>
+          </div>
+        </div>
         <div className="bg-red-50 border border-red-200 rounded-lg p-4">
           <p className="text-red-800">Error: {error}</p>
         </div>
@@ -259,17 +261,20 @@ export default function StationSlotsPage() {
   return (
     <div className="h-full flex flex-col overflow-hidden">
       {/* Breadcrumb */}
-      <Breadcrumb
-        items={[
-          { label: "Station Management", href: "/station-management" },
-          {
-            label: station?.stationName || "Station Information",
-            href: `/station-management/${stationId}`,
-          },
-          { label: "Slots" },
-        ]}
-        className="mb-4 shrink-0"
-      />
+      <div className="mb-4 shrink-0">
+        <div className="flex items-center gap-2 text-sm">
+          <Link
+            href="/station-management"
+            className="text-indigo-600 hover:text-indigo-700"
+          >
+            Station Management
+          </Link>
+          <span className="text-gray-400">&gt;</span>
+          <span className="text-gray-600">
+            {station?.stationName || "Station Details"}
+          </span>
+        </div>
+      </div>
 
       {/* Header */}
       <div className="mb-4 shrink-0">

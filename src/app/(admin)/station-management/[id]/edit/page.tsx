@@ -3,7 +3,6 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useState } from "react";
 import { Toast } from "@/presentation/components/ui/Toast";
-import { Breadcrumb } from "@/presentation/components/ui/Breadcrumb";
 
 export default function EditStation() {
   const params = useParams();
@@ -53,17 +52,25 @@ export default function EditStation() {
   return (
     <div>
       {/* Breadcrumb */}
-      <Breadcrumb
-        items={[
-          { label: "Station Management", href: "/station-management" },
-          {
-            label: "Station Information",
-            href: `/station-management/${stationId}`,
-          },
-          { label: "Edit" },
-        ]}
-        className="mb-4"
-      />
+      <div className="mb-4">
+        <div className="flex items-center gap-2 text-sm">
+          <Link
+            href="/station-management"
+            className="text-indigo-600 hover:text-indigo-700"
+          >
+            Station Management
+          </Link>
+          <span className="text-gray-400">&gt;</span>
+          <Link
+            href={`/station-management/${stationId}`}
+            className="text-indigo-600 hover:text-indigo-700"
+          >
+            Station Details
+          </Link>
+          <span className="text-gray-400">&gt;</span>
+          <span className="text-gray-600">Edit</span>
+        </div>
+      </div>
 
       <div className="mb-6">
         <h2 className="text-2xl font-semibold">Edit Station</h2>
