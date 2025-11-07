@@ -4,6 +4,7 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useAppDispatch, useAppSelector } from "@/application/hooks/useRedux";
 import { fetchAllStations } from "@/application/services/stationService";
+import { Breadcrumb } from "@/presentation/components/ui/Breadcrumb";
 
 export default function StationDetail() {
   const params = useParams();
@@ -67,24 +68,41 @@ export default function StationDetail() {
 
   return (
     <div>
+      {/* Breadcrumb */}
+      <Breadcrumb
+        items={[
+          { label: "Station Management", href: "/station-management" },
+          { label: station.stationName },
+        ]}
+        className="mb-4"
+      />
+
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <Link
-            href="/station-management"
-            className="text-indigo-600 hover:text-indigo-700 mb-2 inline-block"
-          >
-            ← Back to Stations
-          </Link>
           <h2 className="text-2xl font-semibold text-gray-900">
             {station.stationName}
           </h2>
         </div>
-        <Link
-          href={`/station-management/${stationId}/edit`}
-          className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
-        >
-          Edit Station
-        </Link>
+        <div className="flex gap-3">
+          <Link
+            href={`/station-management/${stationId}/batteries`}
+            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+          >
+            View Batteries
+          </Link>
+          <Link
+            href={`/station-management/${stationId}/slots`}
+            className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+          >
+            View Slots
+          </Link>
+          <Link
+            href={`/station-management/${stationId}/edit`}
+            className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+          >
+            Edit Station
+          </Link>
+        </div>
       </div>
 
       <div className="bg-white rounded-lg shadow-sm p-6">
