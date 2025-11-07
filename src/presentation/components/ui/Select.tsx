@@ -1,0 +1,61 @@
+import React from "react";
+
+export interface SelectOption {
+  value: string;
+  label: string;
+}
+
+export interface SelectProps
+  extends Omit<React.SelectHTMLAttributes<HTMLSelectElement>, "className"> {
+  options: SelectOption[];
+  value: string;
+  onChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
+  placeholder?: string;
+  className?: string;
+  containerClassName?: string;
+}
+
+export const Select: React.FC<SelectProps> = ({
+  options,
+  value,
+  onChange,
+  placeholder,
+  className = "",
+  containerClassName = "",
+  ...props
+}) => {
+  const baseSelectClasses =
+    "w-full px-4 py-2 pr-10 text-gray-800 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent cursor-pointer bg-white [&::-ms-expand]:hidden";
+
+  return (
+    <div className={`relative ${containerClassName}`}>
+      <select
+        value={value}
+        onChange={onChange}
+        className={`${baseSelectClasses} ${className}`}
+        style={{
+          appearance: "none",
+          WebkitAppearance: "none",
+          MozAppearance: "none",
+        }}
+        {...props}
+      >
+        {placeholder && <option value="">{placeholder}</option>}
+        {options.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+      <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-700">
+        <svg
+          className="fill-current h-4 w-4"
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 20 20"
+        >
+          <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
+        </svg>
+      </div>
+    </div>
+  );
+};

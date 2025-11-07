@@ -6,12 +6,14 @@ interface StationState {
   selectedStation: Station | null;
   loading: boolean;
   error: string | null;
+  lastFetched: number | null; // timestamp of last successful fetch
 }
 const initialState: StationState = {
   stations: [],
   selectedStation: null,
   loading: false,
   error: null,
+  lastFetched: null,
 };
 const stationSlice = createSlice({
   name: "station",
@@ -20,6 +22,9 @@ const stationSlice = createSlice({
     //action đồng bộ
     clearSelectedStation(state) {
       state.selectedStation = null;
+    },
+    invalidateStationsCache(state) {
+      state.lastFetched = null;
     },
   },
   extraReducers: (builder) => {
@@ -35,6 +40,7 @@ const stationSlice = createSlice({
         (state, action: PayloadAction<Station[]>) => {
           state.loading = false;
           state.stations = action.payload;
+          state.lastFetched = Date.now();
         }
       )
       .addCase(fetchAllStations.rejected, (state, action) => {
@@ -43,5 +49,6 @@ const stationSlice = createSlice({
       });
   },
 });
-export const { clearSelectedStation } = stationSlice.actions;
+export const { clearSelectedStation, invalidateStationsCache } =
+  stationSlice.actions;
 export default stationSlice.reducer;
