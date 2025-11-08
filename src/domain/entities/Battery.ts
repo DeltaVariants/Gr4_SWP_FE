@@ -18,3 +18,15 @@ export interface BatteryListResponse {
     totalPages: number;
   };
 }
+
+export interface UpdateBatteryParams {
+  batteryID: string;
+  batterySlotID?: string;
+  currentPercentage?: number;
+}
+
+export interface UpdateBatteryResponse {
+  success: boolean;
+  message: string;
+  data?: Battery;
+}

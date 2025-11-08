@@ -27,9 +27,13 @@ export const AssignBatteryModal = ({
   );
   const [customPercentage, setCustomPercentage] = useState<number>(100);
 
-  // Filter batteries: idle location and available status
+  // Filter batteries:
+  // 1. batterySlotID === null (chưa được gắn vào slot nào)
+  // 2. idle location
+  // 3. available status
   const availableBatteries = batteries.filter(
     (battery) =>
+      battery.batterySlotID === null &&
       battery.currentLocation.toLowerCase() === "idle" &&
       battery.batteryStatus.toLowerCase() === "available"
   );
@@ -85,7 +89,7 @@ export const AssignBatteryModal = ({
           ) : filteredBatteries.length === 0 ? (
             <div className="text-center py-8 text-gray-600">
               {availableBatteries.length === 0
-                ? "No available batteries found"
+                ? "No unassigned batteries available. All batteries are either assigned to slots or unavailable."
                 : "No batteries match your search"}
             </div>
           ) : (

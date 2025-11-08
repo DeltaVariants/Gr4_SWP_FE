@@ -6,10 +6,15 @@ import { useAppDispatch, useAppSelector } from "@/application/hooks/useRedux";
 import { fetchSlotsByStation } from "@/application/services/slotService";
 import { fetchAllStations } from "@/application/services/stationService";
 import { fetchBatteriesByStation } from "@/application/services/stationBatteryService";
-import { updateBattery } from "@/application/services/batteryUpdateService";
+import {
+  assignBatteryToSlot,
+  updateBatteryPercentage,
+  removeBatteryFromSlot,
+} from "@/application/services/batteryService";
 import { Slot } from "@/domain/entities/Slot";
 import { FaBatteryFull, FaBatteryEmpty, FaSyncAlt } from "react-icons/fa";
 import { AssignBatteryModal } from "@/app/(admin)/components/slot/AssignBatteryModal";
+import { SlotDetailModal } from "@/app/(admin)/components/slot/SlotDetailModal";
 import { Toast } from "@/presentation/components/ui/Toast";
 
 export default function StationSlotsPage() {
@@ -31,6 +36,11 @@ export default function StationSlotsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState<Slot | null>(null);
   const [isAssigning, setIsAssigning] = useState(false);
+
+  // Detail modal state for occupied slots
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [detailSlot, setDetailSlot] = useState<Slot | null>(null);
+  const [isUpdating, setIsUpdating] = useState(false);
 
   // Toast state
   const [toast, setToast] = useState<{
@@ -103,10 +113,14 @@ export default function StationSlotsPage() {
 
   // Handle slot click
   const handleSlotClick = (slot: Slot) => {
-    // Only open modal if slot is empty
+    // If slot is empty, open assign modal
     if (!slot.batteryID || slot.status.toLowerCase() === "empty") {
       setSelectedSlot(slot);
       setIsModalOpen(true);
+    } else {
+      // If slot has battery, open detail modal
+      setDetailSlot(slot);
+      setIsDetailModalOpen(true);
     }
   };
 
@@ -119,14 +133,12 @@ export default function StationSlotsPage() {
 
     setIsAssigning(true);
     try {
+      // Use assignBatteryToSlot with batterySlotID and currentPercentage
       await dispatch(
-        updateBattery({
+        assignBatteryToSlot({
           batteryID: batteryId,
-          data: {
-            batterySlotID: selectedSlot.batterySlotID,
-            vehicleID: null,
-            currentPercentage: currentPercentage,
-          },
+          batterySlotID: selectedSlot.batterySlotID,
+          currentPercentage: currentPercentage,
         })
       ).unwrap();
 
@@ -145,6 +157,66 @@ export default function StationSlotsPage() {
       showToast(message, "error");
     } finally {
       setIsAssigning(false);
+    }
+  };
+
+  // Handle update battery percentage from detail modal
+  const handleUpdatePercentage = async (
+    batteryId: string,
+    percentage: number
+  ) => {
+    setIsUpdating(true);
+    try {
+      await dispatch(
+        updateBatteryPercentage({
+          batteryID: batteryId,
+          currentPercentage: percentage,
+        })
+      ).unwrap();
+
+      showToast(
+        `Battery ${batteryId} percentage updated to ${percentage}% successfully!`,
+        "success"
+      );
+
+      // Close modal and refresh data
+      setIsDetailModalOpen(false);
+      setDetailSlot(null);
+      handleRefresh();
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Failed to update battery percentage";
+      showToast(message, "error");
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  // Handle remove battery from slot
+  const handleRemoveBattery = async (batteryId: string) => {
+    setIsUpdating(true);
+    try {
+      await dispatch(removeBatteryFromSlot(batteryId)).unwrap();
+
+      showToast(
+        `Battery ${batteryId} removed from slot successfully!`,
+        "success"
+      );
+
+      // Close modal and refresh data
+      setIsDetailModalOpen(false);
+      setDetailSlot(null);
+      handleRefresh();
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Failed to remove battery from slot";
+      showToast(message, "error");
+    } finally {
+      setIsUpdating(false);
     }
   };
 
@@ -349,13 +421,7 @@ export default function StationSlotsPage() {
                   <div
                     key={slot.batterySlotID}
                     onClick={() => handleSlotClick(slot)}
-                    className={`${
-                      slotStatus.color
-                    } border-2 rounded-lg p-4 flex flex-col items-center justify-center gap-2 transition-all hover:shadow-md aspect-square ${
-                      isEmpty
-                        ? "cursor-pointer hover:scale-105"
-                        : "cursor-default"
-                    }`}
+                    className={`${slotStatus.color} border-2 rounded-lg p-4 flex flex-col items-center justify-center gap-2 transition-all hover:shadow-md aspect-square cursor-pointer hover:scale-105`}
                   >
                     {slotStatus.icon}
                     <div className="text-center">
@@ -371,6 +437,9 @@ export default function StationSlotsPage() {
                               {slotStatus.percentage}%
                             </p>
                           )}
+                          <p className="text-xs mt-1 text-indigo-600 font-semibold">
+                            Click to manage
+                          </p>
                         </>
                       )}
                       {isEmpty && (
@@ -446,6 +515,21 @@ export default function StationSlotsPage() {
           batteries={batteries}
           loading={batteriesLoading || isAssigning}
           onAssign={handleAssignBattery}
+        />
+      )}
+
+      {/* Slot Detail Modal (for occupied slots) */}
+      {detailSlot && (
+        <SlotDetailModal
+          isOpen={isDetailModalOpen}
+          onClose={() => {
+            setIsDetailModalOpen(false);
+            setDetailSlot(null);
+          }}
+          slot={detailSlot}
+          onUpdatePercentage={handleUpdatePercentage}
+          onRemoveBattery={handleRemoveBattery}
+          loading={isUpdating}
         />
       )}
 

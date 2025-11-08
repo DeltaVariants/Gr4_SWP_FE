@@ -1,11 +1,5 @@
-import React from "react";
+import { redirect } from "next/navigation";
 
-const BillingPlanPage = () => {
-  return (
-    <div className="p-6">
-      {/* Nội dung trang Billing Plan sẽ được thêm sau */}
-    </div>
-  );
-};
-
-export default BillingPlanPage;
+export default function BillingPlanPage() {
+  redirect("/billing-plan/plan");
+}

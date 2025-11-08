@@ -229,9 +229,7 @@ export default function StationDetail() {
             <div className="bg-purple-50 rounded-lg p-4">
               <p className="text-sm text-purple-600 mb-1">Empty Slots</p>
               <p className="text-2xl font-bold text-purple-900">
-                {station.slotNumber -
-                  station.batteryInSlots -
-                  station.batteryOutSlots}
+                {station.slotNumber - station.batteryInSlots}
               </p>
             </div>
           </div>

@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from "@/contexts/AuthContext";
 import {
   HiMenu,
   HiHome,
@@ -22,7 +22,7 @@ const Sidebar = () => {
   const displayedPlan = authUser?.role || "Premium Plan";
 
   const menuItems = [
-    { icon: HiHome, label: "Home", href: "/home", isActive: true },
+    { icon: HiHome, label: "Home", href: "/home" },
     { icon: HiLocationMarker, label: "Find Stations", href: "/stations" },
     { icon: HiOutlineTruck, label: "My vehicles", href: "/vehicles" },
     { icon: HiOutlineCalendar, label: "My Bookings", href: "/bookings" },
@@ -30,6 +30,23 @@ const Sidebar = () => {
     { icon: HiOutlineCreditCard, label: "Billing & Plans", href: "/billing" },
     { icon: HiOutlineQuestionMarkCircle, label: "Support", href: "/support" },
   ];
+
+  // Helper function to check if a menu item is active
+  const isMenuItemActive = (href: string, currentPath: string) => {
+    const normalizedCurrent = currentPath.split("?")[0].replace(/\/+$/, "");
+    const normalizedHref = href.replace(/\/+$/, "");
+
+    // Check if current path matches exactly OR starts with the href (for nested routes)
+    return (
+      normalizedCurrent === normalizedHref ||
+      (normalizedCurrent.startsWith(normalizedHref + "/") &&
+        normalizedHref !== "")
+    );
+  };
+
+  // Get current path (you may need to use usePathname from next/navigation)
+  const currentPath =
+    typeof window !== "undefined" ? window.location.pathname : "/home";
 
   return (
     <div
@@ -60,17 +77,18 @@ const Sidebar = () => {
         <div className="space-y-2">
           {menuItems.map((item, index) => {
             const IconComponent = item.icon;
+            const isActive = isMenuItemActive(item.href, currentPath);
             return (
               <Link
                 key={index}
                 href={item.href}
                 className={`flex items-center space-x-3 p-3 rounded-lg transition-colors group ${
-                  item.isActive
+                  isActive
                     ? "bg-blue-400/30 text-white"
                     : "hover:bg-blue-500/20 text-blue-100"
                 }`}
               >
-                <IconComponent size={20} className="flex-shrink-0" />
+                <IconComponent size={20} className="shrink-0" />
                 {isExpanded && (
                   <span className="font-medium">{item.label}</span>
                 )}

@@ -6,6 +6,7 @@ import batteryReducer from "./slices/batterySlice";
 import slotReducer from "./slices/slotSlice";
 import stationBatteryReducer from "./slices/stationBatterySlice";
 import userReducer from "./slices/userSlice";
+import vehicleReducer from "./slices/vehicleSlice";
 
 export const store = configureStore({
   reducer: {
@@ -16,6 +17,7 @@ export const store = configureStore({
     slot: slotReducer,
     stationBattery: stationBatteryReducer,
     user: userReducer,
+    vehicle: vehicleReducer,
   },
 });
 

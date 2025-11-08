@@ -1,6 +1,6 @@
 "use client";
 import React from "react";
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from "@/contexts/AuthContext";
 import Link from "next/link";
 import { FaBars } from "react-icons/fa";
 
@@ -41,10 +41,10 @@ const SideBar: React.FC<SideBarUIProps> = ({
   // Prefer explicit prop `user`, then auth context, then try decoding token for an immediate name
   const tokenNameFallback = (() => {
     try {
-      if (typeof window !== 'undefined') {
-        const t = localStorage.getItem('accessToken');
+      if (typeof window !== "undefined") {
+        const t = localStorage.getItem("accessToken");
         if (t) {
-          const parts = t.split('.');
+          const parts = t.split(".");
           if (parts.length >= 2) {
             const p = JSON.parse(atob(parts[1]));
             return p.unique_name || p.name || p.email || p.username || null;
@@ -57,7 +57,8 @@ const SideBar: React.FC<SideBarUIProps> = ({
     return null;
   })();
 
-  const displayedName = user?.name || authUser?.name || tokenNameFallback || authUser?.email || "";
+  const displayedName =
+    user?.name || authUser?.name || tokenNameFallback || authUser?.email || "";
   const displayedAvatar = user?.avatarUrl || authUser?.avatar || undefined;
   const displayedInitials =
     user?.initials ||
@@ -69,8 +70,8 @@ const SideBar: React.FC<SideBarUIProps> = ({
           .map((s: string) => s[0].toUpperCase())
           .join("")
       : authLoading
-      ? ''
-      : 'NA');
+      ? ""
+      : "NA");
   return (
     <div
       className={`h-screen flex flex-col sticky top-0 z-10 transition-all duration-300 ease-in-out bg-white shadow-[0_4px_4px_rgba(0,0,0,0.1)] ${
@@ -120,10 +121,19 @@ const SideBar: React.FC<SideBarUIProps> = ({
       <nav className="flex-1 py-4 flex flex-col gap-2">
         {navigationItems.map((item) => {
           // normalize currentPath: strip query and trailing slash
-          const raw = (currentPath || '').toString();
-          const normalized = raw.split('?')[0].replace(/\/+$/, '');
-          const isProfilePage = normalized.toLowerCase().startsWith('/profile');
-          const isActive = !isProfilePage && normalized === item.path.replace(/\/+$/, '');
+          const raw = (currentPath || "").toString();
+          const normalized = raw.split("?")[0].replace(/\/+$/, "");
+          const itemPathNormalized = item.path.replace(/\/+$/, "");
+          const isProfilePage = normalized.toLowerCase().startsWith("/profile");
+
+          // Check if current path matches exactly OR starts with the item path (for nested routes)
+          // e.g., /billing-plan/plan should match /billing-plan
+          const isActive =
+            !isProfilePage &&
+            (normalized === itemPathNormalized ||
+              (normalized.startsWith(itemPathNormalized + "/") &&
+                itemPathNormalized !== ""));
+
           return (
             <Link href={item.path} key={item.name}>
               <div
@@ -220,7 +230,16 @@ function LogoutButton() {
       title="Logout"
       className="w-7 h-7 flex items-center justify-center rounded-md text-gray-600 hover:bg-gray-100"
     >
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <svg
+        width="14"
+        height="14"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
         <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
         <path d="M16 17l5-5-5-5" />
         <path d="M21 12H9" />

@@ -1,11 +1,17 @@
 import { Battery } from "@/domain/entities/Battery";
 import { createSlice } from "@reduxjs/toolkit";
-import { fetchAllBatteries } from "../services/batteryService";
+import {
+  fetchAllBatteries,
+  assignBatteryToSlot,
+  updateBatteryPercentage,
+  removeBatteryFromSlot,
+} from "../services/batteryService";
 
 interface BatteryState {
   batteries: Battery[];
   selectedBattery: Battery | null;
   loading: boolean;
+  updating: boolean; // Loading state cho update operations
   error: string | null;
   lastFetched: number | null; // timestamp of last successful fetch
   pagination: {
@@ -20,6 +26,7 @@ const initialState: BatteryState = {
   batteries: [],
   selectedBattery: null,
   loading: false,
+  updating: false,
   error: null,
   lastFetched: null,
   pagination: null,
@@ -54,6 +61,51 @@ const batterySlice = createSlice({
       .addCase(fetchAllBatteries.rejected, (state, action) => {
         state.loading = false;
         state.error = action.error.message || "Failed to fetch batteries";
+      })
+      // assignBatteryToSlot
+      .addCase(assignBatteryToSlot.pending, (state) => {
+        state.updating = true;
+        state.error = null;
+      })
+      .addCase(assignBatteryToSlot.fulfilled, (state) => {
+        state.updating = false;
+        // Invalidate cache để fetch lại danh sách pin
+        state.lastFetched = null;
+      })
+      .addCase(assignBatteryToSlot.rejected, (state, action) => {
+        state.updating = false;
+        state.error =
+          action.error.message || "Failed to assign battery to slot";
+      })
+      // updateBatteryPercentage
+      .addCase(updateBatteryPercentage.pending, (state) => {
+        state.updating = true;
+        state.error = null;
+      })
+      .addCase(updateBatteryPercentage.fulfilled, (state) => {
+        state.updating = false;
+        // Invalidate cache để fetch lại danh sách pin
+        state.lastFetched = null;
+      })
+      .addCase(updateBatteryPercentage.rejected, (state, action) => {
+        state.updating = false;
+        state.error =
+          action.error.message || "Failed to update battery percentage";
+      })
+      // removeBatteryFromSlot
+      .addCase(removeBatteryFromSlot.pending, (state) => {
+        state.updating = true;
+        state.error = null;
+      })
+      .addCase(removeBatteryFromSlot.fulfilled, (state) => {
+        state.updating = false;
+        // Invalidate cache để fetch lại danh sách pin
+        state.lastFetched = null;
+      })
+      .addCase(removeBatteryFromSlot.rejected, (state, action) => {
+        state.updating = false;
+        state.error =
+          action.error.message || "Failed to remove battery from slot";
       });
   },
 });
