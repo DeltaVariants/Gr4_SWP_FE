@@ -4,17 +4,13 @@ import Link from "next/link";
 export default function StationMonitor() {
   return (
     <div>
-      <div className="mb-6">
+      <div>
         <Link
           href="/station-management"
           className="text-indigo-600 hover:text-indigo-700 mb-2 inline-block"
         >
           ← Back to Stations
         </Link>
-        <h2 className="text-2xl font-semibold">Station Monitor</h2>
-        <p className="text-gray-600">
-          Real-time monitoring of all stations on map
-        </p>
       </div>
 
       <div className="bg-white rounded-lg shadow-sm p-6">

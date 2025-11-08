@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useMemo, useState, useCallback, useRef } from "react";
-import { FaSearch, FaSyncAlt, FaBatteryFull } from "react-icons/fa";
+import { FaSearch, FaSyncAlt } from "react-icons/fa";
 import {
   Table,
   TableHeader,
@@ -12,11 +12,12 @@ import {
 } from "@heroui/react";
 import { useAppDispatch, useAppSelector } from "@/application/hooks/useRedux";
 import { fetchAllBatteries } from "@/application/services/batteryService";
-import { Battery } from "@/domain/entities/Battery";
+import { Battery, getBatteryTypeFromId } from "@/domain/entities/Battery";
 import { Select, SelectOption } from "@/presentation/components/ui/Select";
 import { Input } from "@/presentation/components/ui/Input";
 
 type StatusFilterOption = "all" | "available" | "faulty" | "null";
+type TypeFilterOption = "all" | "Large" | "Medium" | "Small";
 
 // Cache duration in milliseconds (5 minutes)
 const CACHE_DURATION = 5 * 60 * 1000;
@@ -29,6 +30,7 @@ export default function BatteryManagement() {
 
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilterOption>("all");
+  const [typeFilter, setTypeFilter] = useState<TypeFilterOption>("all");
   const [page, setPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(8);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -65,15 +67,27 @@ export default function BatteryManagement() {
     const isCacheValid = lastFetched && now - lastFetched < CACHE_DURATION;
 
     if (!isCacheValid || batteries.length === 0) {
-      dispatch(fetchAllBatteries({ pageNumber: page, pageSize: 100 })); // Fetch more items for client-side filtering
+      dispatch(
+        fetchAllBatteries({
+          pageNumber: page,
+          pageSize: 100,
+          typeName: typeFilter !== "all" ? typeFilter : undefined,
+        })
+      ); // Fetch more items for client-side filtering
     }
-  }, [dispatch, lastFetched, batteries.length, page]);
+  }, [dispatch, lastFetched, batteries.length, page, typeFilter]);
 
   // Handle manual refresh
   const handleRefresh = useCallback(() => {
-    dispatch(fetchAllBatteries({ pageNumber: 1, pageSize: 100 }));
+    dispatch(
+      fetchAllBatteries({
+        pageNumber: 1,
+        pageSize: 100,
+        typeName: typeFilter !== "all" ? typeFilter : undefined,
+      })
+    );
     setPage(1);
-  }, [dispatch]);
+  }, [dispatch, typeFilter]);
 
   // Check if using cached data
   const isCacheValid = useMemo(() => {
@@ -109,14 +123,21 @@ export default function BatteryManagement() {
         matchesStatusFilter = battery.batteryStatus === null;
       }
 
-      return matchesSearch && matchesStatusFilter;
+      // Filter by type (based on batteryID prefix)
+      let matchesTypeFilter = true;
+      if (typeFilter !== "all") {
+        const batteryType = getBatteryTypeFromId(battery.batteryID);
+        matchesTypeFilter = batteryType === typeFilter;
+      }
+
+      return matchesSearch && matchesStatusFilter && matchesTypeFilter;
     });
-  }, [batteries, searchTerm, statusFilter]);
+  }, [batteries, searchTerm, statusFilter, typeFilter]);
 
   // Reset page when filters change
   useEffect(() => {
     setPage(1);
-  }, [searchTerm, statusFilter]);
+  }, [searchTerm, statusFilter, typeFilter]);
 
   // Status filter options
   const statusFilterOptions: SelectOption[] = [
@@ -124,6 +145,14 @@ export default function BatteryManagement() {
     { value: "available", label: "Available" },
     { value: "faulty", label: "Faulty" },
     { value: "null", label: "Unassigned" },
+  ];
+
+  // Type filter options
+  const typeFilterOptions: SelectOption[] = [
+    { value: "all", label: "All Types" },
+    { value: "Large", label: "Large" },
+    { value: "Medium", label: "Medium" },
+    { value: "Small", label: "Small" },
   ];
 
   // Pagination logic
@@ -170,11 +199,11 @@ export default function BatteryManagement() {
     switch (columnKey) {
       case "batteryID":
         return (
-          <div className="flex items-center gap-2">
-            <FaBatteryFull className="text-indigo-600" />
-            <p className="font-medium text-gray-900">{battery.batteryID}</p>
-          </div>
+          <p className="font-medium text-gray-900">{battery.batteryID}</p>
         );
+      case "type":
+        const batteryType = getBatteryTypeFromId(battery.batteryID);
+        return <span className="text-sm text-gray-900">{batteryType}</span>;
       case "status":
         return (
           <Chip
@@ -249,6 +278,13 @@ export default function BatteryManagement() {
             onChange={(e) => setSearchTerm(e.target.value)}
             leftIcon={<FaSearch />}
             containerClassName="flex-1"
+          />
+
+          {/* Type filter */}
+          <Select
+            options={typeFilterOptions}
+            value={typeFilter}
+            onChange={(e) => setTypeFilter(e.target.value as TypeFilterOption)}
           />
 
           {/* Status filter */}
@@ -373,6 +409,7 @@ export default function BatteryManagement() {
             >
               <TableHeader>
                 <TableColumn key="batteryID">BATTERY ID</TableColumn>
+                <TableColumn key="type">TYPE</TableColumn>
                 <TableColumn key="status">STATUS</TableColumn>
                 <TableColumn key="health">HEALTH (SoH)</TableColumn>
                 <TableColumn key="charge">CHARGE</TableColumn>

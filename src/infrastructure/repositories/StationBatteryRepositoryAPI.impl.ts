@@ -1,17 +1,25 @@
 import { StationBattery } from "@/domain/entities/StationBattery";
-import { IStationBatteryRepository } from "@/domain/repositories/StationBatteryRepository";
+import {
+  IStationBatteryRepository,
+  BatteryQueryParams,
+} from "@/domain/repositories/StationBatteryRepository";
 import api from "@/lib/api";
 
 class StationBatteryRepositoryAPI implements IStationBatteryRepository {
   /**
    * Triển khai cụ thể getBatteriesByStation() để fetch từ API
    */
-  async getBatteriesByStation(stationID: string): Promise<StationBattery[]> {
+  async getBatteriesByStation(
+    stationID: string,
+    params?: BatteryQueryParams
+  ): Promise<StationBattery[]> {
     const endpoint = `/batteries/station/${stationID}/batteries`;
 
     try {
       console.log("Fetching station batteries from URL:", endpoint);
-      const response = await api.get(endpoint);
+      console.log("Query params:", params);
+
+      const response = await api.get(endpoint, { params });
 
       console.log("Raw Station Battery API Response:", response.data);
 

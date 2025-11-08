@@ -87,7 +87,7 @@ export default function StationSlotsPage() {
   // Fetch batteries for the station
   useEffect(() => {
     if (stationId) {
-      dispatch(fetchBatteriesByStation(stationId));
+      dispatch(fetchBatteriesByStation({ stationID: stationId }));
     }
   }, [dispatch, stationId]);
 
@@ -107,7 +107,7 @@ export default function StationSlotsPage() {
           pageSize: pageSize,
         })
       );
-      dispatch(fetchBatteriesByStation(stationId));
+      dispatch(fetchBatteriesByStation({ stationID: stationId }));
     }
   };
 
@@ -437,15 +437,7 @@ export default function StationSlotsPage() {
                               {slotStatus.percentage}%
                             </p>
                           )}
-                          <p className="text-xs mt-1 text-indigo-600 font-semibold">
-                            Click to manage
-                          </p>
                         </>
-                      )}
-                      {isEmpty && (
-                        <p className="text-xs mt-1 text-indigo-600 font-semibold">
-                          Click to assign
-                        </p>
                       )}
                     </div>
                   </div>

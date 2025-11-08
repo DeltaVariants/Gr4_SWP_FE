@@ -5,8 +5,11 @@ import Link from "next/link";
 import { useAppDispatch, useAppSelector } from "@/application/hooks/useRedux";
 import { fetchBatteriesByStation } from "@/application/services/stationBatteryService";
 import { fetchAllStations } from "@/application/services/stationService";
-import { StationBattery } from "@/domain/entities/StationBattery";
-import { FaBatteryFull, FaSyncAlt, FaSearch } from "react-icons/fa";
+import {
+  StationBattery,
+  getBatteryTypeFromId,
+} from "@/domain/entities/StationBattery";
+import { FaSyncAlt, FaSearch } from "react-icons/fa";
 import {
   Table,
   TableHeader,
@@ -20,6 +23,7 @@ import { Input } from "@/presentation/components/ui/Input";
 import { Select, SelectOption } from "@/presentation/components/ui/Select";
 
 type StatusFilterOption = "all" | "available" | "faulty" | "charging";
+type TypeFilterOption = "all" | "Large" | "Medium" | "Small";
 
 export default function StationBatteriesPage() {
   const params = useParams();
@@ -32,6 +36,7 @@ export default function StationBatteriesPage() {
 
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilterOption>("all");
+  const [typeFilter, setTypeFilter] = useState<TypeFilterOption>("all");
   const [page, setPage] = useState(1);
   const [rowsPerPage] = useState(6); // Fixed rows per page
 
@@ -45,9 +50,15 @@ export default function StationBatteriesPage() {
   // Fetch batteries
   useEffect(() => {
     if (stationId) {
-      dispatch(fetchBatteriesByStation(stationId));
+      dispatch(
+        fetchBatteriesByStation({
+          stationID: stationId,
+          queryParams:
+            typeFilter !== "all" ? { typeName: typeFilter } : undefined,
+        })
+      );
     }
-  }, [dispatch, stationId]);
+  }, [dispatch, stationId, typeFilter]);
 
   // Find current station
   const station = useMemo(
@@ -58,7 +69,13 @@ export default function StationBatteriesPage() {
   // Handle manual refresh
   const handleRefresh = () => {
     if (stationId) {
-      dispatch(fetchBatteriesByStation(stationId));
+      dispatch(
+        fetchBatteriesByStation({
+          stationID: stationId,
+          queryParams:
+            typeFilter !== "all" ? { typeName: typeFilter } : undefined,
+        })
+      );
     }
   };
 
@@ -77,14 +94,21 @@ export default function StationBatteriesPage() {
           battery.batteryStatus?.toLowerCase() === statusFilter;
       }
 
-      return matchesSearch && matchesStatusFilter;
+      // Filter by type (based on batteryID prefix)
+      let matchesTypeFilter = true;
+      if (typeFilter !== "all") {
+        const batteryType = getBatteryTypeFromId(battery.batteryID);
+        matchesTypeFilter = batteryType === typeFilter;
+      }
+
+      return matchesSearch && matchesStatusFilter && matchesTypeFilter;
     });
-  }, [batteries, searchTerm, statusFilter]);
+  }, [batteries, searchTerm, statusFilter, typeFilter]);
 
   // Reset page when filters change
   useEffect(() => {
     setPage(1);
-  }, [searchTerm, statusFilter]);
+  }, [searchTerm, statusFilter, typeFilter]);
 
   // Pagination logic
   const pages = Math.ceil(filteredBatteries.length / rowsPerPage);
@@ -101,6 +125,14 @@ export default function StationBatteriesPage() {
     { value: "available", label: "Available" },
     { value: "faulty", label: "Faulty" },
     { value: "charging", label: "Charging" },
+  ];
+
+  // Type filter options
+  const typeFilterOptions: SelectOption[] = [
+    { value: "all", label: "All Types" },
+    { value: "Large", label: "Large" },
+    { value: "Medium", label: "Medium" },
+    { value: "Small", label: "Small" },
   ];
 
   // Get status color
@@ -124,12 +156,16 @@ export default function StationBatteriesPage() {
     switch (columnKey) {
       case "batteryID":
         return (
-          <div className="flex items-center gap-2">
-            <FaBatteryFull className="text-indigo-600" />
-            <p className="font-medium text-gray-900">{battery.batteryID}</p>
-          </div>
+          <p className="font-medium text-gray-900">{battery.batteryID}</p>
         );
       case "type":
+        const batteryType = getBatteryTypeFromId(battery.batteryID);
+        return (
+          <span className="text-sm text-gray-900">
+            {batteryType}
+          </span>
+        );
+      case "batteryTypeName":
         return (
           <span className="text-sm text-gray-900">
             {battery.batteryTypeName}
@@ -294,6 +330,13 @@ export default function StationBatteriesPage() {
             containerClassName="flex-1"
           />
 
+          {/* Type filter */}
+          <Select
+            options={typeFilterOptions}
+            value={typeFilter}
+            onChange={(e) => setTypeFilter(e.target.value as TypeFilterOption)}
+          />
+
           {/* Status filter */}
           <Select
             options={statusFilterOptions}
@@ -374,6 +417,7 @@ export default function StationBatteriesPage() {
           <TableHeader>
             <TableColumn key="batteryID">BATTERY ID</TableColumn>
             <TableColumn key="type">TYPE</TableColumn>
+            <TableColumn key="batteryTypeName">BATTERY TYPE</TableColumn>
             <TableColumn key="status">STATUS</TableColumn>
             <TableColumn key="health">HEALTH (SoH)</TableColumn>
             <TableColumn key="charge">CHARGE</TableColumn>
