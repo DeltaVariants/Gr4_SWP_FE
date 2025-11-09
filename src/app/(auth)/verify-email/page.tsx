@@ -15,22 +15,17 @@ function VerifyEmailContent() {
     const handleVerification = async () => {
       if (!token) {
         setStatus('error');
-        setMessage('Token xác thực không hợp lệ');
+        setMessage('Invalid verification token');
         return;
       }
 
       try {
-        const result = await verifyEmail(token);
-        if (result.success) {
-          setStatus('success');
-          setMessage(result.message || 'Email đã được xác thực thành công!');
-        } else {
-          setStatus('error');
-          setMessage(result.message || 'Xác thực email thất bại');
-        }
-      } catch (error) {
+        await verifyEmail({ token });
+        setStatus('success');
+        setMessage('Email verified successfully!');
+      } catch (error: any) {
         setStatus('error');
-        setMessage('Đã xảy ra lỗi trong quá trình xác thực');
+        setMessage(error?.message || 'An error occurred during verification');
       }
     };
 
@@ -52,10 +47,10 @@ function VerifyEmailContent() {
                 </div>
               </div>
               <h3 className="text-lg font-medium text-gray-900 mb-2">
-                Đang xác thực email...
+                Verifying email...
               </h3>
               <p className="text-sm text-gray-500">
-                Vui lòng chờ trong giây lát
+                Please wait a moment
               </p>
             </>
           )}
@@ -70,7 +65,7 @@ function VerifyEmailContent() {
                 </div>
               </div>
               <h3 className="text-lg font-medium text-gray-900 mb-2">
-                Xác thực thành công!
+                Verification successful!
               </h3>
               <p className="text-sm text-gray-500 mb-6">
                 {message}
@@ -79,7 +74,7 @@ function VerifyEmailContent() {
                 href="/login"
                 className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
               >
-                Đăng nhập ngay
+                Sign in now
               </a>
             </>
           )}
@@ -94,7 +89,7 @@ function VerifyEmailContent() {
                 </div>
               </div>
               <h3 className="text-lg font-medium text-gray-900 mb-2">
-                Xác thực thất bại
+                Verification failed
               </h3>
               <p className="text-sm text-gray-500 mb-6">
                 {message}
@@ -104,14 +99,14 @@ function VerifyEmailContent() {
                   href="/register"
                   className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                 >
-                  Đăng ký lại
+                  Register again
                 </a>
                 <div>
                   <a
                     href="/login"
                     className="text-sm text-blue-600 hover:text-blue-500"
                   >
-                    Quay lại đăng nhập
+                    Back to login
                   </a>
                 </div>
               </div>

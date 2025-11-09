@@ -16,6 +16,8 @@ const ROUTE_CONFIG = {
     "/api/auth/verify-email",
     "/api/auth/send-reset",
     "/api/auth/reset-password",
+    "/api/auth/google-login",
+    "/api/auth/set-session",
     "/google-callback",
   ],
 
@@ -133,19 +135,26 @@ export function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
+  // 1.5. Special case: Allow /home with token param (Google OAuth callback)
+  if (pathname === '/home' && req.nextUrl.searchParams.has('token')) {
+    console.log('[Middleware] Allowing /home with token param (Google OAuth callback)');
+    return NextResponse.next();
+  }
+
   // 2. Handle auth pages (login, register, etc.)
   if (matchesPath(ROUTE_CONFIG.AUTH_PAGES, pathname)) {
-    // Nếu đã đăng nhập, redirect về trang tương ứng với role
-    if (auth.isAuthenticated) {
+    // Nếu đã đăng nhập VÀ CÓ ROLE, redirect về trang tương ứng với role
+    if (auth.isAuthenticated && auth.role && auth.role !== 'none') {
       if (auth.isAdmin)
         return redirectTo(req, "/dashboard", "already_authenticated");
       if (auth.isStaff)
         return redirectTo(req, "/dashboardstaff", "already_authenticated");
       if (auth.isCustomer)
         return redirectTo(req, "/home", "already_authenticated");
-      return redirectTo(req, "/", "already_authenticated");
+      // Nếu có token nhưng role không hợp lệ, cho phép re-login
+      console.log('[Middleware] Token exists but invalid role, allowing login');
     }
-    // Chưa đăng nhập thì cho phép truy cập
+    // Chưa đăng nhập hoặc role invalid thì cho phép truy cập
     return NextResponse.next();
   }
 

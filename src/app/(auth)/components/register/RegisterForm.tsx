@@ -36,26 +36,26 @@ export const RegisterForm = () => {
   const validateField = (field: string, value: string) => {
     let error = "";
     if (field === "name") {
-      if (!value.trim()) error = "Tên là bắt buộc";
-      else if (value.trim().length < 2) error = "Tên phải có ít nhất 2 ký tự";
-      else if (value.trim().length > 50) error = "Tên không được quá 50 ký tự";
+      if (!value.trim()) error = "Name is required";
+      else if (value.trim().length < 2) error = "Name must be at least 2 characters";
+      else if (value.trim().length > 50) error = "Name must not exceed 50 characters";
     }
     if (field === "email") {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!value) error = "Email là bắt buộc";
-      else if (!emailRegex.test(value)) error = "Vui lòng nhập địa chỉ email hợp lệ";
+      if (!value) error = "Email is required";
+      else if (!emailRegex.test(value)) error = "Please enter a valid email address";
     }
     if (field === "password") {
-      if (!value) error = "Mật khẩu là bắt buộc";
-      else if (value.length < 6) error = "Mật khẩu phải có ít nhất 6 ký tự";
+      if (!value) error = "Password is required";
+      else if (value.length < 6) error = "Password must be at least 6 characters";
     }
     if (field === "confirmPassword") {
-      if (!value) error = "Vui lòng xác nhận mật khẩu";
-      else if (value !== formData.password) error = "Mật khẩu xác nhận không khớp";
+      if (!value) error = "Please confirm password";
+      else if (value !== formData.password) error = "Passwords do not match";
     }
     if (field === "phoneNumber") {
       const phoneRegex = /^[0-9]{10,11}$/;
-      if (value && !phoneRegex.test(value)) error = "Số điện thoại phải có 10-11 chữ số";
+      if (value && !phoneRegex.test(value)) error = "Phone number must be 10-11 digits";
     }
     return error;
   };
@@ -82,17 +82,13 @@ export const RegisterForm = () => {
     if (!validateAll()) return;
 
     try {
-      const result = await register({
+      // register returns void or throws on error - treat successful return as success
+      await register({
         name: formData.name.trim(),
         email: formData.email.trim().toLowerCase(),
         password: formData.password,
         phoneNumber: (formData.phoneNumber || '').trim(),
       });
-
-      if (!result.success) {
-        setApiError(result.message || "Đăng ký thất bại");
-        return;
-      }
 
       setSuccess(true);
       let countdown = 3;
@@ -106,7 +102,7 @@ export const RegisterForm = () => {
         }
       }, 1000);
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Đăng ký thất bại';
+      const message = err instanceof Error ? err.message : 'Registration failed';
       setApiError(message);
     }
   };
@@ -125,8 +121,8 @@ export const RegisterForm = () => {
               </svg>
             </div>
             <div className="ml-3">
-              <p className="text-sm font-medium">Đăng ký thành công!</p>
-              <p className="text-sm">Chuyển hướng đến trang đăng nhập trong {redirectCountdown} giây...</p>
+              <p className="text-sm font-medium">Registration successful!</p>
+              <p className="text-sm">Redirecting to login page in {redirectCountdown} seconds...</p>
             </div>
           </div>
         </div>

@@ -58,10 +58,15 @@ export function withAuth<P extends object>(
     const router = useRouter();
 
     useEffect(() => {
-      // Wait for auth to load
-      if (loading) return;
+      console.log('[withAuth] Check:', { loading, isAuthenticated, user: !!user });
+      
+      // Wait for auth to load - AuthContext will set loading to false once initialized
+      if (loading) {
+        console.log('[withAuth] Still loading, waiting...');
+        return;
+      }
 
-      // Check if user is authenticated
+      // Check if user is authenticated (no more setTimeout hacks!)
       if (!isAuthenticated || !user) {
         console.log('[withAuth] User not authenticated, redirecting to:', redirectTo);
         router.replace(redirectTo);
@@ -83,7 +88,7 @@ export function withAuth<P extends object>(
       }
 
       console.log('[withAuth] Access granted for:', user.email, 'Role:', user.role);
-    }, [user, loading, isAuthenticated, router]);
+    }, [user, loading, isAuthenticated, router, allowedRoles, redirectTo]);
 
     // Show loading state
     if (loading) {

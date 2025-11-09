@@ -2,37 +2,37 @@
  * Utility functions for working with station data
  */
 
-import { User } from '@/application/services/authService';
+import { AuthUser } from '@/domain/entities/Auth';
 
 /**
  * Get station name from user object
  * Returns the station name if available, otherwise returns a fallback message
  */
-export function getStationName(user: User | null): string {
-  if (!user) return 'Chưa có trạm';
+export function getStationName(user: AuthUser | null): string {
+  if (!user) return 'No station assigned';
   
-  // Ưu tiên stationName, sau đó mới đến stationId
+  // Prioritize stationName, then stationId
   if (user.stationName) {
     return user.stationName;
   }
   
-  // Nếu chỉ có stationId và nó là GUID, thì hiển thị "Trạm #..."
+  // If only stationId is available and it's a GUID, display "Station #..."
   if (user.stationId && /^[0-9a-f-]{36}$/i.test(user.stationId)) {
-    return `Trạm #${user.stationId.slice(0, 8)}`;
+    return `Station #${user.stationId.slice(0, 8)}`;
   }
   
-  // Nếu stationId là tên thì dùng luôn
+  // If stationId is a name, use it directly
   if (user.stationId) {
     return user.stationId;
   }
   
-  return 'Chưa có trạm';
+  return 'No station assigned';
 }
 
 /**
  * Check if user has a valid station ID (GUID format)
  */
-export function hasValidStationId(user: User | null): boolean {
+export function hasValidStationId(user: AuthUser | null): boolean {
   if (!user?.stationId) return false;
   return /^[0-9a-f-]{36}$/i.test(user.stationId);
 }
@@ -41,10 +41,10 @@ export function hasValidStationId(user: User | null): boolean {
  * Get station ID for API calls
  * Returns null if no valid station ID is found
  */
-export function getStationIdForApi(user: User | null): string | null {
+export function getStationIdForApi(user: AuthUser | null): string | null {
   if (!user) return null;
   
-  // Nếu có stationId và nó là GUID thì dùng
+  // If stationId exists and is a GUID, use it
   if (user.stationId && /^[0-9a-f-]{36}$/i.test(user.stationId)) {
     return user.stationId;
   }
@@ -56,15 +56,15 @@ export function getStationIdForApi(user: User | null): string | null {
  * Get station ID for API calls (async version)
  * Automatically fetches station ID from backend if only name is available
  */
-export async function getStationIdForApiAsync(user: User | null): Promise<string | null> {
+export async function getStationIdForApiAsync(user: AuthUser | null): Promise<string | null> {
   if (!user) return null;
   
-  // Nếu có stationId và nó là GUID thì dùng luôn
+  // If stationId exists and is a GUID, use it directly
   if (user.stationId && /^[0-9a-f-]{36}$/i.test(user.stationId)) {
     return user.stationId;
   }
   
-  // Nếu có stationName, thử fetch stationId từ API
+  // If stationName is available, try to fetch stationId from API
   if (user.stationName) {
     try {
       const { getStationIdByName } = await import('@/application/services/stationService');
@@ -80,7 +80,7 @@ export async function getStationIdForApiAsync(user: User | null): Promise<string
     }
   }
   
-  // Fallback: nếu stationId là tên (không phải GUID), thử dùng nó để search
+  // Fallback: if stationId is a name (not a GUID), try to use it for search
   if (user.stationId && !/^[0-9a-f-]{36}$/i.test(user.stationId)) {
     try {
       const { getStationIdByName } = await import('@/application/services/stationService');
@@ -101,7 +101,7 @@ export async function getStationIdForApiAsync(user: User | null): Promise<string
 /**
  * Get station display info for UI
  */
-export function getStationDisplay(user: User | null): {
+export function getStationDisplay(user: AuthUser | null): {
   name: string;
   id: string | null;
   hasValidId: boolean;

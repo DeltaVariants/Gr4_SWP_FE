@@ -21,7 +21,7 @@ export const PhoneInput = ({
         htmlFor="phoneNumber"
         className="block text-sm font-medium text-gray-700 mb-1"
       >
-        Số điện thoại
+        Phone Number
       </label>
       <input
         type="tel"
@@ -31,7 +31,7 @@ export const PhoneInput = ({
         onChange={onChange}
         onBlur={onBlur}
         disabled={disabled}
-        placeholder="Nhập số điện thoại (10-11 số)"
+        placeholder="Enter phone number (10-11 digits)"
         className={`w-full px-3 py-2 border rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-[#0062FF] focus:border-[#0062FF] ${
           error ? 'border-red-500' : 'border-gray-300'
         } ${disabled ? 'bg-gray-100 cursor-not-allowed opacity-60' : ''}`}

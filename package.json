@@ -9,9 +9,13 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@heroui/react": "^2.8.5",
+    "@heroui/system": "^2.4.23",
     "@reduxjs/toolkit": "^2.9.2",
     "axios": "^1.6.0",
+    "framer-motion": "^12.23.24",
     "lucide-react": "^0.544.0",
+    "motion": "^12.23.24",
     "next": "15.5.3",
     "react": "19.1.0",
     "react-dom": "19.1.0",

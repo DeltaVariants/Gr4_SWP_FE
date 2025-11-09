@@ -3,10 +3,12 @@
  * Handles swap transaction operations (customer battery swap flow)
  */
 
+const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || 'https://gr4-swp-be2-sp25.onrender.com/api';
+
 const SwapTransactionAPI = {
-  getAll: '/api/swap-transactions',
-  getById: (id: string) => `/api/swap-transactions/${id}`,
-  complete: (id: string) => `/api/swap-transactions/${id}/completed`,
+  getAll: `${BACKEND_URL}/swap-transactions`,
+  getById: (id: string) => `${BACKEND_URL}/swap-transactions/${id}`,
+  complete: (id: string) => `${BACKEND_URL}/swap-transactions/${id}/completed`,
 };
 
 const swapTransactionService = {

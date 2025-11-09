@@ -58,24 +58,85 @@ export async function POST(request: NextRequest) {
     const token = base.token ?? base.Token;
     const refreshToken = base.refreshToken ?? base.RefreshToken;
     const rawAuth = base.authDTO ?? base.AuthDTO ?? base.user ?? base.User ?? null;
+    
+    console.log('[Login Route] Backend response data:', JSON.stringify(data, null, 2));
+    console.log('[Login Route] rawAuth:', JSON.stringify(rawAuth, null, 2));
+    
+    // Extract role value (handle nested object or string)
+    let roleNameValue = rawAuth?.roleName ?? rawAuth?.RoleName ?? rawAuth?.role ?? rawAuth?.Role;
+    
+    // If role is an object, extract name
+    if (roleNameValue && typeof roleNameValue === 'object') {
+      roleNameValue = roleNameValue.name ?? roleNameValue.Name ?? roleNameValue.roleName ?? roleNameValue.RoleName;
+    }
+    
+    // Fallback: Map roleID to role name
+    if (!roleNameValue && (rawAuth?.roleID || rawAuth?.RoleID || rawAuth?.roleId || rawAuth?.RoleId)) {
+      const roleId = rawAuth.roleID ?? rawAuth.RoleID ?? rawAuth.roleId ?? rawAuth.RoleId;
+      console.log('[Login Route] Using roleID fallback, roleId:', roleId);
+      if (roleId === 1 || roleId === '1') roleNameValue = 'ADMIN';
+      else if (roleId === 2 || roleId === '2') roleNameValue = 'STAFF';
+      else if (roleId === 3 || roleId === '3') roleNameValue = 'CUSTOMER';
+    }
+    
+    console.log('[Login Route] Final roleNameValue:', roleNameValue);
+    console.log('[Login Route] Will set cookie:', roleNameValue ? 'YES' : 'NO');
+    
     const authDTO = rawAuth
       ? {
           userID: rawAuth.userID ?? rawAuth.UserID ?? rawAuth.id ?? rawAuth.Id ?? rawAuth.ID,
           email: rawAuth.email ?? rawAuth.Email,
           username: rawAuth.username ?? rawAuth.Username ?? rawAuth.name ?? rawAuth.Name,
-          roleName: rawAuth.roleName ?? rawAuth.RoleName ?? rawAuth.role ?? rawAuth.Role,
+          roleName: roleNameValue,
           phoneNumber: rawAuth.phoneNumber ?? rawAuth.PhoneNumber ?? rawAuth.phone ?? rawAuth.Phone,
         }
       : null;
 
-    return NextResponse.json({
+    // Create response with cookies for middleware
+    const responseData = {
       success: true,
       token,
       refreshToken,
       authDTO,
       data,
       message: 'Login successful',
-    });
+    };
+
+    const jsonResponse = NextResponse.json(responseData);
+
+    // Set httpOnly cookies for middleware
+    if (token) {
+      jsonResponse.cookies.set('accessToken', token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 60 * 60, // 1 hour
+        path: '/',
+      });
+    }
+
+    if (refreshToken) {
+      jsonResponse.cookies.set('refreshToken', refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 60 * 60 * 24 * 7, // 7 days
+        path: '/',
+      });
+    }
+
+    // Set role cookie for middleware routing
+    if (authDTO?.roleName) {
+      jsonResponse.cookies.set('role', authDTO.roleName, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 60 * 60, // 1 hour
+        path: '/',
+      });
+    }
+
+    return jsonResponse;
   } catch (error) {
     console.error('Login proxy error:', error);
     return NextResponse.json(

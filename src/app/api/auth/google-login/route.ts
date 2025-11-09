@@ -11,9 +11,15 @@ export async function GET(req: NextRequest) {
   
   // Backend endpoint: /api/Auth/google-login
   const target = new URL(`${backendBase}/api/Auth/google-login`);
+  
+  // Yêu cầu backend redirect về /google-callback thay vì /home
+  const callbackUrl = `${currentOrigin}/google-callback`;
   target.searchParams.set('origin', currentOrigin);
+  target.searchParams.set('redirectUrl', callbackUrl);
+  target.searchParams.set('redirect_uri', callbackUrl);
 
   console.log('[GoogleLogin] Redirecting to:', target.toString());
+  console.log('[GoogleLogin] Expecting callback at:', callbackUrl);
 
   // Redirect browser đến backend để xử lý Google OAuth
   return NextResponse.redirect(target.toString(), { status: 307 });

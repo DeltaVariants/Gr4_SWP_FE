@@ -39,21 +39,21 @@ export const LoginForm = () => {
     const newErrors: LoginFormErrors = {};
     
     if (!formData.email) {
-      newErrors.email = 'Email là bắt buộc';
+      newErrors.email = 'Email is required';
     } else if (!validateEmail(formData.email)) {
-      newErrors.email = 'Vui lòng nhập địa chỉ email hợp lệ';
+      newErrors.email = 'Please enter a valid email address';
     }
 
     if (!formData.password) {
-      newErrors.password = 'Mật khẩu là bắt buộc';
+      newErrors.password = 'Password is required';
     } else if (formData.password.length < 6) {
-      newErrors.password = 'Mật khẩu phải có ít nhất 6 ký tự';
+      newErrors.password = 'Password must be at least 6 characters';
     }
 
     setErrors(newErrors);
     if (Object.keys(newErrors).length > 0) return;
 
-    // Gọi login từ AuthContext (chuẩn hóa input)
+    // Call login from AuthContext (normalize input)
     const result = await login({
       email: formData.email.trim().toLowerCase(),
       password: formData.password,
@@ -62,7 +62,7 @@ export const LoginForm = () => {
     if (!result.success && result.message) {
       setApiError(result.message);
     }
-    // Nếu thành công, AuthContext sẽ tự động redirect
+    // If successful, AuthContext will automatically redirect
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -72,7 +72,7 @@ export const LoginForm = () => {
       [name]: type === 'checkbox' ? checked : value,
     }));
 
-    // Clear errors khi user đang type
+    // Clear errors when user is typing
     if (errors[name as keyof LoginFormErrors]) {
       setErrors((prev) => ({
         ...prev,
@@ -86,13 +86,13 @@ export const LoginForm = () => {
     let fieldError = '';
 
     if (name === 'email') {
-      if (!value) fieldError = 'Email là bắt buộc';
-      else if (!validateEmail(value)) fieldError = 'Vui lòng nhập địa chỉ email hợp lệ';
+      if (!value) fieldError = 'Email is required';
+      else if (!validateEmail(value)) fieldError = 'Please enter a valid email address';
     }
 
     if (name === 'password') {
-      if (!value) fieldError = 'Mật khẩu là bắt buộc';
-      else if (value.length < 6) fieldError = 'Mật khẩu phải có ít nhất 6 ký tự';
+      if (!value) fieldError = 'Password is required';
+      else if (value.length < 6) fieldError = 'Password must be at least 6 characters';
     }
 
     setErrors((prev) => ({ ...prev, [name]: fieldError }));
@@ -143,20 +143,20 @@ export const LoginForm = () => {
           {loading ? (
             <div className="flex items-center justify-center">
               <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-              Đang đăng nhập...
+              Signing in...
             </div>
           ) : (
-            'Đăng nhập'
+            'Sign In'
           )}
         </button>
 
         <p className="text-center text-sm text-gray-600">
-          Chưa có tài khoản?{' '}
+          Don't have an account?{' '}
           <Link
             href="/register"
             className="font-medium text-[#0062FF] hover:text-[#0055E0] transition-colors"
           >
-            Đăng ký ngay
+            Sign up now
           </Link>
         </p>
 

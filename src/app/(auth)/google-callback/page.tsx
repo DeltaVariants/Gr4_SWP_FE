@@ -2,13 +2,11 @@
 
 import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useAuth } from '@/contexts/AuthContext';
 import { getRedirectPathByRole } from '@/lib/roleUtils';
 
 function CallbackContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { setUser, setIsAuthenticated } = useAuth();
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
   const [message, setMessage] = useState('Processing Google login...');
 
@@ -25,97 +23,148 @@ function CallbackContent() {
   const error = useMemo(() => searchParams.get('error'), [searchParams]);
 
   useEffect(() => {
+    let isMounted = true; // Prevent state updates after unmount
+    
     const handle = async () => {
       try {
-        if (error) throw new Error(decodeURIComponent(error));
+        if (error) {
+          throw new Error(decodeURIComponent(error));
+        }
 
         if (!token) {
-          setStatus('error');
-          setMessage('Missing token from Google callback');
-          setTimeout(() => router.push('/login'), 2000);
+          if (isMounted) {
+            setStatus('error');
+            setMessage('Missing token from Google callback');
+          }
+          setTimeout(() => router.push('/login?error=no_token'), 2000);
           return;
         }
 
-  // Save token locally and as cookie for middleware
-  localStorage.setItem('accessToken', token);
-  try { document.cookie = `token=${token}; path=/`; } catch {}
-
+        console.log('[GoogleCallback] Token received, length:', token.length);
         
-        let role = 'Driver';
-        let haveUser = false;
+        // Validate token format (basic check)
+        if (token.length < 20) {
+          throw new Error('Invalid token format');
+        }
+        
+        // Save token to localStorage
+        localStorage.setItem('accessToken', token);
+
+        let role = 'CUSTOMER'; // Default to CUSTOMER for Google login (drivers)
+        let userData = null;
+        
+        // Try to get user info from URL params first
         if (userInfoRaw) {
           try {
             const userObj = JSON.parse(decodeURIComponent(userInfoRaw));
-            setUser({
-              id: userObj.UserID || userObj.userID,
+            console.log('[GoogleCallback] User info from URL:', userObj);
+            
+            role = userObj.RoleName || userObj.roleName || userObj.role || 'CUSTOMER';
+            userData = {
+              id: userObj.UserID || userObj.userID || userObj.id,
               email: userObj.Email || userObj.email,
-              name: userObj.Username || userObj.username,
-              role: userObj.RoleName || userObj.roleName || 'Driver',
-              phone: userObj.PhoneNumber || userObj.phoneNumber,
-            });
-            role = userObj.RoleName || userObj.roleName || role;
-            haveUser = true;
-            try { document.cookie = `role=${role}; path=/`; } catch {}
+              name: userObj.Username || userObj.username || userObj.name,
+              role: role,
+              phone: userObj.PhoneNumber || userObj.phoneNumber || userObj.phone,
+            };
+            
+            // Save to localStorage for AuthContext
+            localStorage.setItem('userInfo', JSON.stringify(userData));
+            console.log('[GoogleCallback] User saved from URL params, role:', role);
           } catch (e) {
-           
+            console.error('[GoogleCallback] Error parsing user info:', e);
           }
         }
 
-        if (!haveUser) {
+        // If no user info in URL, fetch from backend
+        if (!userData) {
           try {
-            
+            console.log('[GoogleCallback] Fetching user info from /api/auth/me...');
             const resp = await fetch('/api/auth/me', {
-              headers: { Authorization: `Bearer ${token}` },
+              headers: {
+                'Authorization': `Bearer ${token}`,
+              },
             });
+            
             if (resp.ok) {
               const me = await resp.json();
-              setUser({
+              console.log('[GoogleCallback] User info from API:', me);
+              
+              role = me.RoleName || me.roleName || me.role || 'CUSTOMER';
+              userData = {
                 id: me.UserID || me.userID || me.id,
                 email: me.Email || me.email,
                 name: me.Username || me.username || me.name,
-                role: me.RoleName || me.roleName || me.role || 'Driver',
+                role: role,
                 phone: me.PhoneNumber || me.phoneNumber || me.phone,
-              });
-              role = me.RoleName || me.roleName || me.role || role;
-              try { document.cookie = `role=${role}; path=/`; } catch {}
+              };
+              
+              // Save to localStorage for AuthContext
+              localStorage.setItem('userInfo', JSON.stringify(userData));
+              console.log('[GoogleCallback] User saved from API, role:', role);
+            } else {
+              console.warn('[GoogleCallback] Failed to fetch user info, using default role');
             }
-          } catch {
-           
+          } catch (error) {
+            console.error('[GoogleCallback] Error fetching user info:', error);
           }
         }
 
+        // Store role in localStorage for middleware
+        localStorage.setItem('role', role);
         
-        // Create server session
+        // Set cookies via API route for middleware (httpOnly cookies)
         try {
-          const sessionResponse = await fetch('/auth/session', {
+          console.log('[GoogleCallback] Setting cookies via API...');
+          const cookieResponse = await fetch('/api/auth/set-session', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ token, role, maxAge: 60 * 60 }), // 1h
+            body: JSON.stringify({ 
+              accessToken: token,
+              role: role,
+            }),
           });
           
-          if (!sessionResponse.ok) {
-            const sessionError = await sessionResponse.text().catch(() => 'Unknown error');
-            console.error('[GoogleCallback] Session creation failed:', sessionError);
+          if (cookieResponse.ok) {
+            console.log('[GoogleCallback] Cookies set successfully');
+          } else {
+            console.error('[GoogleCallback] Failed to set cookies:', await cookieResponse.text());
           }
         } catch (error) {
-          console.error('[GoogleCallback] Session creation error:', error);
+          console.error('[GoogleCallback] Error setting cookies:', error);
         }
 
-        setIsAuthenticated(true);
-
-        setStatus('success');
-        setMessage('Google login successful! Redirecting...');
-        const redirectPath = getRedirectPathByRole(role);
-        setTimeout(() => router.push(redirectPath), 1200);
+        if (isMounted) {
+          setStatus('success');
+          const redirectPath = getRedirectPathByRole(role);
+          setMessage(`Google login successful! Redirecting to ${redirectPath}...`);
+        }
+        
+        console.log('[GoogleCallback] Login complete, redirecting to:', getRedirectPathByRole(role));
+        // Use window.location.href instead of router.push to force full page reload
+        // This ensures AuthContext re-initializes and loads user from localStorage
+        setTimeout(() => {
+          if (isMounted) {
+            window.location.href = getRedirectPathByRole(role);
+          }
+        }, 1500);
       } catch (err: any) {
-        setStatus('error');
-        setMessage(err?.message || 'Google login failed');
-        setTimeout(() => router.push('/login'), 2000);
+        console.error('[GoogleCallback] Error:', err);
+        if (isMounted) {
+          setStatus('error');
+          setMessage(err?.message || 'Google login failed');
+        }
+        setTimeout(() => router.push('/login?error=oauth_failed'), 2000);
       }
     };
 
     handle();
-  }, [error, router, setIsAuthenticated, setUser, token, userInfoRaw]);
+    
+    // Cleanup
+    return () => {
+      isMounted = false;
+    };
+  }, [error, router, token, userInfoRaw]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">

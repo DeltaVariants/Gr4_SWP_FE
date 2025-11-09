@@ -3,7 +3,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { createRoot } from "react-dom/client";
 import { FaLocationCrosshairs } from "react-icons/fa6";
 import MarkerPopup from "./MarkerPopup";
-import { getAllStationsUseCase } from "@/application/usecases/GetAllStations.usecase";
+import { getAllStationsUseCase } from "@/application/usecases/station/GetAllStations.usecase";
 import { stationRepositoryAPI } from "@/infrastructure/repositories/StationRepositoryAPI.impl";
 import { useAppDispatch, useAppSelector } from "@/application/hooks/useRedux";
 import { setMapView, setUserLocation } from "@/application/slices/mapSlice";
@@ -111,6 +111,15 @@ export default function MapSection() {
     if (mapInstanceRef.current) {
       console.log("Map already initialized, skipping re-initialization");
       return;
+    }
+    
+    // Additional check: if map container has Leaflet ID, remove it
+    const container = mapRef.current;
+    if (container && (container as any)._leaflet_id) {
+      console.log("Removing existing Leaflet instance from container");
+      delete (container as any)._leaflet_id;
+      // Clear container to ensure clean state
+      container.innerHTML = '';
     }
 
     // Helper function to setup map
@@ -225,24 +234,45 @@ export default function MapSection() {
 
   // Initialize Leaflet map once
   useEffect(() => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const L = (window as any).L;
-    if (!L) {
-      console.error("Leaflet chưa được load!");
-      return;
-    }
+    // Wait for Leaflet to be loaded
+    const checkLeafletAndInitialize = () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const L = (window as any).L;
+      if (!L) {
+        console.warn("Leaflet chưa được load, đợi...");
+        // Retry after a short delay
+        setTimeout(checkLeafletAndInitialize, 100);
+        return;
+      }
 
-    // Only initialize if not already initialized
-    if (mapRef.current && !mapInstanceRef.current) {
-      initializeMapWithLocation();
-    }
+      // Only initialize if not already initialized
+      if (mapRef.current && !mapInstanceRef.current) {
+        initializeMapWithLocation();
+      }
+    };
+
+    checkLeafletAndInitialize();
 
     // Cleanup when component unmounts - IMPORTANT to prevent "already initialized" error
     return () => {
+      console.log('[MapSection] Cleaning up map instance');
       if (mapInstanceRef.current) {
-        mapInstanceRef.current.remove();
+        try {
+          mapInstanceRef.current.remove();
+        } catch (error) {
+          console.warn('[MapSection] Error removing map:', error);
+        }
         mapInstanceRef.current = null;
+      }
+      
+      if (stationsLayerRef.current) {
         stationsLayerRef.current = null;
+      }
+      
+      // Clear Leaflet ID from container
+      if (mapRef.current && (mapRef.current as any)._leaflet_id) {
+        delete (mapRef.current as any)._leaflet_id;
+        mapRef.current.innerHTML = '';
       }
     };
   }, [initializeMapWithLocation]);
@@ -253,7 +283,14 @@ export default function MapSection() {
     const L = (window as any).L;
     const map = mapInstanceRef.current;
     const layer = stationsLayerRef.current;
-    if (!L || !map || !layer) return;
+
+    // Wait for Leaflet to be ready
+    if (!L) {
+      console.warn("Leaflet not ready yet for rendering stations");
+      return;
+    }
+
+    if (!map || !layer) return;
 
     // Clear existing station markers
     layer.clearLayers();
@@ -306,7 +343,7 @@ export default function MapSection() {
         <div ref={mapRef} style={{ width: "100%", height: "100%" }}></div>
 
         {/* Control buttons overlay */}
-        <div className="absolute top-2 right-2 z-[2000] flex gap-2 pointer-events-auto">
+        <div className="absolute top-2 right-2 z-2000 flex gap-2 pointer-events-auto">
           {/* Get user location button */}
           <button
             onClick={getUserLocation}

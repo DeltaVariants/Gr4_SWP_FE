@@ -64,7 +64,7 @@ export default withStaffAuth(function SwapPage() {
 
   const handleScanOld = () => {
     if (!oldId.trim()) {
-      showToast({ type: 'error', message: 'Vui lòng nhập mã pin cũ' });
+      showToast({ type: 'error', message: 'Please enter old battery ID' });
       return;
     }
     setIsScanning(true);
@@ -76,7 +76,7 @@ export default withStaffAuth(function SwapPage() {
 
   const handleScanNew = () => {
     if (!newId.trim()) {
-      showToast({ type: 'error', message: 'Vui lòng nhập mã pin mới' });
+      showToast({ type: 'error', message: 'Please enter new battery ID' });
       return;
     }
     setIsScanning(true);
@@ -92,7 +92,7 @@ export default withStaffAuth(function SwapPage() {
       console.warn('[Swap] ⚠️ BLOCKED - Direct access denied. No booking found.');
       showToast({ 
         type: 'error', 
-        message: 'Truy cập bị từ chối! Vui lòng sử dụng Check-in & Swap thay thế.',
+        message: 'Access denied! Please use Check-in & Swap instead.',
         duration: 4000
       });
       router.replace('/check-in');
@@ -107,17 +107,17 @@ export default withStaffAuth(function SwapPage() {
       <div className="max-w-2xl mx-auto mt-20 text-center">
         <div className="bg-red-50 rounded-2xl p-12 border-2 border-red-200">
           <XCircle className="w-20 h-20 text-red-500 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-gray-900 mb-3">Truy cập bị từ chối</h2>
+          <h2 className="text-2xl font-bold text-gray-900 mb-3">Access Denied</h2>
           <p className="text-gray-600 mb-6">
-            Trang này chỉ được truy cập thông qua flow <strong>Check-in & Swap</strong>.
+            This page can only be accessed through the <strong>Check-in & Swap</strong> flow.
             <br />
-            Vui lòng sử dụng menu Check-in & Swap để thực hiện giao dịch.
+            Please use the Check-in & Swap menu to perform transactions.
           </p>
           <button
             onClick={() => router.push('/check-in')}
             className="px-6 py-3 bg-blue-500 text-white rounded-lg font-semibold hover:bg-blue-600"
           >
-            ← Quay về Check-in & Swap
+            ← Back to Check-in & Swap
           </button>
         </div>
       </div>
@@ -187,9 +187,9 @@ export default withStaffAuth(function SwapPage() {
       
       console.log('[Swap] User object:', u);
       
-      // Step 1: Lấy stationId và stationName từ user
+      // Step 1: Get stationId and stationName from user
       if (u) {
-        // Ưu tiên lấy stationId nếu có và là GUID
+        // Prioritize getting stationId if available and is GUID
         const possibleId = (
           u['stationId'] || 
           u['StationID'] || 
@@ -200,24 +200,24 @@ export default withStaffAuth(function SwapPage() {
           u['Station']
         ) as string | undefined;
         
-        // Lấy stationName riêng
+        // Get stationName separately
         stationNameValue = (
           u['stationName'] || 
           u['StationName']
         ) as string | undefined;
         
-        // Nếu possibleId là GUID thì dùng luôn
+        // If possibleId is GUID, use it directly
         if (possibleId && guidPattern.test(possibleId)) {
           stationId = possibleId;
           console.log('[Swap] Found valid GUID from user.stationId:', stationId);
         } else if (possibleId) {
-          // Nếu possibleId không phải GUID, có thể là tên
+          // If possibleId is not GUID, it might be a name
           stationNameValue = possibleId;
           console.log('[Swap] stationId is not GUID, treating as name:', possibleId);
         }
       }
       
-      // Step 2: Nếu chưa có GUID nhưng có tên, fetch từ API
+      // Step 2: If no GUID but have name, fetch from API
       if (!stationId && stationNameValue) {
         console.log('[Swap] Attempting to fetch stationId from name:', stationNameValue);
         
@@ -230,7 +230,7 @@ export default withStaffAuth(function SwapPage() {
             console.log('[Swap] Successfully fetched stationId:', stationId);
             showToast({ 
               type: 'success', 
-              message: `Đã tìm thấy trạm: ${stationNameValue}`,
+              message: `Station found: ${stationNameValue}`,
               duration: 2000
             });
           } else {
@@ -241,7 +241,7 @@ export default withStaffAuth(function SwapPage() {
         }
       }
       
-      // Step 3: Nếu vẫn chưa có, thử fetch từ /api/auth/me
+      // Step 3: If still no GUID, try fetching from /api/auth/me
       if (!stationId && !stationNameValue && typeof window !== 'undefined') {
         console.log('[Swap] No station info from user, fetching from /api/auth/me');
         
@@ -259,7 +259,7 @@ export default withStaffAuth(function SwapPage() {
           if (meRes.ok && mePayload?.success && mePayload.data) {
             const d = mePayload.data as Record<string, unknown>;
             
-            // Lấy stationName từ /api/auth/me
+            // Get stationName from /api/auth/me
             stationNameValue = (
               d['stationName'] || 
               d['StationName']
@@ -267,7 +267,7 @@ export default withStaffAuth(function SwapPage() {
             
             console.log('[Swap] Got stationName from /api/auth/me:', stationNameValue);
             
-            // Thử fetch ID từ tên
+            // Try to fetch ID from name
             if (stationNameValue) {
               try {
                 const { getStationIdByName } = await import('@/application/services/stationService');
@@ -295,7 +295,7 @@ export default withStaffAuth(function SwapPage() {
           stationId = manualValue;
           console.log('[Swap] Using manual GUID:', stationId);
         } else {
-          // Manual input là tên, thử fetch
+          // Manual input is a name, try to fetch
           console.log('[Swap] Manual input is name, fetching ID:', manualValue);
           try {
             const { getStationIdByName } = await import('@/application/services/stationService');
@@ -321,8 +321,8 @@ export default withStaffAuth(function SwapPage() {
         showToast({ 
           type: 'error', 
           message: stationNameValue 
-            ? `Không tìm thấy trạm "${stationNameValue}" trong hệ thống. Vui lòng nhập Station ID (GUID) thủ công.`
-            : 'Không tìm thấy thông tin trạm. Vui lòng nhập Station ID (GUID) thủ công.'
+            ? `Station "${stationNameValue}" not found in system. Please enter Station ID (GUID) manually.`
+            : 'Station information not found. Please enter Station ID (GUID) manually.'
         });
         setShowStationIdInput(true);
         setStep('confirm');
@@ -375,7 +375,7 @@ export default withStaffAuth(function SwapPage() {
         console.error('[Swap] Failed to save to local storage:', e);
       }
 
-      showToast({ type: 'success', message: 'Đổi pin hoàn tất thành công!' });
+      showToast({ type: 'success', message: 'Battery swap completed successfully!' });
       setStep('completed');
       
       // Reset after 3 seconds
@@ -404,7 +404,7 @@ export default withStaffAuth(function SwapPage() {
     try {
       const transferId = lastCreatedTransferId;
       if (!transferId) {
-        showToast({ type: 'error', message: 'Không tìm thấy transfer để ghi nhận. Hãy thực hiện swap trước.' });
+        showToast({ type: 'error', message: 'No transfer found to record. Please perform swap first.' });
         return;
       }
       const exception = { type: reportType, reason: reportReason, createdAt: new Date().toISOString() };
@@ -413,7 +413,7 @@ export default withStaffAuth(function SwapPage() {
       // TODO: Implement rollback for swap transactions
       // Currently swap transactions are completed in one call
       // May need backend support for cancellation/rollback
-      showToast({ type: 'success', message: 'Exception đã được ghi nhận' });
+      showToast({ type: 'success', message: 'Exception recorded' });
       
       setReportOpen(false);
     } catch (e) {
@@ -434,11 +434,11 @@ export default withStaffAuth(function SwapPage() {
             </div>
             <div className="flex-1">
               <h3 className="text-lg font-bold text-emerald-900 mb-1">
-                ✅ Swap với Booking
+                ✅ Swap with Booking
               </h3>
               <p className="text-sm text-emerald-700 mb-2">
-                Giao dịch này được liên kết với booking của khách hàng. 
-                Thông tin sẽ được lưu vào lịch sử.
+                This transaction is linked to customer booking. 
+                Information will be saved to history.
               </p>
               <div className="flex items-center gap-4 text-xs">
                 <div className="flex items-center gap-1">
@@ -469,15 +469,15 @@ export default withStaffAuth(function SwapPage() {
             </div>
             <div className="flex-1">
               <h3 className="text-lg font-bold text-amber-900 mb-1">
-                ⚠️ Walk-in Swap (Không có Booking)
+                ⚠️ Walk-in Swap (No Booking)
               </h3>
               <p className="text-sm text-amber-700 mb-2">
-                Giao dịch này KHÔNG liên kết với booking. 
-                Thông tin khách hàng sẽ không được lưu.
+                This transaction is NOT linked to booking. 
+                Customer information will not be saved.
               </p>
               <div className="flex items-center gap-3 text-xs">
                 <span className="px-3 py-1 bg-amber-100 border border-amber-300 rounded-full text-amber-900 font-semibold">
-                  💡 Tip: Nên check-in khách hàng trước khi swap
+                  💡 Tip: Should check-in customer before swap
                 </span>
               </div>
             </div>
@@ -488,9 +488,9 @@ export default withStaffAuth(function SwapPage() {
       {/* Step Progress Indicator */}
       <div className="mb-8 flex items-center justify-center gap-3">
         {[
-          { key: 'scan-old', label: 'Pin cũ (OUT)', icon: Battery },
-          { key: 'scan-new', label: 'Pin mới (IN)', icon: BatteryCharging },
-          { key: 'confirm', label: 'Xác nhận', icon: CheckCircle2 },
+          { key: 'scan-old', label: 'Old Battery (OUT)', icon: Battery },
+          { key: 'scan-new', label: 'New Battery (IN)', icon: BatteryCharging },
+          { key: 'confirm', label: 'Confirm', icon: CheckCircle2 },
         ].map((s, idx) => {
           const isActive = step === s.key;
           const isPassed = 
@@ -529,8 +529,8 @@ export default withStaffAuth(function SwapPage() {
             <div className={`inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-rose-500 to-red-600 text-white mb-4 shadow-xl ${isScanning ? 'animate-pulse' : ''}`}>
               <Battery className="w-10 h-10" />
             </div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Bước 1: Scan Pin Cũ (OUT)</h2>
-            <p className="text-gray-600">Quét hoặc nhập mã pin khách hàng đang sử dụng</p>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Step 1: Scan Old Battery (OUT)</h2>
+            <p className="text-gray-600">Scan or enter the battery ID customer is currently using</p>
           </div>
 
           <div className="max-w-lg mx-auto space-y-6">
@@ -540,7 +540,7 @@ export default withStaffAuth(function SwapPage() {
                 type="text"
                 value={oldId}
                 onChange={(e) => setOldId(e.target.value)}
-                placeholder="Scan hoặc nhập mã pin cũ..."
+                placeholder="Scan or enter old battery ID..."
                 className="w-full h-14 pl-12 pr-4 rounded-xl border-2 border-gray-200 text-black text-lg placeholder:text-gray-400 focus:border-rose-500 focus:ring-4 focus:ring-rose-100 transition-all"
                 onKeyPress={(e) => e.key === 'Enter' && handleScanOld()}
                 disabled={isScanning}
@@ -552,7 +552,7 @@ export default withStaffAuth(function SwapPage() {
                   value={oldId}
                   onChange={(e) => setOldId(e.target.value)}
                 >
-                  <option value="">-- Chọn pin cũ từ trạm --</option>
+                  <option value="">-- Select old battery from station --</option>
                   {stationBatteryIds.map((id) => (
                     <option key={id} value={id}>{id}</option>
                   ))}
@@ -568,11 +568,11 @@ export default withStaffAuth(function SwapPage() {
               {isScanning ? (
                 <>
                   <Loader2 className="w-6 h-6 animate-spin" />
-                  Đang xử lý...
+                  Processing...
                 </>
               ) : (
                 <>
-                  Tiếp theo
+                  Next
                   <ArrowRight className="w-5 h-5" />
                 </>
               )}
@@ -588,8 +588,8 @@ export default withStaffAuth(function SwapPage() {
             <div className={`inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 text-white mb-4 shadow-xl ${isScanning ? 'animate-pulse' : ''}`}>
               <BatteryCharging className="w-10 h-10" />
             </div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Bước 2: Scan Pin Mới (IN)</h2>
-            <p className="text-gray-600">Quét hoặc nhập mã pin đầy để cung cấp cho khách hàng</p>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Step 2: Scan New Battery (IN)</h2>
+            <p className="text-gray-600">Scan or enter the full battery ID to provide to customer</p>
           </div>
 
           {/* Show Old Battery Info */}
@@ -597,7 +597,7 @@ export default withStaffAuth(function SwapPage() {
             <div className="flex items-center gap-3">
               <Battery className="w-5 h-5 text-rose-600" />
               <div>
-                <div className="text-xs text-gray-600">Pin cũ (đã xác nhận)</div>
+                <div className="text-xs text-gray-600">Old Battery (confirmed)</div>
                 <div className="font-semibold text-gray-900">{oldId}</div>
               </div>
             </div>
@@ -610,7 +610,7 @@ export default withStaffAuth(function SwapPage() {
                   type="text"
                   value={newId}
                   onChange={(e) => setNewId(e.target.value)}
-                  placeholder="Scan hoặc nhập mã pin mới..."
+                  placeholder="Scan or enter new battery ID..."
                   className="w-full h-14 pl-12 pr-4 rounded-xl border-2 border-gray-200 text-black text-lg placeholder:text-gray-400 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 transition-all"
                   onKeyPress={(e) => e.key === 'Enter' && handleScanNew()}
                   disabled={isScanning}
@@ -621,7 +621,7 @@ export default withStaffAuth(function SwapPage() {
                     value={newId}
                     onChange={(e) => setNewId(e.target.value)}
                   >
-                    <option value="">-- Chọn pin mới từ trạm --</option>
+                    <option value="">-- Select new battery from station --</option>
                     {stationBatteryIds.map((id) => (
                       <option key={id} value={id}>{id}</option>
                     ))}
@@ -634,7 +634,7 @@ export default withStaffAuth(function SwapPage() {
                 onClick={() => setStep('scan-old')}
                 className="flex-1 h-14 rounded-xl border-2 border-gray-300 text-gray-700 font-bold hover:bg-gray-50 transition-all"
               >
-                Quay lại
+                Back
               </button>
               <button
                 onClick={handleScanNew}
@@ -644,11 +644,11 @@ export default withStaffAuth(function SwapPage() {
                 {isScanning ? (
                   <>
                     <Loader2 className="w-6 h-6 animate-spin" />
-                    Đang xử lý...
+                    Processing...
                   </>
                 ) : (
                   <>
-                    Tiếp theo
+                    Next
                     <ArrowRight className="w-5 h-5" />
                   </>
                 )}
@@ -665,8 +665,8 @@ export default withStaffAuth(function SwapPage() {
             <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 text-white mb-4 shadow-xl">
               <CheckCircle2 className="w-10 h-10" />
             </div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Bước 3: Xác nhận Hoàn tất</h2>
-            <p className="text-gray-600">Kiểm tra thông tin và xác nhận hoàn tất quy trình đổi pin</p>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Step 3: Confirm Completion</h2>
+            <p className="text-gray-600">Review information and confirm completion of battery swap process</p>
           </div>
 
           <div className="max-w-2xl mx-auto space-y-6">
@@ -676,7 +676,7 @@ export default withStaffAuth(function SwapPage() {
               <div className="p-6 bg-gradient-to-br from-rose-50 to-red-50 rounded-xl border-2 border-rose-200">
                 <div className="flex items-center gap-2 mb-3">
                   <Battery className="w-5 h-5 text-rose-600" />
-                  <span className="text-sm font-semibold text-rose-900">PIN CŨ (OUT)</span>
+                  <span className="text-sm font-semibold text-rose-900">OLD BATTERY (OUT)</span>
                 </div>
                 <div className="text-2xl font-bold text-rose-900 break-all">{oldId}</div>
               </div>
@@ -685,7 +685,7 @@ export default withStaffAuth(function SwapPage() {
               <div className="p-6 bg-gradient-to-br from-emerald-50 to-teal-50 rounded-xl border-2 border-emerald-200">
                 <div className="flex items-center gap-2 mb-3">
                   <BatteryCharging className="w-5 h-5 text-emerald-600" />
-                  <span className="text-sm font-semibold text-emerald-900">PIN MỚI (IN)</span>
+                  <span className="text-sm font-semibold text-emerald-900">NEW BATTERY (IN)</span>
                 </div>
                 <div className="text-2xl font-bold text-emerald-900 break-all">{newId}</div>
               </div>
@@ -696,14 +696,14 @@ export default withStaffAuth(function SwapPage() {
               <div className="p-4 bg-amber-50 border-2 border-amber-200 rounded-xl">
                 <div className="flex items-center gap-2 mb-3">
                   <AlertTriangle className="w-5 h-5 text-amber-600" />
-                  <span className="text-sm font-semibold text-amber-900">Không tìm thấy Station ID</span>
+                  <span className="text-sm font-semibold text-amber-900">Station ID Not Found</span>
                 </div>
-                <p className="text-sm text-amber-700 mb-3">Vui lòng nhập Station ID của bạn để tiếp tục:</p>
+                <p className="text-sm text-amber-700 mb-3">Please enter your Station ID to continue:</p>
                 <input
                   type="text"
                   value={manualStationId}
                   onChange={(e) => setManualStationId(e.target.value)}
-                  placeholder="Nhập Station ID..."
+                  placeholder="Enter Station ID..."
                   className="w-full h-11 px-4 rounded-lg border-2 border-amber-300 text-black placeholder:text-gray-400 focus:border-amber-500 focus:ring-2 focus:ring-amber-200 transition-all"
                 />
               </div>
@@ -714,21 +714,21 @@ export default withStaffAuth(function SwapPage() {
                 onClick={() => setStep('scan-new')}
                 className="flex-1 h-14 rounded-xl border-2 border-gray-300 text-gray-700 font-bold hover:bg-gray-50 transition-all"
               >
-                Quay lại
+                Back
               </button>
               <button
                 onClick={confirmSwap}
                 className="flex-1 h-14 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 text-white text-lg font-bold shadow-lg hover:from-emerald-600 hover:to-teal-700 transition-all hover:shadow-xl flex items-center justify-center gap-2"
               >
                 <CheckCircle2 className="w-6 h-6" />
-                Xác nhận Hoàn tất
+                Confirm Completion
               </button>
               <button
                 onClick={openReport}
                 className="h-14 px-6 rounded-xl bg-gradient-to-r from-rose-50 to-red-50 text-rose-700 font-bold ring-2 ring-rose-200 hover:from-rose-100 hover:to-red-100 transition-all flex items-center gap-2"
               >
                 <AlertTriangle className="w-5 h-5" />
-                Báo lỗi
+                Report Issue
               </button>
             </div>
           </div>
@@ -739,8 +739,8 @@ export default withStaffAuth(function SwapPage() {
       {step === 'processing' && (
         <div className="bg-white rounded-2xl shadow-lg p-12 border border-gray-100 text-center">
           <Loader2 className="w-16 h-16 text-blue-500 animate-spin mx-auto mb-6" />
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Đang xử lý giao dịch...</h2>
-          <p className="text-gray-600">Vui lòng đợi trong giây lát</p>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Processing transaction...</h2>
+          <p className="text-gray-600">Please wait a moment</p>
         </div>
       )}
 
@@ -750,17 +750,17 @@ export default withStaffAuth(function SwapPage() {
           <div className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 text-white mb-6 shadow-2xl">
             <CheckCircle2 className="w-12 h-12" />
           </div>
-          <h2 className="text-3xl font-bold text-gray-900 mb-3">Đổi pin thành công!</h2>
-          <p className="text-lg text-gray-600 mb-6">Giao dịch đã được ghi nhận</p>
+          <h2 className="text-3xl font-bold text-gray-900 mb-3">Battery swap successful!</h2>
+          <p className="text-lg text-gray-600 mb-6">Transaction has been recorded</p>
           
           <div className="max-w-md mx-auto p-4 bg-gray-50 rounded-xl">
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div className="text-left">
-                <div className="text-gray-600 mb-1">Pin cũ</div>
+                <div className="text-gray-600 mb-1">Old Battery</div>
                 <div className="font-semibold text-rose-700">{oldId}</div>
               </div>
               <div className="text-left">
-                <div className="text-gray-600 mb-1">Pin mới</div>
+                <div className="text-gray-600 mb-1">New Battery</div>
                 <div className="font-semibold text-emerald-700">{newId}</div>
               </div>
             </div>
@@ -772,7 +772,7 @@ export default withStaffAuth(function SwapPage() {
           </div>
 
           <div className="mt-6 text-sm text-blue-600 font-medium">
-            Tự động reset sau 3 giây...
+            Auto reset in 3 seconds...
           </div>
         </div>
       )}
@@ -786,8 +786,8 @@ export default withStaffAuth(function SwapPage() {
                 <AlertTriangle className="w-6 h-6" />
               </div>
               <div>
-                <h3 className="text-xl font-bold text-gray-900">Báo cáo sự cố</h3>
-                <p className="text-sm text-gray-600">Ghi nhận và hoàn tác giao dịch</p>
+                <h3 className="text-xl font-bold text-gray-900">Report Issue</h3>
+                <p className="text-sm text-gray-600">Record and rollback transaction</p>
               </div>
             </div>
 
@@ -800,26 +800,26 @@ export default withStaffAuth(function SwapPage() {
 
             <div className="space-y-5">
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Loại sự cố</label>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Issue Type</label>
                 <select 
                   value={reportType} 
                   onChange={(e) => setReportType(e.target.value)} 
                   className="w-full h-11 px-4 rounded-lg border-2 border-gray-200 text-black focus:border-rose-500 focus:ring-2 focus:ring-rose-200 transition-all"
                 >
-                  <option value="Issue">Sự cố chung</option>
-                  <option value="CustomerCancel">Khách hủy</option>
-                  <option value="HardwareFault">Lỗi thiết bị</option>
-                  <option value="BatteryDefect">Pin lỗi</option>
-                  <option value="Other">Khác</option>
+                  <option value="Issue">General Issue</option>
+                  <option value="CustomerCancel">Customer Canceled</option>
+                  <option value="HardwareFault">Hardware Fault</option>
+                  <option value="BatteryDefect">Battery Defect</option>
+                  <option value="Other">Other</option>
                 </select>
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Chi tiết / Lý do</label>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Details / Reason</label>
                 <textarea 
                   value={reportReason} 
                   onChange={(e) => setReportReason(e.target.value)} 
-                  placeholder="Mô tả vấn đề gặp phải..." 
+                  placeholder="Describe the issue encountered..." 
                   className="w-full rounded-lg border-2 border-gray-200 p-3 text-sm h-32 text-black placeholder:text-gray-400 focus:border-rose-500 focus:ring-2 focus:ring-rose-200 transition-all resize-none"
                 />
               </div>
@@ -830,14 +830,14 @@ export default withStaffAuth(function SwapPage() {
                 onClick={() => setReportOpen(false)} 
                 className="flex-1 h-11 rounded-lg border-2 border-gray-300 text-gray-700 font-semibold hover:bg-gray-50 transition-all"
               >
-                Hủy
+                Cancel
               </button>
               <button 
                 onClick={submitReport} 
                 className="flex-1 h-11 rounded-lg bg-gradient-to-r from-rose-500 to-red-600 text-white font-semibold shadow-lg hover:from-rose-600 hover:to-red-700 transition-all hover:shadow-xl flex items-center justify-center gap-2"
               >
                 <XCircle className="w-5 h-5" />
-                Ghi nhận & Hoàn tác
+                Record & Rollback
               </button>
             </div>
           </div>

@@ -48,13 +48,13 @@ export const ForgotPasswordForm = () => {
       });
       const data = await res.json();
       if (!res.ok || data.success === false) {
-        const msg = data?.message || 'Không gửi được email đặt lại mật khẩu.';
+        const msg = data?.message || 'Failed to send password reset email.';
         alert(msg);
         return;
       }
       router.push(`/resetpassword?email=${encodeURIComponent(email)}`);
     } catch (err) {
-      alert('Lỗi khi gửi email đặt lại mật khẩu');
+      alert('Error sending password reset email');
     } finally {
       setLoading(false);
     }

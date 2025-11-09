@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { StatCard } from '../components/StatCard';
 import { Table } from '../components/Table';
 import reportsService from '@/application/services/reportsService';
-import batteryService from '@/application/services/batteryService';
+import { useBatteries } from '@/presentation/hooks/useBatteries';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/presentation/components/ui/Notification';
 import { TrendingUp, DollarSign, Battery, AlertTriangle, Download, Calendar, FileText, RefreshCw, CheckCircle2 } from 'lucide-react';
@@ -17,15 +17,25 @@ export default withStaffAuth(function ReportsPage() {
   const [q, setQ] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [revenueData, setRevenueData] = useState<any>(null);
-  const [batteries, setBatteries] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
   const { user } = useAuth();
   const { showToast } = useToast();
+  
+  // Get stationId from user (MUST be GUID, not station name)
+  const stationId = user?.stationId;
+  
+  // Use custom hook for batteries
+  const { batteries, loading, error } = useBatteries(stationId);
+  
+  // Show error toast
+  useEffect(() => {
+    if (error) {
+      showToast({ type: 'error', message: error.message || 'Failed to load batteries' });
+    }
+  }, [error, showToast]);
 
-  // Load data
+  // Load local transfers
   useEffect(() => {
     const loadData = async () => {
-      setLoading(true);
       try {
         // Load local transfers
         const raw = localStorage.getItem(LOCAL_TRANSFERS_KEY);
@@ -45,18 +55,8 @@ export default withStaffAuth(function ReportsPage() {
           setRevenueData(null);
         }
         */
-
-        // Load battery data
-        try {
-          const batteryList = await batteryService.getAllBatteries();
-          setBatteries(batteryList || []);
-        } catch (e) {
-          console.error('Failed to load batteries:', e);
-        }
       } catch (e) {
-        showToast({ type: 'error', message: 'Không thể tải dữ liệu báo cáo' });
-      } finally {
-        setLoading(false);
+        showToast({ type: 'error', message: 'Failed to load report data' });
       }
     };
 
@@ -79,7 +79,7 @@ export default withStaffAuth(function ReportsPage() {
   });
   const completedSwaps = todayTransfers.filter(t => t.status === 'Completed').length;
   const exceptions = todayTransfers.filter(t => t.status === 'Exception' || t.status === 'Cancelled').length;
-  const faultyBatteries = batteries.filter(b => b.status === 'Faulty').length;
+  const faultyBatteries = batteries.filter(b => b.status === 'Maintenance' || b.status === 'Damaged').length;
   const totalRevenue = revenueData?.totalRevenue || revenueData?.revenue || 0;
 
   // Export function
@@ -102,7 +102,7 @@ export default withStaffAuth(function ReportsPage() {
     link.href = URL.createObjectURL(blob);
     link.download = `report_${new Date().toISOString().split('T')[0]}.csv`;
     link.click();
-    showToast({ type: 'success', message: 'Đã xuất báo cáo thành công!' });
+    showToast({ type: 'success', message: 'Report exported successfully!' });
   };
 
   const columns = [
@@ -132,7 +132,7 @@ export default withStaffAuth(function ReportsPage() {
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-3xl font-bold mb-2">Daily Summary Report</h2>
-            <p className="text-purple-100">Báo cáo tổng hợp hoạt động hôm nay</p>
+            <p className="text-purple-100">Today's Operations Summary</p>
           </div>
           
         </div>
@@ -143,7 +143,7 @@ export default withStaffAuth(function ReportsPage() {
         <div className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-xl p-6 border border-emerald-200">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <div className="text-sm text-emerald-700 font-medium mb-1">Swaps hôm nay</div>
+              <div className="text-sm text-emerald-700 font-medium mb-1">Today's Swaps</div>
               <div className="text-3xl font-bold text-emerald-900">{completedSwaps}</div>
             </div>
             <div className="w-12 h-12 rounded-full bg-emerald-500 flex items-center justify-center text-white">
@@ -157,28 +157,28 @@ export default withStaffAuth(function ReportsPage() {
         <div className="bg-gradient-to-br from-gray-50 to-slate-50 rounded-xl p-6 border-2 border-dashed border-gray-300 opacity-60">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <div className="text-sm text-gray-600 font-medium mb-1">Doanh thu</div>
-              <div className="text-2xl font-bold text-gray-400">🔒 Chưa khả dụng</div>
+              <div className="text-sm text-gray-600 font-medium mb-1">Revenue</div>
+              <div className="text-2xl font-bold text-gray-400">🔒 Not Available</div>
             </div>
             <div className="w-12 h-12 rounded-full bg-gray-300 flex items-center justify-center text-white">
               <DollarSign className="w-6 h-6" />
             </div>
           </div>
-          <div className="text-xs text-gray-500">Yêu cầu quyền Admin</div>
+          <div className="text-xs text-gray-500">Requires Admin permission</div>
         </div>
         */}
 
         <div className="bg-gradient-to-br from-rose-50 to-red-50 rounded-xl p-6 border border-rose-200">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <div className="text-sm text-rose-700 font-medium mb-1">Pin lỗi</div>
+              <div className="text-sm text-rose-700 font-medium mb-1">Faulty Batteries</div>
               <div className="text-3xl font-bold text-rose-900">{faultyBatteries}</div>
             </div>
             <div className="w-12 h-12 rounded-full bg-rose-500 flex items-center justify-center text-white">
               <Battery className="w-6 h-6" />
             </div>
           </div>
-          <div className="text-xs text-rose-700">Cần kiểm tra</div>
+          <div className="text-xs text-rose-700">Needs inspection</div>
         </div>
 
         <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl p-6 border border-amber-200">
@@ -204,7 +204,7 @@ export default withStaffAuth(function ReportsPage() {
             </div>
             <div>
               <h3 className="text-xl font-bold text-gray-900">Event Log</h3>
-              <p className="text-sm text-gray-600">Chi tiết các giao dịch đổi pin</p>
+              <p className="text-sm text-gray-600">Battery swap transaction details</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -230,7 +230,7 @@ export default withStaffAuth(function ReportsPage() {
         {loading ? (
           <div className="p-12 text-center">
             <RefreshCw className="w-12 h-12 text-purple-500 animate-spin mx-auto mb-4" />
-            <p className="text-gray-600">Đang tải dữ liệu...</p>
+            <p className="text-gray-600">Loading data...</p>
           </div>
         ) : (
           <Table columns={columns} data={filtered} empty={<span className="text-sm text-gray-500">No events recorded yet</span>} />
@@ -246,17 +246,17 @@ export default withStaffAuth(function ReportsPage() {
           </h3>
           <div className="space-y-3">
             <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-              <span className="text-sm text-gray-600">Tỷ lệ hoàn thành</span>
+              <span className="text-sm text-gray-600">Completion Rate</span>
               <span className="font-semibold text-gray-900">
                 {transfers.length > 0 ? ((completedSwaps / todayTransfers.length) * 100).toFixed(1) : 0}%
               </span>
             </div>
             <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-              <span className="text-sm text-gray-600">Thời gian trung bình</span>
-              <span className="font-semibold text-gray-900">~5 phút</span>
+              <span className="text-sm text-gray-600">Average Time</span>
+              <span className="font-semibold text-gray-900">~5 mins</span>
             </div>
             <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-              <span className="text-sm text-gray-600">Doanh thu/swap</span>
+              <span className="text-sm text-gray-600">Revenue/Swap</span>
               <span className="font-semibold text-gray-900">
                 {completedSwaps > 0 ? (totalRevenue / completedSwaps).toLocaleString() : 0} VND
               </span>
@@ -271,9 +271,9 @@ export default withStaffAuth(function ReportsPage() {
           </h3>
           <div className="space-y-3">
             <div className="flex items-center justify-between p-3 bg-emerald-50 rounded-lg">
-              <span className="text-sm text-emerald-700">Full/Available</span>
+              <span className="text-sm text-emerald-700">Available</span>
               <span className="font-semibold text-emerald-900">
-                {batteries.filter(b => b.status === 'Full' || b.status === 'Available').length}
+                {batteries.filter(b => b.status === 'Available').length}
               </span>
             </div>
             <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">

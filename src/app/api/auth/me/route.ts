@@ -10,7 +10,8 @@ export async function GET(req: NextRequest) {
     if (incomingAuth) {
       token = incomingAuth.replace(/^Bearer\s+/i, '');
     } else {
-      token = req.cookies.get('token')?.value;
+      // Try both cookie names (accessToken is new, token is legacy)
+      token = req.cookies.get('accessToken')?.value || req.cookies.get('token')?.value;
     }
 
     if (!token) {
@@ -19,7 +20,7 @@ export async function GET(req: NextRequest) {
         if (process.env.NODE_ENV === 'development') {
           const incomingAuth = req.headers.get('authorization');
           const incomingCookie = req.headers.get('cookie');
-          const tokenCookie = req.cookies.get('token')?.value;
+          const tokenCookie = req.cookies.get('accessToken')?.value || req.cookies.get('token')?.value;
           const maskedCookie = tokenCookie ? `${tokenCookie.slice(0,8)}...(${tokenCookie.length}ch)` : null;
           const maskedIncomingAuth = incomingAuth ? (() => {
             try { const t = incomingAuth.replace(/^Bearer\s+/i, ''); return `${t.slice(0,8)}...(${t.length}ch)`; } catch { return 'present'; }
@@ -88,7 +89,7 @@ export async function GET(req: NextRequest) {
         if (process.env.NODE_ENV === 'development') {
           const incomingAuth = req.headers.get('authorization');
           const incomingCookie = req.headers.get('cookie');
-          const tokenCookie = req.cookies.get('token')?.value;
+          const tokenCookie = req.cookies.get('accessToken')?.value || req.cookies.get('token')?.value;
           const maskedCookie = tokenCookie ? `${tokenCookie.slice(0,8)}...(${tokenCookie.length}ch)` : null;
           const maskedIncomingAuth = incomingAuth ? (() => {
             try { const t = incomingAuth.replace(/^Bearer\s+/i, ''); return `${t.slice(0,8)}...(${t.length}ch)`; } catch { return 'present'; }

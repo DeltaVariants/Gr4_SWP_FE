@@ -1,9 +1,12 @@
 import type { Metadata } from "next";
 import Script from "next/script";
 import "./globals.css";
+import "@/lib/errorHandler"; // Global error handler
 import { ReduxProvider } from "../application/providers/ReduxProvider";
 import { AuthProvider } from "@/contexts/AuthContext";
-import { ToastProvider } from '@/presentation/components/ui/Notification';
+import { ToastProvider } from "@/presentation/components/ui/Notification";
+import { ErrorBoundary } from "@/presentation/components/ErrorBoundary";
+import Providers from "./provider";
 
 export const metadata: Metadata = {
   title: "eSwap - Driver Portal",
@@ -16,7 +19,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-  <html lang="en" suppressHydrationWarning data-scroll-behavior="smooth">
+    <html lang="en" suppressHydrationWarning data-scroll-behavior="smooth">
       <head>
         {/* Leaflet CSS */}
         <link
@@ -44,12 +47,15 @@ export default function RootLayout({
           src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"
           strategy="lazyOnload"
         />
-        {/* Wrap children ONCE with all providers in a single tree */}
-        <AuthProvider>
-          <ToastProvider>
-            <ReduxProvider>{children}</ReduxProvider>
-          </ToastProvider>
-        </AuthProvider>
+        <ErrorBoundary>
+          <Providers>
+            <AuthProvider>
+              <ToastProvider>
+                <ReduxProvider>{children}</ReduxProvider>
+              </ToastProvider>
+            </AuthProvider>
+          </Providers>
+        </ErrorBoundary>
       </body>
     </html>
   );

@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { Clipboard } from 'lucide-react';
 import { useToast } from '@/presentation/components/ui/Notification/ToastProvider';
-import { Edit2, Lock, Check, X, Clipboard } from 'lucide-react';
 
 type MeResponse = {
   userID?: string;
@@ -32,13 +32,6 @@ export function ProfileCard() {
     stationId?: string;
     stationName?: string;
   } | null>(null);
-  const [editing, setEditing] = useState(false);
-  const [nameInput, setNameInput] = useState('');
-  const [phoneInput, setPhoneInput] = useState('');
-  const [pwdOpen, setPwdOpen] = useState(false);
-  const [currentPwd, setCurrentPwd] = useState('');
-  const [newPwd, setNewPwd] = useState('');
-  const [confirmPwd, setConfirmPwd] = useState('');
 
   useEffect(() => {
     let cancelled = false;
@@ -51,7 +44,6 @@ export function ProfileCard() {
           if (!cancelled) setProfile(ctxUser);
         }
 
-        
         const resp = await fetch('/api/auth/me', { cache: 'no-store' });
         if (!resp.ok) {
           const payload = await resp.json().catch(() => ({}));
@@ -71,10 +63,6 @@ export function ProfileCard() {
           stationName: (me as any).StationName || (me as any).stationName || (me as any).station || undefined,
         };
         if (!cancelled) setProfile(normalized);
-        if (!cancelled) {
-          setNameInput(normalized.name || '');
-          setPhoneInput(normalized.phone || '');
-        }
       } catch (e: unknown) {
         const message = e instanceof Error ? e.message : 'Unknown error';
         if (!cancelled) setError(message);
@@ -117,7 +105,6 @@ export function ProfileCard() {
       <div className="bg-white rounded-lg p-6 shadow-md border border-gray-100">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            
             <div>
               <div className="text-xl font-bold text-gray-900">{profile.name || '-'}</div>
               <div className="text-sm font-medium text-gray-600">{profile.email || '-'}</div>
@@ -151,108 +138,35 @@ export function ProfileCard() {
               )}
             </div>
           </div>
-
-          <div className="flex items-center gap-3">
-            <button onClick={() => setEditing(true)} title="Edit profile" className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-gradient-to-r from-blue-500 to-blue-600 text-white font-medium shadow-md hover:from-blue-600 hover:to-blue-700 transition-all duration-200 hover:shadow-lg">
-              <Edit2 className="w-4 h-4" /> <span className="text-sm">Edit</span>
-            </button>
-            <button onClick={() => setPwdOpen(true)} title="Change password" className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-medium shadow-md hover:from-emerald-600 hover:to-teal-700 transition-all duration-200 hover:shadow-lg">
-              <Lock className="w-4 h-4" /> <span className="text-sm">Change</span>
-            </button>
-          </div>
         </div>
 
         <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-5">
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">Name</label>
-            <input value={nameInput} onChange={(e) => setNameInput(e.target.value)} readOnly={!editing} className={`mt-1 p-3 rounded-lg w-full text-gray-900 font-medium ${editing ? 'border-2 border-blue-300 bg-blue-50 focus:border-blue-500 focus:ring-2 focus:ring-blue-200' : 'bg-gray-50 border-0'}`} />
+            <div className="mt-1 p-3 rounded-lg w-full text-gray-900 font-medium bg-gray-50">
+              {profile.name || '-'}
+            </div>
           </div>
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">Phone Number</label>
-            <input value={phoneInput} onChange={(e) => setPhoneInput(e.target.value)} readOnly={!editing} className={`mt-1 p-3 rounded-lg w-full text-gray-900 font-medium ${editing ? 'border-2 border-blue-300 bg-blue-50 focus:border-blue-500 focus:ring-2 focus:ring-blue-200' : 'bg-gray-50 border-0'}`} />
+            <div className="mt-1 p-3 rounded-lg w-full text-gray-900 font-medium bg-gray-50">
+              {profile.phone || '-'}
+            </div>
           </div>
-        </div>
-
-        <div className="mt-6 flex items-center gap-3">
-          {editing ? (
-            <>
-              <button onClick={async () => {
-                try {
-                  setLoading(true);
-                  const payload = { name: nameInput, phoneNumber: phoneInput };
-                  const res = await fetch('/api/auth/update-profile', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-                  const p = await res.json().catch(() => ({}));
-                  if (!res.ok) throw new Error(p?.message || 'Cập nhật thất bại');
-                  toast.showToast({ type: 'success', message: 'Profile updated' });
-                  setProfile((prev) => prev ? { ...prev, name: nameInput, phone: phoneInput } : prev);
-                  setEditing(false);
-                } catch (err: unknown) {
-                  const msg = err && typeof err === 'object' && 'message' in (err as Record<string, unknown>) ? String((err as Record<string, unknown>)['message']) : String(err || 'Failed to update');
-                  toast.showToast({ type: 'error', message: msg });
-                } finally { setLoading(false); }
-              }} className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-semibold shadow-md hover:from-emerald-600 hover:to-teal-700 transition-all">
-                <Check className="w-4 h-4" /> Save
-              </button>
-              <button onClick={() => { setEditing(false); setNameInput(profile.name || ''); setPhoneInput(profile.phone || ''); }} className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-gray-200 text-gray-700 font-semibold hover:bg-gray-300 transition-all">
-                <X className="w-4 h-4" /> Cancel
-              </button>
-            </>
-          ) : (
-            <div className="text-sm text-gray-600 font-medium">Đã cập nhật lần cuối: <span className="font-semibold text-gray-800">—</span></div>
-          )}
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">Email</label>
+            <div className="mt-1 p-3 rounded-lg w-full text-gray-900 font-medium bg-gray-50">
+              {profile.email || '-'}
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">Role</label>
+            <div className="mt-1 p-3 rounded-lg w-full text-gray-900 font-medium bg-gray-50">
+              {profile.role || '-'}
+            </div>
+          </div>
         </div>
       </div>
-
-      {/* Change password modal */}
-      {pwdOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setPwdOpen(false)} />
-          <div className="relative bg-white rounded-2xl p-8 w-full max-w-md shadow-2xl border border-gray-100">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-                <Lock className="w-6 h-6 text-emerald-600" />
-                Thay đổi mật khẩu
-              </h3>
-              <button onClick={() => setPwdOpen(false)} className="text-gray-400 hover:text-gray-600 transition-colors">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="space-y-5">
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Mật khẩu hiện tại</label>
-                <input type="password" value={currentPwd} onChange={(e) => setCurrentPwd(e.target.value)} className="w-full p-3 border-2 border-gray-200 rounded-lg focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all" placeholder="Nhập mật khẩu hiện tại" />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Mật khẩu mới</label>
-                <input type="password" value={newPwd} onChange={(e) => setNewPwd(e.target.value)} className="w-full p-3 border-2 border-gray-200 rounded-lg focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all" placeholder="Nhập mật khẩu mới" />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Xác nhận mật khẩu mới</label>
-                <input type="password" value={confirmPwd} onChange={(e) => setConfirmPwd(e.target.value)} className="w-full p-3 border-2 border-gray-200 rounded-lg focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all" placeholder="Nhập lại mật khẩu mới" />
-              </div>
-            </div>
-            <div className="mt-8 flex justify-end gap-3">
-              <button onClick={() => setPwdOpen(false)} className="px-5 py-2.5 rounded-lg bg-gray-200 text-gray-700 font-semibold hover:bg-gray-300 transition-all">Hủy</button>
-              <button onClick={async () => {
-                if (!newPwd || newPwd !== confirmPwd) { toast.showToast({ type: 'error', message: 'Mật khẩu mới không khớp' }); return; }
-                try {
-                  setLoading(true);
-                  const payload = { currentPassword: currentPwd, newPassword: newPwd };
-                  const res = await fetch('/api/auth/change-password', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-                  const p = await res.json().catch(() => ({}));
-                  if (!res.ok) throw new Error(p?.message || 'Không thể đổi mật khẩu');
-                  toast.showToast({ type: 'success', message: 'Đổi mật khẩu thành công' });
-                  setPwdOpen(false);
-                  setCurrentPwd(''); setNewPwd(''); setConfirmPwd('');
-                } catch (err: unknown) {
-                  const msg = err && typeof err === 'object' && 'message' in (err as Record<string, unknown>) ? String((err as Record<string, unknown>)['message']) : String(err || 'Failed');
-                  toast.showToast({ type: 'error', message: msg });
-                } finally { setLoading(false); }
-              }} className="px-6 py-2.5 rounded-lg bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-semibold shadow-lg hover:from-emerald-600 hover:to-teal-700 transition-all hover:shadow-xl">Đổi mật khẩu</button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

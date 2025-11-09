@@ -3,7 +3,7 @@ import Link from "next/link";
 
 export default function StationMonitor() {
   return (
-    <div className="p-6">
+    <div>
       <div className="mb-6">
         <Link
           href="/station-management"

@@ -15,7 +15,7 @@ export const SocialLogin = () => {
     <>
       <div className="flex items-center my-4">
         <div className="flex-1 h-px bg-gray-300" />
-        <span className="px-2 text-sm text-gray-500">Hoặc đăng nhập với</span>
+        <span className="px-2 text-sm text-gray-500">Or sign in with</span>
         <div className="flex-1 h-px bg-gray-300" />
       </div>
       <button
@@ -32,7 +32,7 @@ export const SocialLogin = () => {
           className="group-hover:scale-110 transition-transform"
         />
         <span className="text-sm font-medium text-gray-700">
-          {loading ? 'Đang kết nối...' : 'Đăng nhập với Google'}
+          {loading ? 'Connecting...' : 'Sign in with Google'}
         </span>
       </button>
     </>
