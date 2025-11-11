@@ -6,6 +6,7 @@ interface MarkerPopupProps {
   status: boolean;
   availableSlots: number;
   totalSlots: number;
+  stationId?: string;
 }
 
 const MarkerPopup: React.FC<MarkerPopupProps> = ({
@@ -14,7 +15,14 @@ const MarkerPopup: React.FC<MarkerPopupProps> = ({
   status,
   availableSlots,
   totalSlots,
+  stationId,
 }) => {
+  const handleBookNow = () => {
+    if (stationId) {
+      window.location.href = `/findstation/${stationId}`;
+    }
+  };
+
   return (
     <div className="p-3 min-w-[200px]">
       <h3 className="font-semibold text-lg mb-2">{stationName}</h3>
@@ -28,7 +36,14 @@ const MarkerPopup: React.FC<MarkerPopupProps> = ({
         Còn trống: {availableSlots}/{totalSlots} chỗ
       </p>
 
-      {/* Directional controls removed */}
+      {stationId && (
+        <button
+          onClick={handleBookNow}
+          className="w-full bg-indigo-600 text-white py-2 px-4 rounded-lg font-medium hover:bg-indigo-700 transition-colors text-sm"
+        >
+          Đặt lịch
+        </button>
+      )}
     </div>
   );
 };

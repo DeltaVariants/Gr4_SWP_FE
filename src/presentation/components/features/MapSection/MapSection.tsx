@@ -76,7 +76,10 @@ export default function MapSection() {
           const newMarker = L.marker([latitude, longitude], { icon: userIcon })
             .addTo(map)
             .bindPopup(
-              '<div class="text-center"><strong>You are here</strong></div>'
+              `<div>
+                <div>longitude: ${longitude}</div>
+                <div>latitude: ${latitude}</div>
+              </div>`
             );
 
           setUserLocationMarker(newMarker);
@@ -113,12 +116,21 @@ export default function MapSection() {
       return;
     }
 
+    // Check if the DOM element already has a Leaflet map instance
+    // This prevents "Map container is already initialized" error
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    if ((mapRef.current as any)._leaflet_id) {
+      console.log(
+        "DOM element already has a Leaflet map, skipping initialization"
+      );
+      return;
+    }
+
     // Helper function to setup map
     const setupMap = (initialCenter: [number, number], initialZoom: number) => {
-      const mapInstance = L.map(mapRef.current).setView(
-        initialCenter,
-        initialZoom
-      );
+      const mapInstance = L.map(mapRef.current, {
+        zoomControl: false,
+      }).setView(initialCenter, initialZoom);
       mapInstanceRef.current = mapInstance;
 
       // Add tile layer
@@ -131,19 +143,34 @@ export default function MapSection() {
 
       // Save map view changes to Redux (with debounce to avoid infinite loop)
       let moveEndTimeout: NodeJS.Timeout;
-      mapInstance.on("moveend", () => {
+      const handleMoveEnd = () => {
         clearTimeout(moveEndTimeout);
         moveEndTimeout = setTimeout(() => {
-          const newCenter = mapInstance.getCenter();
-          const newZoom = mapInstance.getZoom();
-          dispatch(
-            setMapView({
-              center: [newCenter.lat, newCenter.lng],
-              zoom: newZoom,
-            })
-          );
+          // Check if map is still valid before accessing it
+          if (mapInstance && mapInstance.getCenter) {
+            try {
+              const newCenter = mapInstance.getCenter();
+              const newZoom = mapInstance.getZoom();
+              dispatch(
+                setMapView({
+                  center: [newCenter.lat, newCenter.lng],
+                  zoom: newZoom,
+                })
+              );
+            } catch (error) {
+              console.warn("Map instance no longer valid:", error);
+            }
+          }
         }, 300); // Debounce 300ms
-      });
+      };
+
+      mapInstance.on("moveend", handleMoveEnd);
+
+      // Store cleanup function
+      mapInstance._cleanupMoveEnd = () => {
+        clearTimeout(moveEndTimeout);
+        mapInstance.off("moveend", handleMoveEnd);
+      };
 
       return mapInstance;
     };
@@ -168,7 +195,10 @@ export default function MapSection() {
       })
         .addTo(mapInstance)
         .bindPopup(
-          '<div class="text-center"><strong>You are here</strong></div>'
+          `<div>
+            <div>longitude: ${userLocation.longitude}</div>
+            <div>latitude: ${userLocation.latitude}</div>
+          </div>`
         );
 
       setUserLocationMarker(marker);
@@ -193,7 +223,10 @@ export default function MapSection() {
           const marker = L.marker([latitude, longitude], { icon: userIcon })
             .addTo(mapInstance)
             .bindPopup(
-              '<div class="text-center"><strong>You are here</strong></div>'
+              `<div>
+                <div>longitude: ${longitude}</div>
+                <div>latitude: ${latitude}</div>
+              </div>`
             );
 
           setUserLocationMarker(marker);
@@ -225,6 +258,9 @@ export default function MapSection() {
 
   // Initialize Leaflet map once
   useEffect(() => {
+    // Store the current ref value for cleanup
+    const mapElement = mapRef.current;
+
     // Wait for Leaflet to be loaded
     const checkLeafletAndInitialize = () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -247,12 +283,32 @@ export default function MapSection() {
     // Cleanup when component unmounts - IMPORTANT to prevent "already initialized" error
     return () => {
       if (mapInstanceRef.current) {
+        // Call cleanup function if it exists
+        if (mapInstanceRef.current._cleanupMoveEnd) {
+          mapInstanceRef.current._cleanupMoveEnd();
+        }
         mapInstanceRef.current.remove();
         mapInstanceRef.current = null;
         stationsLayerRef.current = null;
+
+        // Remove Leaflet ID from DOM element to allow re-initialization
+        if (mapElement) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          delete (mapElement as any)._leaflet_id;
+        }
       }
     };
   }, [initializeMapWithLocation]);
+
+  // Listen to Redux state changes and update map view
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    if (!map) return;
+
+    // Update map view when center or zoom changes from Redux
+    // This allows external components (like MapSideBar) to control the map
+    map.setView(center, zoom);
+  }, [center, zoom]);
 
   // Render station markers when stations data changes
   useEffect(() => {
@@ -291,6 +347,7 @@ export default function MapSection() {
           status={(station.batteryInSlots ?? 0) > 0}
           availableSlots={station.batteryInSlots ?? 0}
           totalSlots={station.slotNumber}
+          stationId={station.stationID}
         />
       );
 

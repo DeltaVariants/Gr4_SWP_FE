@@ -141,7 +141,7 @@ export const LoginForm = () => {
         <button
           type="submit"
           disabled={loading}
-          className="w-full bg-[#295E9C] text-white py-3 rounded-md font-medium hover:bg-[#1C4078] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full bg-indigo-600 text-white py-3 rounded-md font-medium hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {loading ? (
             <div className="flex items-center justify-center">
@@ -157,7 +157,7 @@ export const LoginForm = () => {
           Chưa có tài khoản?{" "}
           <Link
             href="/register"
-            className="font-medium text-[#0062FF] hover:text-[#0055E0] transition-colors"
+            className="font-medium text-indigo-600 hover:text-indigo-700 transition-colors"
           >
             Đăng ký ngay
           </Link>

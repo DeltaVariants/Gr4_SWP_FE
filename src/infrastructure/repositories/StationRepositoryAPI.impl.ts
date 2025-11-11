@@ -5,6 +5,8 @@ import { Station } from "@/domain/entities/Station";
 import {
   IStationRepository,
   CreateStationRequest,
+  SearchStationsRequest,
+  SearchStationResponse,
 } from "@/domain/repositories/StationRepository";
 import api from "@/lib/api";
 
@@ -181,6 +183,73 @@ class StationRepositoryAPI implements IStationRepository {
         console.error("Error setting up request:", axiosError.message);
         throw new Error(
           `Failed to delete station: ${axiosError.message || "Unknown error"}`
+        );
+      }
+    }
+  }
+
+  /**
+   * Triển khai cụ thể search() để tìm kiếm trạm gần vị trí với loại pin cụ thể
+   * API trả về stations với distance và durationMinutes đã tính sẵn
+   */
+  async search(
+    request: SearchStationsRequest
+  ): Promise<SearchStationResponse[]> {
+    const endpoint = "/stations/search";
+
+    try {
+      const response = await api.post<SearchStationResponse[]>(endpoint, {
+        latitude: request.latitude,
+        longitude: request.longitude,
+        batteryType: request.batteryType,
+      });
+
+      console.log("Search Stations Response:", response.data);
+
+      // Kiểm tra response có hợp lệ không
+      if (!Array.isArray(response.data)) {
+        throw new Error("Invalid API response: expected array of stations");
+      }
+
+      return response.data;
+    } catch (error) {
+      const axiosError = error as {
+        response?: { status: number; statusText: string; data: unknown };
+        request?: unknown;
+        message?: string;
+      };
+
+      if (axiosError.response) {
+        console.error(
+          `API error: ${axiosError.response.status}`,
+          axiosError.response.data
+        );
+
+        // Trích xuất message từ response nếu có
+        const errorMessage =
+          typeof axiosError.response.data === "object" &&
+          axiosError.response.data !== null &&
+          "message" in axiosError.response.data
+            ? (axiosError.response.data as { message: string }).message
+            : JSON.stringify(axiosError.response.data);
+
+        throw new Error(
+          `Failed to search stations: ${
+            errorMessage || axiosError.response.statusText
+          }`
+        );
+      } else if (axiosError.request) {
+        console.error(
+          "Network error - no response received:",
+          axiosError.request
+        );
+        throw new Error(
+          "Failed to search stations: Network error. This might be a CORS issue."
+        );
+      } else {
+        console.error("Error setting up request:", axiosError.message);
+        throw new Error(
+          `Failed to search stations: ${axiosError.message || "Unknown error"}`
         );
       }
     }

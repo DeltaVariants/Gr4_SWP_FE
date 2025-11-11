@@ -1,6 +1,6 @@
 "use client";
 import React from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import MainLayout from "../../presentation/layouts/MainLayout";
 import CustomerHeader from "./components/CustomerHeader";
 import CustomerSideBar from "./components/CustomerSideBar";
@@ -44,7 +44,8 @@ const routeConfig: Record<
 
 // Generate breadcrumbs based on pathname
 const generateBreadcrumbs = (
-  pathname: string
+  pathname: string,
+  searchParams: URLSearchParams
 ): BreadcrumbItem[] | undefined => {
   const segments = pathname.split("/").filter(Boolean);
 
@@ -70,11 +71,18 @@ const generateBreadcrumbs = (
       });
     } else if (i === segments.length - 1) {
       // Last segment - create a breadcrumb even if not in config
-      // Capitalize and format the segment name
-      const label = segments[i]
-        .split("-")
-        .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-        .join(" ");
+      let label: string;
+
+      // Check if this is a dynamic route with station name in search params
+      if (pathname.includes("/findstation/") && searchParams.get("name")) {
+        label = searchParams.get("name") || segments[i];
+      } else {
+        // Capitalize and format the segment name
+        label = segments[i]
+          .split("-")
+          .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+          .join(" ");
+      }
 
       breadcrumbs.push({
         label,
@@ -120,8 +128,9 @@ const getPageInfo = (pathname: string) => {
 
 export default function CustomerLayout({ children }: CustomerLayoutProps) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const pageInfo = getPageInfo(pathname);
-  const breadcrumbs = generateBreadcrumbs(pathname);
+  const breadcrumbs = generateBreadcrumbs(pathname, searchParams);
 
   return (
     <MainLayout
