@@ -135,7 +135,7 @@ export default function StationBookingPage() {
         {/* Left Column - Station Info */}
         <div className="bg-white rounded-2xl shadow-lg overflow-hidden flex flex-col">
           {/* Station Header */}
-          <div className="bg-gradient-to-r from-indigo-600 to-indigo-800 text-white p-4">
+          <div className="bg-linear-to-r from-indigo-600 to-indigo-800 text-white p-4">
             <h1 className="text-2xl font-bold mb-2">{station.stationName}</h1>
             <div className="flex items-start gap-2">
               <FaMapMarkerAlt className="mt-1 shrink-0" />
@@ -210,7 +210,7 @@ export default function StationBookingPage() {
               </div>
               <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
                 <div
-                  className="bg-gradient-to-r from-green-500 to-green-600 h-full rounded-full transition-all duration-500"
+                  className="bg-linear-to-r from-green-500 to-green-600 h-full rounded-full transition-all duration-500"
                   style={{
                     width: `${availabilityPercentage}%`,
                   }}

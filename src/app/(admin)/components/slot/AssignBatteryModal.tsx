@@ -34,8 +34,8 @@ export const AssignBatteryModal = ({
   const availableBatteries = batteries.filter(
     (battery) =>
       battery.batterySlotID === null &&
-      battery.currentLocation.toLowerCase() === "idle" &&
-      battery.batteryStatus.toLowerCase() === "available"
+      battery.currentLocation?.toLowerCase() === "idle" &&
+      battery.batteryStatus?.toLowerCase() === "available"
   );
 
   // Search filter
