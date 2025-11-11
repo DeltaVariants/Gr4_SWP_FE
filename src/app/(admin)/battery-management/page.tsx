@@ -198,9 +198,7 @@ export default function BatteryManagement() {
   const renderCell = useCallback((battery: Battery, columnKey: React.Key) => {
     switch (columnKey) {
       case "batteryID":
-        return (
-          <p className="font-medium text-gray-900">{battery.batteryID}</p>
-        );
+        return <p className="font-medium text-gray-900">{battery.batteryID}</p>;
       case "type":
         const batteryType = getBatteryTypeFromId(battery.batteryID);
         return <span className="text-sm text-gray-900">{batteryType}</span>;
