@@ -39,12 +39,13 @@ export interface IBookingRepository {
   /**
    * Update booking status
    */
-  updateStatus(bookingId: string, status: Booking['bookingStatus']): Promise<Booking>;
+  updateStatus(bookingId: string, status: Booking['status']): Promise<Booking>;
 
   /**
-   * Confirm booking (Pending -> Booked)
+   * Confirm booking (pending -> completed)
+   * Returns booking and swapTransactionId if created
    */
-  confirm(bookingId: string): Promise<Booking>;
+  confirm(bookingId: string): Promise<{ booking: Booking; swapTransactionId?: string }>;
 
   /**
    * Cancel booking

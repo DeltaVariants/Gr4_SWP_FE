@@ -354,10 +354,10 @@ export default withStaffAuth(function InventoryPage() {
                         })
                       : null;
                     
+                    // ✅ Use new format: status (lowercase)
                     const isBooked = slotBooking && 
-                      (slotBooking.bookingStatus === 'Pending' || 
-                       slotBooking.bookingStatus === 'Booked' || 
-                       slotBooking.bookingStatus === 'Queue');
+                      (slotBooking.status === 'pending' || 
+                       (slotBooking as any).status === 'confirmed');
                     
                     const statusConfig: Record<string, { icon: any; gradient: string; label: string }> = {
                       Empty: {
@@ -434,10 +434,10 @@ export default withStaffAuth(function InventoryPage() {
                                 <div>
                                   <div className="text-xs text-purple-600 font-semibold">Booked</div>
                                   <div className="text-xs text-gray-500">
-                                    {slotBooking.customerName || 'Driver'}
+                                    {slotBooking.userName || 'Driver'}  {/* ✅ Use userName */}
                                   </div>
                                   <div className="text-xs text-gray-400">
-                                    {slotBooking.bookingStatus}
+                                    {slotBooking.status}  {/* ✅ Use status */}
                                   </div>
                                 </div>
                               </div>

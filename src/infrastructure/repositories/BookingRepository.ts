@@ -1,10 +1,13 @@
 /**
  * Booking Repository Implementation
  * Implements IBookingRepository using API calls
+ * Sử dụng DTOs và Mappers để tách biệt format backend và frontend
  */
 
 import { IBookingRepository } from '@/domain/repositories/IBookingRepository';
 import { Booking, CheckInData, SwapData, CreateBookingData } from '@/domain/entities/Booking';
+import { BookingDTO, ApiResponse } from '@/domain/dto/BookingDTO';
+import { BookingMapper } from '@/infrastructure/mappers/BookingMapper';
 import api from '@/lib/api';
 
 export class BookingRepository implements IBookingRepository {
@@ -14,19 +17,26 @@ export class BookingRepository implements IBookingRepository {
     try {
       // Backend endpoint: GET /api/stations/bookings
       // Backend tự động filter theo station của staff đang login
-      const response = await api.get('/stations/bookings');
+      const response = await api.get<ApiResponse<BookingDTO[]> | BookingDTO[]>('/stations/bookings');
       
-      // API returns array directly, not wrapped in {data: [...]}
-      const data = response.data;
+      // Backend có thể trả về ApiResponse<T> hoặc array trực tiếp
+      let dtos: BookingDTO[] = [];
+      if (Array.isArray(response.data)) {
+        // Response là array trực tiếp
+        dtos = response.data;
+      } else if (response.data && typeof response.data === 'object' && 'data' in response.data) {
+        // Response là ApiResponse wrapper
+        dtos = (response.data as ApiResponse<BookingDTO[]>).data || [];
+      }
       
       console.log('[BookingRepository] getByStation response:', {
         stationId,
-        responseType: Array.isArray(data) ? 'array' : typeof data,
-        count: Array.isArray(data) ? data.length : 0,
-        sample: Array.isArray(data) && data.length > 0 ? data[0] : null
+        count: dtos.length,
+        sample: dtos.length > 0 ? dtos[0] : null
       });
       
-      return Array.isArray(data) ? data : [];
+      // Map DTOs → Entities
+      return BookingMapper.toEntities(dtos);
     } catch (error: any) {
       // Handle network errors gracefully - return empty array instead of throwing
       if (error.message?.includes('Network Error') || error.message?.includes('No response received')) {
@@ -39,15 +49,32 @@ export class BookingRepository implements IBookingRepository {
   }
 
   async getByCustomer(customerId: string): Promise<Booking[]> {
-    const response = await api.get(`${this.basePath}/customer/${customerId}`);
-    const data = response.data.data || response.data;
-    return Array.isArray(data) ? data : [];
+    const response = await api.get<ApiResponse<BookingDTO[]> | BookingDTO[]>(`${this.basePath}/customer/${customerId}`);
+    
+    // Handle both ApiResponse and direct array
+    let dtos: BookingDTO[] = [];
+    if (Array.isArray(response.data)) {
+      dtos = response.data;
+    } else if (response.data && typeof response.data === 'object' && 'data' in response.data) {
+      dtos = (response.data as ApiResponse<BookingDTO[]>).data || [];
+    }
+    
+    return BookingMapper.toEntities(dtos);
   }
 
   async getById(bookingId: string): Promise<Booking> {
     try {
-      const response = await api.get(`${this.basePath}/${bookingId}`);
-      return response.data.data || response.data;
+      const response = await api.get<ApiResponse<BookingDTO> | BookingDTO>(`${this.basePath}/${bookingId}`);
+      
+      // Handle both ApiResponse and direct DTO
+      let dto: BookingDTO;
+      if (response.data && typeof response.data === 'object' && 'data' in response.data) {
+        dto = (response.data as ApiResponse<BookingDTO>).data;
+      } else {
+        dto = response.data as BookingDTO;
+      }
+      
+      return BookingMapper.toEntity(dto);
     } catch (error: any) {
       // Handle 405 (Method Not Allowed) gracefully - backend may not support GET /api/bookings/{id}
       if (error?.response?.status === 405) {
@@ -82,30 +109,50 @@ export class BookingRepository implements IBookingRepository {
 
   async updateStatus(
     bookingId: string,
-    status: Booking['bookingStatus']
+    status: Booking['status']  // ✅ Updated to use new status type
   ): Promise<Booking> {
     // Backend endpoint: PATCH /api/bookings/{id}?status={status}
     // Backend expects lowercase status: "completed" or "cancelled"
-    // Convert status to lowercase to match backend enum
-    const statusLower = typeof status === 'string' ? status.toLowerCase() : status;
+    // Status is already lowercase from entity
+    const statusLower = status.toLowerCase();
     
     console.log('[BookingRepository] Updating booking status:', { bookingId, status, statusLower });
     
     try {
-      const response = await api.patch(`${this.basePath}/${bookingId}`, null, {
+      const response = await api.patch<ApiResponse<BookingDTO> | BookingDTO>(`${this.basePath}/${bookingId}`, null, {
         params: { status: statusLower }
       });
       
       // Backend returns SwapTransactionResponseDTOs when status="completed", or null when status="cancelled"
-      const responseData = response.data;
+      // If response contains booking data, map it; otherwise construct from bookingId
+      let dto: BookingDTO | null = null;
+      if (response.data && typeof response.data === 'object') {
+        if ('data' in response.data) {
+          dto = (response.data as ApiResponse<BookingDTO>).data;
+        } else {
+          dto = response.data as BookingDTO;
+        }
+      }
       
-      console.log('[BookingRepository] ✅ Status updated successfully:', { bookingId, status, responseData });
+      console.log('[BookingRepository] ✅ Status updated successfully:', { bookingId, status, dto });
       
-      // Return updated booking (backend may not return booking, so we construct it)
-      return {
-        bookingID: bookingId,
-        bookingStatus: status as any,
-      } as Booking;
+      // If backend returned booking data, map it; otherwise construct minimal booking
+      if (dto && dto.BookingID) {
+        return BookingMapper.toEntity(dto);
+      } else {
+        // Fallback: construct minimal booking from bookingId
+        return {
+          bookingID: bookingId,
+          userName: '',
+          vehicleName: '',
+          stationName: '',
+          batteryType: '',
+          planName: 'pay-per-swap',
+          bookingTime: '',
+          createdAt: '',
+          status: status,
+        };
+      }
     } catch (error: any) {
       console.error('[BookingRepository] ❌ Failed to update status:', error);
       const errorMessage = error?.response?.data?.message || error?.message || 'Failed to update booking status';
@@ -121,10 +168,11 @@ export class BookingRepository implements IBookingRepository {
       params: { status: 'completed' }
     });
     
+    // Backend returns SwapTransactionResponseDTOs, not BookingDTO
+    // We need to extract swapTransactionId and fetch booking separately
     const responseData = response.data.data || response.data;
     
     // Extract SwapTransactionID from response
-    // Backend returns SwapTransactionResponseDTOs when status="completed"
     const swapTransactionId = responseData?.swapTransactionID || 
                               responseData?.SwapTransactionID || 
                               responseData?.swapTransaction?.swapTransactionID ||
@@ -136,8 +184,27 @@ export class BookingRepository implements IBookingRepository {
       responseData
     });
     
+    // Try to get updated booking, or construct from bookingId
+    let booking: Booking;
+    try {
+      booking = await this.getById(bookingId);
+    } catch (e) {
+      // If getById fails, construct minimal booking
+      booking = {
+        bookingID: bookingId,
+        userName: '',
+        vehicleName: '',
+        stationName: '',
+        batteryType: '',
+        planName: 'pay-per-swap',
+        bookingTime: '',
+        createdAt: '',
+        status: 'completed',
+      };
+    }
+    
     return {
-      booking: responseData,
+      booking,
       swapTransactionId
     };
   }

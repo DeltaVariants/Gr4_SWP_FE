@@ -238,19 +238,19 @@ export default withStaffAuth(function ReservationsPage() {
     console.log('[Reservations] Total bookings:', bookings.length);
     console.log('[Reservations] All bookings:', bookings);
     
-    const rows = bookings.map((b) => {
+    const rows = bookings.map((b: Booking) => {
       // Log first booking to see structure
       if (bookings.indexOf(b) === 0) {
         console.log('[Reservations] Sample booking data:', b);
         console.log('[Reservations] Available keys:', Object.keys(b));
       }
       
-      // Support both 'status' and 'bookingStatus' field names from API
-      const status = (b as any).status || b.bookingStatus || 'Booked';
+      // ✅ Use new format: status (lowercase)
+      const status = b.status || 'pending';
       
-      // Extract driver and vehicle info - try multiple possible field names
-      const driverName = (b as any).customerName || (b as any).driverName || (b as any).userName || (b as any).fullName || '—';
-      const vehiclePlate = (b as any).vehiclePlate || (b as any).licensePlate || (b as any).vehicleId || (b as any).plateNumber || '—';
+      // ✅ Use new format: userName, vehicleName (Leader format)
+      const driverName = b.userName || '—';
+      const vehiclePlate = b.vehicleName || '—';
       
       // Try different ID field names
       const bookingId = b.bookingID || (b as any).id || (b as any).BookingID || (b as any).bookingId;
@@ -320,19 +320,17 @@ export default withStaffAuth(function ReservationsPage() {
   const filtered = useMemo(() => {
     let items = data;
     
-    // Filter by status tab
+    // ✅ Filter by status tab - Leader format: "pending" | "cancelled" | "completed"
     if (filterStatus === 'pending') {
-      // Pending: status = Pending (not checked in)
-      items = items.filter(d => d.status.toLowerCase() === 'pending');
+      items = items.filter(d => d.status === 'pending');
     } else if (filterStatus === 'waiting') {
-      // Waiting: status = Booked, Queue (confirmed, waiting to process)
-      items = items.filter(d => ['booked', 'queue'].includes(d.status.toLowerCase()));
+      // Waiting: không có trong Leader format, có thể là "pending" đang chờ xử lý
+      items = items.filter(d => d.status === 'pending');
     } else if (filterStatus === 'checked-in') {
-      // Checked in: status = Checked, Completed
-      items = items.filter(d => ['checked', 'completed'].includes(d.status.toLowerCase()));
+      // Checked in: status = completed
+      items = items.filter(d => d.status === 'completed');
     } else if (filterStatus === 'cancelled') {
-      // Cancelled: status = Cancelled
-      items = items.filter(d => d.status.toLowerCase() === 'cancelled');
+      items = items.filter(d => d.status === 'cancelled');
     }
     // 'all' shows everything
     
@@ -349,11 +347,11 @@ export default withStaffAuth(function ReservationsPage() {
     return items;
   }, [q, data, filterStatus]);
 
-  // Count by status (case-insensitive)
-  const pendingCount = data.filter(d => d.status.toLowerCase() === 'pending').length;
-  const waitingCount = data.filter(d => ['booked', 'queue'].includes(d.status.toLowerCase())).length;
-  const checkedCount = data.filter(d => ['checked', 'completed'].includes(d.status.toLowerCase())).length;
-  const cancelledCount = data.filter(d => d.status.toLowerCase() === 'cancelled').length;
+  // ✅ Count by status - Leader format
+  const pendingCount = data.filter(d => d.status === 'pending').length;
+  const waitingCount = data.filter(d => d.status === 'pending').length; // Same as pending
+  const checkedCount = data.filter(d => d.status === 'completed').length;
+  const cancelledCount = data.filter(d => d.status === 'cancelled').length;
 
   // Show loading if auth is still loading or no stationId yet
   const isInitializing = authLoading || !stationId;

@@ -11,19 +11,11 @@ export const useCheckInFlow = (initialBookingId?: string) => {
   const [bookingData, setBookingData] = useState<Booking | null>(null);
   const [swapTransactionId, setSwapTransactionId] = useState<string | undefined>(undefined);
 
-  // Extract driver name from booking
-  // Backend may return customerName, userName, or driverName
-  const driverName = bookingData?.customerName || 
-                     (bookingData as any)?.userName || 
-                     (bookingData as any)?.driverName || 
-                     'N/A';
+  // ✅ Extract driver name from booking - Leader format
+  const driverName = bookingData?.userName || 'N/A';
 
-  // Extract vehicle info as string
-  // Backend may return vehicleName, vehicleId, or licensePlate
-  const vehicle = (bookingData as any)?.vehicleName || 
-                  (bookingData as any)?.licensePlate || 
-                  bookingData?.vehicleId || 
-                  'N/A';
+  // ✅ Extract vehicle info as string - Leader format
+  const vehicle = bookingData?.vehicleName || 'N/A';
 
   // Extract battery type
   const batteryType = bookingData?.batteryType || 'N/A';

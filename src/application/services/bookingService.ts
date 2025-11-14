@@ -1,26 +1,35 @@
 // bookingService: DEPRECATED - Use BookingRepository instead
 // This service uses old architecture - prefer using BookingRepository
 // Keeping for backward compatibility with existing code (dashboardstaff)
+// ✅ Updated to use DTOs and Mappers for consistency
 import api from '@/lib/api';
+import { BookingDTO, ApiResponse } from '@/domain/dto/BookingDTO';
+import { BookingMapper } from '@/infrastructure/mappers/BookingMapper';
+import { Booking } from '@/domain/entities/Booking';
 
 const bookingService = {
-  async getAllBookingOfStation(stationID?: string) {
+  async getAllBookingOfStation(stationID?: string): Promise<Booking[]> {
     try {
       // Use axios instance which calls backend directly (same as BookingRepository)
       // Backend endpoint: GET /api/stations/bookings
       // Backend automatically filters by staff's station
-      const response = await api.get('/stations/bookings');
+      const response = await api.get<ApiResponse<BookingDTO[]> | BookingDTO[]>('/stations/bookings');
       
-      // API returns array directly, not wrapped in {data: [...]}
-      const data = response.data;
+      // Handle both ApiResponse and direct array
+      let dtos: BookingDTO[] = [];
+      if (Array.isArray(response.data)) {
+        dtos = response.data;
+      } else if (response.data && typeof response.data === 'object' && 'data' in response.data) {
+        dtos = (response.data as ApiResponse<BookingDTO[]>).data || [];
+      }
       
       console.log('[bookingService] getAllBookingOfStation response:', {
         stationID,
-        responseType: Array.isArray(data) ? 'array' : typeof data,
-        count: Array.isArray(data) ? data.length : 0,
+        count: dtos.length,
       });
       
-      return Array.isArray(data) ? data : [];
+      // ✅ Map DTOs → Entities (Leader format)
+      return BookingMapper.toEntities(dtos);
     } catch (error: any) {
       console.error('[bookingService] Failed to fetch bookings:', error);
       throw new Error(error?.response?.data?.message || error?.message || 'Failed to fetch bookings');

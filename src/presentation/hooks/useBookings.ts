@@ -47,7 +47,7 @@ export const useBookings = (stationId?: string, options: UseBookingsOptions = {}
   // Update booking status
   const updateStatus = useCallback(async (
     bookingId: string,
-    status: Booking['bookingStatus']
+    status: Booking['status']  // ✅ Updated to use new status type
   ) => {
     try {
       setLoading(true);
@@ -77,7 +77,7 @@ export const useBookings = (stationId?: string, options: UseBookingsOptions = {}
       // Update local state
       setBookings(prev => prev.map(b => 
         b.bookingID === bookingId 
-          ? { ...b, bookingStatus: 'completed' as any }
+          ? { ...b, status: 'completed' }  // ✅ Updated to use new status field
           : b
       ));
 

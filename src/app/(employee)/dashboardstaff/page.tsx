@@ -129,19 +129,13 @@ export default withStaffAuth(function StaffDashboard() {
           console.log('[dashboardstaff] Available fields:', Object.keys(list[0]));
         }
         
-        const rows = (list || []).map((b: any) => {
-          // Extract customer name - try many possible field names
-          const customerName = b.customerName || b.CustomerName || 
-                               b.username || b.userName || b.UserName ||
-                               b.fullName || b.FullName ||
-                               b.customer || b.Customer ||
-                               b.driver || b.Driver ||
-                               b.user?.name || b.user?.fullName ||
-                               b.Customer?.FullName || b.User?.FullName ||
-                               '—';
+        // ✅ list is now Booking[] (Leader format) from bookingService
+        const rows = (list || []).map((b: Booking) => {
+          // ✅ Use Leader format: userName, vehicleName, status (lowercase)
+          const customerName = b.userName || '—';
           
           // Format date and time from bookingTime
-          const bookingTimeStr = b.bookingTime || b.BookingTime || b.time || b.bookingHour || '';
+          const bookingTimeStr = b.bookingTime || '';
           let dateStr = '--';
           let timeStr = '--';
           let sortDate: Date | null = null;
@@ -159,26 +153,21 @@ export default withStaffAuth(function StaffDashboard() {
             }
           }
           
-          // Try createdAt or updatedAt as fallback for sorting
-          if (!sortDate) {
-            const createdAtStr = b.createdAt || b.CreatedAt || b.created_at;
-            const updatedAtStr = b.updatedAt || b.UpdatedAt || b.updated_at;
-            const fallbackDateStr = createdAtStr || updatedAtStr;
-            if (fallbackDateStr) {
-              try {
-                sortDate = new Date(fallbackDateStr);
-              } catch (e) {
-                console.warn('[dashboardstaff] Failed to parse createdAt/updatedAt:', fallbackDateStr);
-              }
+          // Try createdAt as fallback for sorting
+          if (!sortDate && b.createdAt) {
+            try {
+              sortDate = new Date(b.createdAt);
+            } catch (e) {
+              console.warn('[dashboardstaff] Failed to parse createdAt:', b.createdAt);
             }
           }
           
           return {
-            id: b.bookingID || b.id || b.BookingID || b.bookingId,
+            id: b.bookingID,
             name: customerName,
             date: dateStr,
             time: timeStr,
-            status: b.bookingStatus || b.status || 'Booked',
+            status: b.status || 'pending',  // ✅ Use status (lowercase)
             raw: b,
             sortDate: sortDate || new Date(0), // Use epoch if no date available (will sort last)
           };
@@ -252,9 +241,9 @@ export default withStaffAuth(function StaffDashboard() {
     }
   };
 
-  // Calculate stats
-  const activeReservations = data.filter(d => d.status === 'Booked').length;
-  const queueCount = data.filter(d => d.status === 'Queue').length;
+  // Calculate stats - ✅ Updated to use lowercase status
+  const activeReservations = data.filter(d => d.status === 'pending' || d.status === 'confirmed').length;
+  const queueCount = 0; // Queue status not in Leader format
   
   // Use inventory data from useBatteries hook (same as Inventory page)
   // This ensures consistency between Dashboard and Inventory
