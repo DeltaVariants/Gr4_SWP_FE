@@ -7,6 +7,7 @@ import slotReducer from "./slices/slotSlice";
 import stationBatteryReducer from "./slices/stationBatterySlice";
 import userReducer from "./slices/userSlice";
 import vehicleReducer from "./slices/vehicleSlice";
+import batteryTypeReducer from "./slices/batteryTypeSlice";
 
 export const store = configureStore({
   reducer: {
@@ -18,6 +19,7 @@ export const store = configureStore({
     stationBattery: stationBatteryReducer,
     user: userReducer,
     vehicle: vehicleReducer,
+    batteryType: batteryTypeReducer,
   },
 });
 

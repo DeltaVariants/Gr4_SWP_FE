@@ -25,12 +25,12 @@ export const Modal: React.FC<ModalProps> = ({
       : "absolute inset-0 bg-black/60";
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center animate-fadeIn">
+    <div className="fixed inset-0 z-9999 flex items-center justify-center animate-fadeIn">
       {/* Backdrop with blur or opaque effect */}
       <div className={overlayClasses} onClick={onClose} />
 
       {/* Modal Content */}
-      <div className="relative bg-white rounded-lg shadow-2xl max-w-md w-full mx-4 p-6 z-10 animate-scaleIn">
+      <div className="relative bg-white rounded-lg shadow-2xl max-w-xl w-full mx-4 p-6 z-10 animate-scaleIn">
         {/* Close Button */}
         {showCloseButton && (
           <button

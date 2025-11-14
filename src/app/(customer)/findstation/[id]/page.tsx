@@ -14,6 +14,7 @@ import { stationRepositoryAPI } from "@/infrastructure/repositories/StationRepos
 import { Station } from "@/domain/entities/Station";
 import { useAppSelector, useAppDispatch } from "@/application/hooks/useRedux";
 import { fetchAllVehicles } from "@/application/services/vehicleService";
+import { fetchAllBatteryTypes } from "@/application/services/batteryTypeService";
 
 export default function StationBookingPage() {
   const params = useParams();
@@ -24,15 +25,19 @@ export default function StationBookingPage() {
   const [station, setStation] = useState<Station | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Get vehicle info from Redux
+  // Get vehicle info and battery types from Redux
   const { selectedVehicle } = useAppSelector((state) => state.vehicle);
+  const { batteryTypes } = useAppSelector((state) => state.batteryType);
 
-  // Fetch vehicles when component mounts if not already loaded
+  // Fetch vehicles and battery types when component mounts if not already loaded
   useEffect(() => {
     if (!selectedVehicle) {
       dispatch(fetchAllVehicles());
     }
-  }, [dispatch, selectedVehicle]);
+    if (batteryTypes.length === 0) {
+      dispatch(fetchAllBatteryTypes());
+    }
+  }, [dispatch, selectedVehicle, batteryTypes.length]);
 
   useEffect(() => {
     const fetchStationDetails = async () => {
@@ -268,7 +273,16 @@ export default function StationBookingPage() {
                       <div className="flex justify-between">
                         <span className="text-xs text-gray-600">Loại pin:</span>
                         <span className="text-xs font-medium text-indigo-700">
-                          {selectedVehicle.batteryTypeModel || "Medium"}
+                          {(() => {
+                            const batteryType = batteryTypes.find(
+                              (bt) =>
+                                bt.batteryTypeID ===
+                                selectedVehicle.batteryTypeID
+                            );
+                            return batteryType
+                              ? `${batteryType.batteryTypeModel} (${batteryType.batteryTypeCapacity}kWh)`
+                              : "N/A";
+                          })()}
                         </span>
                       </div>
                     </div>
