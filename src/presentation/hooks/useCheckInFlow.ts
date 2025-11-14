@@ -1,124 +1,68 @@
-/**
- * useCheckInFlow Hook
- * Quản lý state và logic của toàn bộ check-in flow
- * 
- * Flow: Scan → Verify → Payment → Swap → Completed
- */
+'use client';
 
 import { useState, useCallback } from 'react';
 import { Booking } from '@/domain/entities/Booking';
 
-export type CheckInStep = 'scan' | 'verify' | 'payment' | 'swap' | 'completed';
+type CheckInStep = 'verify' | 'swap' | 'completed';
 
-interface CheckInFlowState {
-  step: CheckInStep;
-  reservationId: string;
-  bookingData: Booking | null;
-  driverName: string;
-  vehicle: string;
-  batteryType: string;
-  oldBatteryId: string;
-  newBatteryId: string;
-  swapTransactionId: string | null;
-  paymentCompleted: boolean;
-}
+export const useCheckInFlow = (initialBookingId?: string) => {
+  const [step, setStep] = useState<CheckInStep>('verify');
+  const [reservationId, setReservationId] = useState<string | undefined>(initialBookingId);
+  const [bookingData, setBookingData] = useState<Booking | null>(null);
+  const [swapTransactionId, setSwapTransactionId] = useState<string | undefined>(undefined);
 
-export function useCheckInFlow(initialReservationId?: string) {
-  const [state, setState] = useState<CheckInFlowState>({
-    step: initialReservationId ? 'verify' : 'scan',
-    reservationId: initialReservationId || '',
-    bookingData: null,
-    driverName: '',
-    vehicle: '',
-    batteryType: '',
-    oldBatteryId: '',
-    newBatteryId: '',
-    swapTransactionId: null,
-    paymentCompleted: false,
-  });
+  // Extract driver name from booking
+  // Backend may return customerName, userName, or driverName
+  const driverName = bookingData?.customerName || 
+                     (bookingData as any)?.userName || 
+                     (bookingData as any)?.driverName || 
+                     'N/A';
 
-  // Navigation methods
-  const goToStep = useCallback((step: CheckInStep) => {
-    setState((prev) => ({ ...prev, step }));
+  // Extract vehicle info as string
+  // Backend may return vehicleName, vehicleId, or licensePlate
+  const vehicle = (bookingData as any)?.vehicleName || 
+                  (bookingData as any)?.licensePlate || 
+                  bookingData?.vehicleId || 
+                  'N/A';
+
+  // Extract battery type
+  const batteryType = bookingData?.batteryType || 'N/A';
+
+  // Navigation functions
+  const goToVerify = useCallback(() => {
+    setStep('verify');
   }, []);
 
-  const goToScan = useCallback(() => goToStep('scan'), [goToStep]);
-  const goToVerify = useCallback(() => goToStep('verify'), [goToStep]);
-  const goToPayment = useCallback(() => goToStep('payment'), [goToStep]);
   const goToSwap = useCallback(() => {
-    setState((prev) => ({ ...prev, step: 'swap', paymentCompleted: true }));
-  }, []);
-  const goToCompleted = useCallback(() => goToStep('completed'), [goToStep]);
-
-  // Update methods
-  const setReservationId = useCallback((id: string) => {
-    setState((prev) => ({ ...prev, reservationId: id }));
+    setStep('swap');
   }, []);
 
-  const setBookingData = useCallback((data: Booking | null) => {
-    setState((prev) => ({
-      ...prev,
-      bookingData: data,
-      driverName: data?.customerName || (data as any)?.userName || '',
-      vehicle: (data as any)?.vehicleId || '',
-      batteryType: data?.batteryType || '',
-    }));
+  const goToCompleted = useCallback(() => {
+    setStep('completed');
   }, []);
 
-  const setDriverName = useCallback((name: string) => {
-    setState((prev) => ({ ...prev, driverName: name }));
-  }, []);
-
-  const setOldBatteryId = useCallback((id: string) => {
-    setState((prev) => ({ ...prev, oldBatteryId: id }));
-  }, []);
-
-  const setNewBatteryId = useCallback((id: string) => {
-    setState((prev) => ({ ...prev, newBatteryId: id }));
-  }, []);
-
-  const setSwapTransactionId = useCallback((id: string | null) => {
-    setState((prev) => ({ ...prev, swapTransactionId: id }));
-  }, []);
-
-  // Reset flow
   const resetFlow = useCallback(() => {
-    setState({
-      step: 'scan',
-      reservationId: '',
-      bookingData: null,
-      driverName: '',
-      vehicle: '',
-      batteryType: '',
-      oldBatteryId: '',
-      newBatteryId: '',
-      swapTransactionId: null,
-      paymentCompleted: false,
-    });
+    setStep('verify');
+    setReservationId(undefined);
+    setBookingData(null);
+    setSwapTransactionId(undefined);
   }, []);
 
   return {
-    // State
-    ...state,
-    
-    // Navigation
-    goToStep,
-    goToScan,
-    goToVerify,
-    goToPayment,
-    goToSwap,
-    goToCompleted,
-    
-    // Updates
+    step,
+    reservationId,
+    bookingData,
+    driverName,
+    vehicle,
+    batteryType,
+    swapTransactionId,
     setReservationId,
     setBookingData,
-    setDriverName,
-    setOldBatteryId,
-    setNewBatteryId,
     setSwapTransactionId,
-    
-    // Actions
+    goToVerify,
+    goToSwap,
+    goToCompleted,
     resetFlow,
   };
-}
+};
 

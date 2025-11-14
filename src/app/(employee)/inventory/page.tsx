@@ -1,12 +1,13 @@
 "use client";
 
 import { withStaffAuth } from '@/hoc/withAuth';
-import { Table } from '../components/Table';
 import { useMemo, useState, useEffect } from 'react';
-import { useToast } from '@/presentation/components/ui/Notification/ToastProvider';
+import { useToast } from '@/presentation/components/ui/Notification';
 import { useAuth } from '@/contexts/AuthContext';
 import { useBatteries } from '@/presentation/hooks/useBatteries';
-import { Battery, BatteryCharging, BatteryWarning, AlertTriangle, CheckCircle2, Clock, Grid3x3, List, Zap, Box } from 'lucide-react';
+import { useBatterySlots } from '@/presentation/hooks/useBatterySlots';
+import { useBookings } from '@/presentation/hooks/useBookings';
+import { Battery, BatteryCharging, BatteryWarning, AlertTriangle, CheckCircle2, Clock, Grid3x3, Zap, Box, Package } from 'lucide-react';
 
 function StatusBadge({ value }: { value: string }) {
   const map: Record<string, { style: string; label: string }> = {
@@ -89,17 +90,6 @@ function BatteryCard({
   );
 }
 
-function UpdateActions({ row, onOpen }: { row: Record<string, unknown>; onOpen: (r: Record<string, unknown>) => void }) {
-  return (
-    <div className="flex gap-2">
-      <button onClick={() => onOpen(row)} className="text-xs px-3 py-1.5 rounded-md bg-rose-50 text-rose-700 ring-1 ring-rose-200 hover:bg-rose-100">Mark Faulty</button>
-      <button onClick={() => onOpen(row)} className="text-xs px-3 py-1.5 rounded-md bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200 hover:bg-emerald-100">In Service</button>
-    </div>
-  );
-}
-
-// NOTE: columns need access to onOpen handler so they are defined inside the component
-
 const initialData: Record<string, unknown>[] = [];
 
 const STATUS_OPTIONS = [
@@ -117,13 +107,20 @@ export default withStaffAuth(function InventoryPage() {
   const [reason, setReason] = useState<string>('');
   const [status, setStatus] = useState<string>('');
   const [q, setQ] = useState<string>('');
-  const [viewMode, setViewMode] = useState<'grid' | 'table' | 'slots'>('table'); // Slots view disabled until backend supports /battery-slots endpoint
+  const [viewMode, setViewMode] = useState<'grid' | 'slots'>('slots');
 
   // Get stationId from user (MUST be GUID, not station name)
   const stationId = user?.stationId;
 
   // Use custom hook to fetch batteries and inventory
   const { batteries, inventory, loading, error, refetch, updateStatus } = useBatteries(stationId);
+  
+  // Use custom hook to fetch battery slots
+  const { slots: batterySlots, loading: slotsLoading, error: slotsError, refetch: refetchSlots } = useBatterySlots(stationId);
+  
+  // Use custom hook to fetch bookings for this station (to check if slots are booked)
+  const { bookings, loading: bookingsLoading } = useBookings(stationId, { autoLoad: true });
+  
 
   // Show error toast if any
   useEffect(() => {
@@ -164,22 +161,16 @@ export default withStaffAuth(function InventoryPage() {
     setModalOpen(true);
   };
 
-  const columnsLocal = [
-    { key: 'displayId', header: 'Battery Code' },  // Display batteryCode
-    { key: 'type', header: 'Type' },
-  { key: 'status', header: 'Status', render: (row: Record<string, unknown>) => <StatusBadge value={String(row['status'] || '')} /> },
-    { key: 'actions', header: '', render: (row: Record<string, unknown>) => (
-      <UpdateActions row={row} onOpen={onOpen} />
-    ) },
-  ];
 
   const handleConfirm = async () => {
     if (!selected) return;
     const id = String((selected as Record<string, unknown>)['id'] || (selected as Record<string, unknown>)['batteryID'] || (String(((selected as Record<string, unknown>)['raw'] as Record<string, unknown>)?.['batteryID'] || '') || ''));
+    const oldStatus = String((selected as Record<string, unknown>)['status'] || '');
     const payload = { 
       batteryId: id, 
       status: newStatus as 'Available' | 'In-Use' | 'Charging' | 'Maintenance' | 'Damaged', 
-      reason: reason || undefined 
+      reason: reason || undefined,
+      oldStatus: oldStatus || undefined // Truyền oldStatus để logic backend biết cách xử lý
     };
     try {
       toast.showToast({ message: 'Updating battery status...', type: 'info' });
@@ -265,7 +256,6 @@ export default withStaffAuth(function InventoryPage() {
             </div>
             
             <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-lg">
-              {/* Slots view disabled until backend supports /battery-slots endpoint */}
               <button
                 onClick={() => setViewMode('grid')}
                 className={`h-8 w-8 rounded flex items-center justify-center transition-all ${
@@ -276,13 +266,13 @@ export default withStaffAuth(function InventoryPage() {
                 <Grid3x3 className="w-4 h-4 text-gray-600" />
               </button>
               <button
-                onClick={() => setViewMode('table')}
+                onClick={() => setViewMode('slots')}
                 className={`h-8 w-8 rounded flex items-center justify-center transition-all ${
-                  viewMode === 'table' ? 'bg-white shadow-sm' : 'hover:bg-gray-200'
+                  viewMode === 'slots' ? 'bg-white shadow-sm' : 'hover:bg-gray-200'
                 }`}
-                title="Table View"
+                title="Slots View"
               >
-                <List className="w-4 h-4 text-gray-600" />
+                <Package className="w-4 h-4 text-gray-600" />
               </button>
             </div>
           </div>
@@ -303,15 +293,164 @@ export default withStaffAuth(function InventoryPage() {
       ) : (
         <>
           {viewMode === 'slots' ? (
-            <div className="bg-white rounded-xl shadow-sm p-12 border border-gray-100 text-center">
-              <Box className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Slots View - Coming Soon</h3>
-              <p className="text-sm text-gray-600 mb-4">
-                Battery slots view is currently disabled. Backend support for <code>/battery-slots</code> endpoint is required.
-              </p>
-              <p className="text-xs text-gray-500">Please use Grid or Table view instead.</p>
-            </div>
-          ) : viewMode === 'grid' ? (
+            slotsLoading ? (
+              <div className="p-12 bg-white rounded-xl shadow-sm text-center border border-gray-100">
+                <Zap className="w-12 h-12 text-blue-500 animate-pulse mx-auto mb-4" />
+                <p className="text-gray-600">Loading battery slots...</p>
+              </div>
+            ) : slotsError ? (
+              <div className="p-6 bg-rose-50 text-rose-700 rounded-xl shadow-sm border border-rose-200 flex items-center gap-3">
+                <AlertTriangle className="w-5 h-5" />
+                <span>{slotsError.message || 'Failed to load battery slots'}</span>
+              </div>
+            ) : batterySlots.length === 0 ? (
+              <div className="p-12 bg-white rounded-xl shadow-sm text-center border border-gray-100">
+                <Box className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                <p className="text-gray-600">No battery slots found</p>
+              </div>
+            ) : (
+              <>
+                {/* Slot Statistics */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                  <div className="bg-white rounded-xl p-4 border border-gray-200">
+                    <div className="text-sm text-gray-500 mb-1">Total Slots</div>
+                    <div className="text-2xl font-bold text-gray-900">{batterySlots.length}</div>
+                  </div>
+                  <div className="bg-white rounded-xl p-4 border border-gray-200">
+                    <div className="text-sm text-gray-500 mb-1">Occupied Slots</div>
+                    <div className="text-2xl font-bold text-blue-600">
+                      {batterySlots.filter(s => s.status === 'Occupied' || s.status === 'Charging').length}
+                    </div>
+                  </div>
+                  <div className="bg-white rounded-xl p-4 border border-gray-200">
+                    <div className="text-sm text-gray-500 mb-1">Empty Slots</div>
+                    <div className="text-2xl font-bold text-gray-600">
+                      {batterySlots.filter(s => s.status === 'Empty').length}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Slot Cards */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                  {batterySlots.map((slot) => {
+                    const slotStatus = slot.status || 'Empty';
+                    
+                    // Tìm booking cho slot này thông qua batteryID
+                    // Note: Booking có thể không có batteryID trong response, cần check backend DTO
+                    const slotBooking = slot.batteryID 
+                      ? bookings.find(b => {
+                          // Thử nhiều cách để tìm batteryID trong booking
+                          const bookingBatteryId = (b as any).batteryID || 
+                                                   (b as any).batteryId || 
+                                                   (b as any).battery_id ||
+                                                   (b as any).newBatteryID ||
+                                                   (b as any).newBatteryId;
+                          const slotBatteryId = slot.batteryID || slot.batteryCode;
+                          return bookingBatteryId && (
+                            bookingBatteryId === slotBatteryId || 
+                            bookingBatteryId === slot.batteryCode ||
+                            bookingBatteryId === slot.batteryID
+                          );
+                        })
+                      : null;
+                    
+                    const isBooked = slotBooking && 
+                      (slotBooking.bookingStatus === 'Pending' || 
+                       slotBooking.bookingStatus === 'Booked' || 
+                       slotBooking.bookingStatus === 'Queue');
+                    
+                    const statusConfig: Record<string, { icon: any; gradient: string; label: string }> = {
+                      Empty: {
+                        icon: Box,
+                        gradient: 'from-gray-400 to-gray-500',
+                        label: 'Empty'
+                      },
+                      Occupied: {
+                        icon: Battery,
+                        gradient: 'from-blue-500 to-blue-600',
+                        label: 'Occupied'
+                      },
+                      Charging: {
+                        icon: BatteryCharging,
+                        gradient: 'from-emerald-500 to-teal-600',
+                        label: 'Charging'
+                      },
+                      Maintenance: {
+                        icon: BatteryWarning,
+                        gradient: 'from-amber-500 to-orange-600',
+                        label: 'Maintenance'
+                      },
+                      Error: {
+                        icon: AlertTriangle,
+                        gradient: 'from-rose-500 to-red-600',
+                        label: 'Error'
+                      }
+                    };
+                    const config = statusConfig[slotStatus] || statusConfig['Empty'];
+                    const Icon = config.icon;
+                    
+                    return (
+                      <div 
+                        key={slot.batterySlotID} 
+                        className={`bg-white rounded-xl p-5 border transition-all ${
+                          isBooked 
+                            ? 'border-purple-300 hover:border-purple-400 shadow-md' 
+                            : 'border-gray-200 hover:border-blue-300 hover:shadow-md'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between mb-4">
+                          <div className={`w-12 h-12 rounded-full bg-gradient-to-br ${config.gradient} flex items-center justify-center text-white shadow-lg`}>
+                            <Icon className="w-6 h-6" />
+                          </div>
+                          <div className="text-right">
+                            <div className="text-xs text-gray-500 mb-0.5">Slot</div>
+                            <div className="text-lg font-bold text-gray-900">#{slot.slotNumber}</div>
+                          </div>
+                        </div>
+                        
+                        <div className="space-y-2 mb-4">
+                          <div>
+                            <div className="text-xs text-gray-500 mb-0.5">Status</div>
+                            <div className={`text-sm font-semibold ${
+                              slotStatus === 'Empty' ? 'text-gray-600' :
+                              slotStatus === 'Occupied' ? 'text-blue-600' :
+                              slotStatus === 'Charging' ? 'text-emerald-600' :
+                              slotStatus === 'Maintenance' ? 'text-amber-600' :
+                              'text-rose-600'
+                            }`}>
+                              {config.label}
+                            </div>
+                          </div>
+                          {slot.batteryID && (
+                            <div>
+                              <div className="text-xs text-gray-500 mb-0.5">Battery ID</div>
+                              <div className="font-mono text-sm font-bold text-gray-900">{slot.batteryCode || slot.batteryID}</div>
+                            </div>
+                          )}
+                          {isBooked && slotBooking && (
+                            <div className="mt-2 pt-2 border-t border-gray-200">
+                              <div className="flex items-center gap-2">
+                                <Clock className="w-4 h-4 text-purple-600" />
+                                <div>
+                                  <div className="text-xs text-purple-600 font-semibold">Booked</div>
+                                  <div className="text-xs text-gray-500">
+                                    {slotBooking.customerName || 'Driver'}
+                                  </div>
+                                  <div className="text-xs text-gray-400">
+                                    {slotBooking.bookingStatus}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            )
+          ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {filtered.length === 0 ? (
                 <div className="col-span-full p-12 bg-white rounded-xl shadow-sm text-center border border-gray-100">
@@ -328,8 +467,6 @@ export default withStaffAuth(function InventoryPage() {
                 ))
               )}
             </div>
-          ) : (
-            <Table columns={columnsLocal} data={filtered} empty={<span className="text-sm text-gray-500">No batteries match your filters</span>} />
           )}
 
           {/* Modal: Update Battery Status */}
@@ -368,6 +505,7 @@ export default withStaffAuth(function InventoryPage() {
                     >
                       <option value="">-- Select Status --</option>
                       <option value="Available">✓ Available - Battery ready to use</option>
+                      <option value="Charging">🔋 Charging - Battery is charging</option>
                       <option value="Damaged">⚠ Damaged - Battery needs repair</option>
                     </select>
                   </div>
@@ -402,8 +540,10 @@ export default withStaffAuth(function InventoryPage() {
               </div>
             </div>
           )}
+
         </>
       )}
     </div>
   );
 });
+

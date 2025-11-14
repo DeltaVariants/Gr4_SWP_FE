@@ -11,21 +11,31 @@ export class BookingRepository implements IBookingRepository {
   private readonly basePath = '/bookings';
 
   async getByStation(stationId: string): Promise<Booking[]> {
-    // Backend endpoint: GET /api/stations/bookings
-    // Backend tự động filter theo station của staff đang login
-    const response = await api.get('/stations/bookings');
-    
-    // API returns array directly, not wrapped in {data: [...]}
-    const data = response.data;
-    
-    console.log('[BookingRepository] getByStation response:', {
-      stationId,
-      responseType: Array.isArray(data) ? 'array' : typeof data,
-      count: Array.isArray(data) ? data.length : 0,
-      sample: Array.isArray(data) && data.length > 0 ? data[0] : null
-    });
-    
-    return Array.isArray(data) ? data : [];
+    try {
+      // Backend endpoint: GET /api/stations/bookings
+      // Backend tự động filter theo station của staff đang login
+      const response = await api.get('/stations/bookings');
+      
+      // API returns array directly, not wrapped in {data: [...]}
+      const data = response.data;
+      
+      console.log('[BookingRepository] getByStation response:', {
+        stationId,
+        responseType: Array.isArray(data) ? 'array' : typeof data,
+        count: Array.isArray(data) ? data.length : 0,
+        sample: Array.isArray(data) && data.length > 0 ? data[0] : null
+      });
+      
+      return Array.isArray(data) ? data : [];
+    } catch (error: any) {
+      // Handle network errors gracefully - return empty array instead of throwing
+      if (error.message?.includes('Network Error') || error.message?.includes('No response received')) {
+        console.warn('[BookingRepository] Network error in getByStation (non-critical):', error.message);
+        return []; // Return empty array instead of throwing
+      }
+      // Re-throw other errors
+      throw error;
+    }
   }
 
   async getByCustomer(customerId: string): Promise<Booking[]> {
@@ -35,8 +45,17 @@ export class BookingRepository implements IBookingRepository {
   }
 
   async getById(bookingId: string): Promise<Booking> {
-    const response = await api.get(`${this.basePath}/${bookingId}`);
-    return response.data.data || response.data;
+    try {
+      const response = await api.get(`${this.basePath}/${bookingId}`);
+      return response.data.data || response.data;
+    } catch (error: any) {
+      // Handle 405 (Method Not Allowed) gracefully - backend may not support GET /api/bookings/{id}
+      if (error?.response?.status === 405) {
+        console.warn('[BookingRepository] GET /api/bookings/{id} not supported (405), returning null');
+        throw new Error('GET /api/bookings/{id} endpoint is not supported by backend');
+      }
+      throw error;
+    }
   }
 
   async create(data: CreateBookingData): Promise<Booking> {
@@ -65,46 +84,62 @@ export class BookingRepository implements IBookingRepository {
     bookingId: string,
     status: Booking['bookingStatus']
   ): Promise<Booking> {
-    // API: PATCH /api/bookings/{id}?status={status}
-    // Status is a QUERY parameter, not body
-    const response = await api.patch(`${this.basePath}/${bookingId}`, null, {
-      params: { status }
-    });
-    return response.data.data || response.data;
+    // Backend endpoint: PATCH /api/bookings/{id}?status={status}
+    // Backend expects lowercase status: "completed" or "cancelled"
+    // Convert status to lowercase to match backend enum
+    const statusLower = typeof status === 'string' ? status.toLowerCase() : status;
+    
+    console.log('[BookingRepository] Updating booking status:', { bookingId, status, statusLower });
+    
+    try {
+      const response = await api.patch(`${this.basePath}/${bookingId}`, null, {
+        params: { status: statusLower }
+      });
+      
+      // Backend returns SwapTransactionResponseDTOs when status="completed", or null when status="cancelled"
+      const responseData = response.data;
+      
+      console.log('[BookingRepository] ✅ Status updated successfully:', { bookingId, status, responseData });
+      
+      // Return updated booking (backend may not return booking, so we construct it)
+      return {
+        bookingID: bookingId,
+        bookingStatus: status as any,
+      } as Booking;
+    } catch (error: any) {
+      console.error('[BookingRepository] ❌ Failed to update status:', error);
+      const errorMessage = error?.response?.data?.message || error?.message || 'Failed to update booking status';
+      throw new Error(errorMessage);
+    }
   }
 
-  async confirm(bookingId: string): Promise<Booking> {
-    console.log('[BookingRepository] Confirming booking:', bookingId);
+  async confirm(bookingId: string): Promise<{ booking: Booking; swapTransactionId?: string }> {
+    // Backend endpoint: PATCH /api/bookings/{id}?status=completed
+    // Backend tự động tạo SwapTransaction với status="initiated" khi status="completed"
+    // Backend trả về SwapTransactionResponseDTOs với SwapTransactionID
+    const response = await api.patch(`${this.basePath}/${bookingId}`, null, {
+      params: { status: 'completed' }
+    });
     
-    // API: PATCH /api/bookings/{id}?status={status}
-    // Try different status values that backend might accept
-    const possibleStatuses = ['Booked', 'Confirmed', 'booked', 'confirmed'];
+    const responseData = response.data.data || response.data;
     
-    for (const statusValue of possibleStatuses) {
-      try {
-        console.log(`[BookingRepository] Trying status: "${statusValue}"`);
-        const response = await api.patch(`${this.basePath}/${bookingId}`, null, {
-          params: { status: statusValue }
-        });
-        console.log('[BookingRepository] ✅ Confirm SUCCESS with status:', statusValue);
-        console.log('[BookingRepository] Response:', response.data);
-        return response.data.data || response.data;
-      } catch (error: any) {
-        const errorStatus = error?.response?.status;
-        console.log(`[BookingRepository] ❌ Status "${statusValue}" failed:`, errorStatus);
-        
-        // If it's not a 400/404/405, throw the error
-        if (errorStatus && errorStatus !== 400 && errorStatus !== 404 && errorStatus !== 405) {
-          throw error;
-        }
-        
-        // Continue trying next status value
-        continue;
-      }
-    }
+    // Extract SwapTransactionID from response
+    // Backend returns SwapTransactionResponseDTOs when status="completed"
+    const swapTransactionId = responseData?.swapTransactionID || 
+                              responseData?.SwapTransactionID || 
+                              responseData?.swapTransaction?.swapTransactionID ||
+                              responseData?.swapTransaction?.SwapTransactionID;
     
-    // If all attempts failed, throw error
-    throw new Error('Không thể xác nhận booking. Đã thử tất cả các status values.');
+    console.log('[BookingRepository] ✅ Booking confirmed:', {
+      bookingId,
+      swapTransactionId,
+      responseData
+    });
+    
+    return {
+      booking: responseData,
+      swapTransactionId
+    };
   }
 
   async cancel(bookingId: string): Promise<void> {
@@ -113,14 +148,37 @@ export class BookingRepository implements IBookingRepository {
 
   async searchBooking(searchTerm: string): Promise<Booking | null> {
     try {
+      // NOTE: Backend endpoint GET /api/bookings/{id} is currently broken
+      // It returns 405 (Method Not Allowed) - backend may have changed routing
+      // We'll skip getById and try search endpoint only
+      
       // Try searching via API endpoint (if backend supports)
-      const response = await api.get(`${this.basePath}/search`, {
-        params: { q: searchTerm }
-      });
-      const data = response.data.data || response.data;
-      return data || null;
-    } catch (error) {
-      console.error('[BookingRepository] Search failed:', error);
+      try {
+        const response = await api.get(`${this.basePath}/search`, {
+          params: { q: searchTerm }
+        });
+        const data = response.data.data || response.data;
+        if (data) {
+          console.log('[BookingRepository] ✅ Found booking via search endpoint');
+          return data;
+        }
+      } catch (searchError: any) {
+        // If 404 or 405 (Method Not Allowed), endpoint doesn't exist
+        if (searchError?.response?.status === 404 || searchError?.response?.status === 405) {
+          console.log('[BookingRepository] Search endpoint not available (404/405)');
+          // Don't try getById as fallback because it also returns 405
+          return null;
+        } else {
+          // Other errors, log but don't throw
+          console.warn('[BookingRepository] Search endpoint error:', searchError?.response?.status, searchError?.message);
+          return null;
+        }
+      }
+      
+      return null;
+    } catch (error: any) {
+      // Don't log as error - just return null silently
+      console.warn('[BookingRepository] Search failed (non-critical):', error?.message || 'Unknown error');
       return null;
     }
   }

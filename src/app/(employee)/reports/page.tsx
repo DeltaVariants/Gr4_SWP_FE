@@ -255,12 +255,7 @@ export default withStaffAuth(function ReportsPage() {
               <span className="text-sm text-gray-600">Average Time</span>
               <span className="font-semibold text-gray-900">~5 mins</span>
             </div>
-            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-              <span className="text-sm text-gray-600">Revenue/Swap</span>
-              <span className="font-semibold text-gray-900">
-                {completedSwaps > 0 ? (totalRevenue / completedSwaps).toLocaleString() : 0} VND
-              </span>
-            </div>
+            {/* Revenue/Swap metric removed - Backend requires Admin role for revenue data */}
           </div>
         </div>
 

@@ -91,6 +91,20 @@ export function VerifyStep({
             </div>
           </div>
 
+          {/* Debug info - remove in production */}
+          {(loading || !driverName) && (
+            <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-xs text-yellow-800">
+              <div className="font-semibold mb-1">Debug Info:</div>
+              <div>Loading: {loading ? 'Yes' : 'No'}</div>
+              <div>Driver Name: {driverName || '(empty)'}</div>
+              {!driverName && (
+                <div className="mt-2 text-yellow-700">
+                  ⚠️ Waiting for customer information to load...
+                </div>
+              )}
+            </div>
+          )}
+
           <div className="flex gap-3 pt-6 border-t border-gray-200">
             <button
               onClick={onBack}
@@ -101,7 +115,8 @@ export function VerifyStep({
             <button
               onClick={onVerify}
               disabled={loading || !driverName}
-              className="flex-1 h-11 rounded-lg bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-semibold hover:from-emerald-600 hover:to-teal-700 disabled:opacity-50 flex items-center justify-center gap-2"
+              className="flex-1 h-11 rounded-lg bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-semibold hover:from-emerald-600 hover:to-teal-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              title={loading ? 'Processing...' : !driverName ? 'Please wait for customer information to load' : 'Continue to swap step'}
             >
               {loading ? (
                 <>

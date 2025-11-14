@@ -16,19 +16,24 @@ export class UpdateBookingStatusUseCase {
     if (!status || status.trim().length === 0) {
       throw new Error('Status is required');
     }
-
-    // Validate status values
-    const validStatuses = ['Pending', 'Confirmed', 'Booked', 'Queue', 'Checked', 'Completed', 'Cancelled'];
-    if (!validStatuses.includes(status)) {
+ 
+    // Validate status values (accept both uppercase and lowercase)
+    // Backend expects lowercase: "completed" or "cancelled"
+    const statusLower = status.toLowerCase();
+    const validStatuses = ['pending', 'confirmed', 'booked', 'queue', 'checked', 'completed', 'cancelled'];
+    if (!validStatuses.includes(statusLower)) {
       throw new Error(`Invalid status. Must be one of: ${validStatuses.join(', ')}`);
     }
 
     try {
-      await this.bookingRepository.updateBookingStatus(bookingId, status);
-      console.log('[UpdateBookingStatusUseCase] Status updated:', { bookingId, status });
+      // Repository will convert to lowercase automatically, but we pass the original status
+      // to maintain consistency with the Booking type
+      await this.bookingRepository.updateStatus(bookingId, status as any);
+      console.log('[UpdateBookingStatusUseCase] Status updated:', { bookingId, status, statusLower });
     } catch (error: any) {
       console.error('[UpdateBookingStatusUseCase] Update failed:', error);
-      throw new Error(error?.message || 'Failed to update booking status');
+      const errorMessage = error?.response?.data?.message || error?.message || 'Failed to update booking status';
+      throw new Error(errorMessage);
     }
   }
 }

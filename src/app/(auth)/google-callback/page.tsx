@@ -134,20 +134,17 @@ function CallbackContent() {
           console.error('[GoogleCallback] Error setting cookies:', error);
         }
 
-        if (isMounted) {
-          setStatus('success');
-          const redirectPath = getRedirectPathByRole(role);
-          setMessage(`Google login successful! Redirecting to ${redirectPath}...`);
-        }
+        // Redirect immediately without showing UI
+        const redirectPath = getRedirectPathByRole(role);
+        console.log('[GoogleCallback] Login complete, redirecting immediately to:', redirectPath);
         
-        console.log('[GoogleCallback] Login complete, redirecting to:', getRedirectPathByRole(role));
-        // Use window.location.href instead of router.push to force full page reload
+        // Use window.location.replace to redirect immediately without showing callback page
         // This ensures AuthContext re-initializes and loads user from localStorage
-        setTimeout(() => {
-          if (isMounted) {
-            window.location.href = getRedirectPathByRole(role);
-          }
-        }, 1500);
+        if (isMounted) {
+          // Clear URL params to avoid showing token in URL
+          window.history.replaceState({}, '', redirectPath);
+          window.location.href = redirectPath;
+        }
       } catch (err: any) {
         console.error('[GoogleCallback] Error:', err);
         if (isMounted) {

@@ -51,12 +51,32 @@ api.interceptors.response.use(
         method: originalRequest?.method || 'unknown',
       };
       
-      // Only log non-401 errors and non-logout 404s (401 is expected when token expires, logout 404 is expected)
+      // Suppress error logs for:
+      // 1. 401 errors (expected when token expires)
+      // 2. Logout 404s (expected)
+      // 3. GET /api/bookings/{id} 405 (endpoint not supported)
+      // 4. GET /api/bookings/search 405 (endpoint not supported)
+      // 5. PATCH /api/bookings/{id} 404 (endpoint broken - returns "Swap transaction not found")
+      // 6. PATCH /api/bookings/{id} 400 with "No available batteries" (handled in component)
       const isLogoutError = errorDetails.url?.includes('/logout') || errorDetails.url?.includes('/auth/logout');
-      const shouldSuppressLog = error.response.status === 401 || (error.response.status === 404 && isLogoutError);
+      const isGetBookingById405 = error.response.status === 405 && errorDetails.url?.match(/\/bookings\/[^\/]+$/) && originalRequest?.method === 'get';
+      const isSearchBooking405 = error.response.status === 405 && errorDetails.url?.includes('/bookings/search') && originalRequest?.method === 'get';
+      const isPatchBookingById404 = error.response.status === 404 && errorDetails.url?.match(/\/bookings\/[^\/]+$/) && originalRequest?.method === 'patch';
+      const isNoAvailableBatteries = error.response.status === 400 && 
+                                     (errorDetails.message?.toLowerCase().includes('no available batteries') ||
+                                      errorDetails.message?.toLowerCase().includes('no available battery'));
+      const shouldSuppressLog = error.response.status === 401 || 
+                                 (error.response.status === 404 && isLogoutError) ||
+                                 isGetBookingById405 ||
+                                 isSearchBooking405 ||
+                                 isPatchBookingById404 ||
+                                 isNoAvailableBatteries;
       
       if (!shouldSuppressLog) {
         console.error('[API Error]', errorDetails);
+      } else {
+        // Log as warning instead of error for suppressed logs
+        console.warn('[API] Suppressed error log:', errorDetails);
       }
 
       // Nếu token hết hạn (401), tự động refresh token

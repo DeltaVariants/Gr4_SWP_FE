@@ -112,15 +112,6 @@ export default function MapSection() {
       console.log("Map already initialized, skipping re-initialization");
       return;
     }
-    
-    // Additional check: if map container has Leaflet ID, remove it
-    const container = mapRef.current;
-    if (container && (container as any)._leaflet_id) {
-      console.log("Removing existing Leaflet instance from container");
-      delete (container as any)._leaflet_id;
-      // Clear container to ensure clean state
-      container.innerHTML = '';
-    }
 
     // Helper function to setup map
     const setupMap = (initialCenter: [number, number], initialZoom: number) => {
@@ -255,24 +246,10 @@ export default function MapSection() {
 
     // Cleanup when component unmounts - IMPORTANT to prevent "already initialized" error
     return () => {
-      console.log('[MapSection] Cleaning up map instance');
       if (mapInstanceRef.current) {
-        try {
-          mapInstanceRef.current.remove();
-        } catch (error) {
-          console.warn('[MapSection] Error removing map:', error);
-        }
+        mapInstanceRef.current.remove();
         mapInstanceRef.current = null;
-      }
-      
-      if (stationsLayerRef.current) {
         stationsLayerRef.current = null;
-      }
-      
-      // Clear Leaflet ID from container
-      if (mapRef.current && (mapRef.current as any)._leaflet_id) {
-        delete (mapRef.current as any)._leaflet_id;
-        mapRef.current.innerHTML = '';
       }
     };
   }, [initializeMapWithLocation]);

@@ -2,7 +2,7 @@
 
 import { withStaffAuth } from '@/hoc/withAuth';
 import { Suspense } from 'react';
-import CheckInContainer from './components/CheckInContainer';
+import CheckInContainer from './CheckInContainer';
 
 export default withStaffAuth(function CheckInPage() {
   return (

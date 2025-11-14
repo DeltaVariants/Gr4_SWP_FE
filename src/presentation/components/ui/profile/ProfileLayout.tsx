@@ -9,8 +9,8 @@ export const ProfileLayout = () => {
     <div className="w-full">
       <div className="max-w-5xl mx-auto">
         <div className="mb-6">
-          <h1 className="text-3xl font-extrabold text-gray-900">Profile</h1>
-          <p className="text-sm text-gray-600 mt-1">View your account information</p>
+          <h1 className="text-3xl font-extrabold text-gray-900">Hồ sơ cá nhân</h1>
+          <p className="text-sm text-gray-600 mt-1">Quản lý thông tin tài khoản, bảo mật và liên hệ</p>
         </div>
 
         <div className="bg-gradient-to-r from-white to-slate-50 rounded-xl shadow-xl p-6">
@@ -19,8 +19,8 @@ export const ProfileLayout = () => {
               <div className="w-36 h-36 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center shadow-lg text-white text-3xl font-bold">
                 <User className="w-10 h-10" />
               </div>
-              <h2 className="mt-4 text-xl font-semibold text-gray-900">Your Information</h2>
-              <p className="mt-1 text-sm text-gray-600">View your profile information and account details.</p>
+              <h2 className="mt-4 text-xl font-semibold text-gray-900">Thông tin của bạn</h2>
+              <p className="mt-1 text-sm text-gray-600">Cập nhật hồ sơ, thay đổi mật khẩu và tuỳ chỉnh thông tin cá nhân.</p>
             </div>
 
             <div className="col-span-2">

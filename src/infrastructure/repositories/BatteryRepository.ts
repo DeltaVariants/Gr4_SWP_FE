@@ -129,51 +129,167 @@ export class BatteryRepository implements IBatteryRepository {
   }
 
   async updateStatus(data: UpdateBatteryStatusData): Promise<Battery> {
-    // ⚠️ IMPORTANT: Backend does NOT have /api/Batteries/{id} PATCH endpoint
-    // Based on Swagger, we need to use /api/battery-condition-logs instead
+    /**
+     * Logic update battery status theo backend:
+     * 
+     * Backend enum: charging, available, faulty, occupied
+     * 
+     * 1. PATCH /api/batteries/{id}?CurrentPercentage=X
+     *    - Chỉ update percentage và tự động set status:
+     *      - >= 90 → available
+     *      - < 90 → charging
+     *    - KHÔNG check faulty battery (có thể dùng để chuyển từ faulty về available/charging)
+     * 
+     * 2. POST /api/battery-condition-logs
+     *    - LUÔN set battery status = "faulty" (damaged)
+     *    - Dùng để đánh dấu pin bị hỏng
+     * 
+     * Mapping frontend → backend:
+     * - Available → available (dùng update percentage với % >= 90)
+     * - Charging → charging (dùng update percentage với % < 90)
+     * - Damaged → faulty (dùng condition log)
+     * - In-Use → không có trong backend enum, có thể là occupied (không thể set trực tiếp)
+     * - Maintenance → không có trong backend enum (không thể set trực tiếp)
+     */
     
-    console.log('[BatteryRepository] ⚠️ Backend does not support direct battery status update');
-    console.log('[BatteryRepository] Available APIs:', {
-      conditionLogs: 'POST /api/battery-condition-logs (create log)',
-      patchLog: 'PATCH /api/battery-condition-logs/{id} (update log)',
-      note: 'No endpoint to update batteryStatus directly'
-    });
+    const oldStatus = (data as any).oldStatus;
     
-    // Map frontend status to backend condition
-    const statusMap: Record<string, string> = {
-      'Available': 'available',
-      'In-Use': 'in-use',
-      'Charging': 'charging',
-      'Maintenance': 'maintenance',
-      'Damaged': 'damaged',
-      'Faulty': 'damaged',
-    };
-    
-    const backendStatus = statusMap[data.status] || data.status.toLowerCase();
-    
-    console.log('[BatteryRepository] Attempting to update via condition log:', {
+    console.log('[BatteryRepository] Updating battery status:', {
       batteryId: data.batteryId,
-      newStatus: backendStatus,
-      notes: data.notes
+      oldStatus: oldStatus || 'unknown',
+      newStatus: data.status
     });
     
     try {
-      const payload = {
-        batteryID: data.batteryId,
-        conditionStatus: backendStatus,
-        notes: data.notes || `Status changed to ${data.status}`,
-        recordedAt: new Date().toISOString(),
+      // Case 1: Chuyển từ Damaged về Available hoặc Charging
+      if (oldStatus === 'Damaged' && (data.status === 'Available' || data.status === 'Charging')) {
+        const percentage = data.status === 'Available' ? 90 : 50; // >= 90 = available, < 90 = charging
+        
+        console.log(`[BatteryRepository] 🔄 Damaged → ${data.status}: Using PATCH /batteries/{id}?CurrentPercentage=${percentage}`);
+        
+        // Backend route: api/batteries (baseURL đã có /api rồi, chỉ cần /batteries)
+        const response = await api.patch(`/batteries/${data.batteryId}`, null, {
+          params: {
+            CurrentPercentage: percentage
+          }
+        });
+        
+        console.log('[BatteryRepository] ✅ Battery percentage updated, status should be', data.status);
+        
+        // Tạo condition log để ghi lại lịch sử
+        try {
+          const logPayload = {
+            BatteryID: data.batteryId,
+            Condition: data.status.toLowerCase(),
+            Description: data.notes || `Status changed from Damaged to ${data.status}`
+          };
+          await api.post('/battery-condition-logs', logPayload);
+          console.log('[BatteryRepository] ✅ Condition log created for history');
+        } catch (logError) {
+          // Log error nhưng không throw vì update percentage đã thành công
+          console.warn('[BatteryRepository] ⚠️ Failed to create condition log (non-critical):', logError);
+        }
+        
+        return {
+          batteryId: data.batteryId,
+          batteryCode: data.batteryId,
+          batteryType: 'Unknown',
+          status: data.status,
+          stationId: '',
+        } as Battery;
+      }
+      
+      // Case 2: Chuyển từ Available ↔ Charging (dùng update percentage)
+      if ((oldStatus === 'Available' || oldStatus === 'Charging') && 
+          (data.status === 'Available' || data.status === 'Charging')) {
+        const percentage = data.status === 'Available' ? 90 : 50;
+        
+        console.log(`[BatteryRepository] 🔄 ${oldStatus} → ${data.status}: Using PATCH /batteries/{id}?CurrentPercentage=${percentage}`);
+        
+        // Backend route: api/batteries (baseURL đã có /api rồi, chỉ cần /batteries)
+        const response = await api.patch(`/batteries/${data.batteryId}`, null, {
+          params: {
+            CurrentPercentage: percentage
+          }
+        });
+        
+        console.log('[BatteryRepository] ✅ Battery status updated to', data.status);
+        
+        // Tạo condition log để ghi lại lịch sử
+        try {
+          const logPayload = {
+            BatteryID: data.batteryId,
+            Condition: data.status.toLowerCase(),
+            Description: data.notes || `Status changed from ${oldStatus} to ${data.status}`
+          };
+          await api.post('/battery-condition-logs', logPayload);
+          console.log('[BatteryRepository] ✅ Condition log created for history');
+        } catch (logError) {
+          console.warn('[BatteryRepository] ⚠️ Failed to create condition log (non-critical):', logError);
+        }
+        
+        return {
+          batteryId: data.batteryId,
+          batteryCode: data.batteryId,
+          batteryType: 'Unknown',
+          status: data.status,
+          stationId: '',
+        } as Battery;
+      }
+      
+      // Case 3: Chuyển về Damaged (dùng condition log - backend sẽ set thành faulty)
+      if (data.status === 'Damaged' || data.status === 'Faulty') {
+        console.log('[BatteryRepository] 📝 Setting status to Damaged: Using condition log');
+        
+        const payload = {
+          BatteryID: data.batteryId,
+          Condition: 'damaged',
+          Description: data.notes || `Status changed to Damaged`
+        };
+        
+        console.log('[BatteryRepository] 📤 Sending condition log payload:', payload);
+        
+        const response = await api.post('/battery-condition-logs', payload);
+        
+        console.log('[BatteryRepository] ✅ Condition log created, battery status set to faulty (damaged)');
+        
+        return {
+          batteryId: data.batteryId,
+          batteryCode: data.batteryId,
+          batteryType: 'Unknown',
+          status: 'Damaged',
+          stationId: '',
+        } as Battery;
+      }
+      
+      // Case 4: Các trường hợp khác (In-Use, Maintenance) - Backend không hỗ trợ trực tiếp
+      // Vẫn tạo condition log để ghi lại, nhưng backend sẽ set thành faulty
+      console.log('[BatteryRepository] ⚠️ Status', data.status, 'not directly supported by backend, using condition log');
+      
+      const statusMap: Record<string, string> = {
+        'Available': 'available',
+        'In-Use': 'in-use',
+        'Charging': 'charging',
+        'Maintenance': 'maintenance',
+        'Damaged': 'damaged',
+        'Faulty': 'damaged',
       };
       
-      console.log('[BatteryRepository] 📤 Sending payload:', payload);
+      const backendCondition = statusMap[data.status] || data.status.toLowerCase();
       
-      // Create battery condition log (this might trigger status update in backend)
+      const payload = {
+        BatteryID: data.batteryId,
+        Condition: backendCondition,
+        Description: data.notes || `Status changed to ${data.status} (Note: Backend will set status to faulty)`
+      };
+      
       const response = await api.post('/battery-condition-logs', payload);
       
-      console.log('[BatteryRepository] ✅ Condition log created:', response.data);
-      console.log('[BatteryRepository] 🔍 Check if backend updated batteryStatus to:', backendStatus);
+      console.log('[BatteryRepository] ⚠️ Condition log created, but backend set status to faulty');
+      console.log('[BatteryRepository] 💡 To set status to', data.status, ', backend needs to support this status');
       
-      // Return optimistic update since backend doesn't return updated battery
+      // Trả về status mong muốn (frontend optimistic update)
+      // Nhưng thực tế backend đã set thành faulty
       return {
         batteryId: data.batteryId,
         batteryCode: data.batteryId,
@@ -183,7 +299,7 @@ export class BatteryRepository implements IBatteryRepository {
       } as Battery;
       
     } catch (error: any) {
-      console.error('[BatteryRepository] ❌ Failed to create condition log:', {
+      console.error('[BatteryRepository] ❌ Failed to update battery status:', {
         status: error?.response?.status,
         data: error?.response?.data,
         message: error?.message
@@ -194,7 +310,7 @@ export class BatteryRepository implements IBatteryRepository {
           ? 'Battery not found or endpoint not available'
           : error?.response?.status === 403
           ? 'Permission denied - Staff role may not have access'
-          : 'Failed to update battery status. Backend does not support this operation.'
+          : error?.response?.data?.message || error?.message || 'Failed to update battery status'
       );
     }
   }

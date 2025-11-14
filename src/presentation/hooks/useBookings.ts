@@ -1,124 +1,104 @@
-/**
- * useBookings Hook
- * Custom hook for booking operations
- */
+'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Booking, CheckInData, SwapData } from '@/domain/entities/Booking';
-import {
-  getBookingsByStationUseCase,
-  checkInBookingUseCase,
-  completeSwapUseCase,
-  searchBookingUseCase,
-  updateBookingStatusUseCase,
-} from '@/application/usecases/booking';
+import { Booking } from '@/domain/entities/Booking';
+import { getBookingsByStationUseCase, updateBookingStatusUseCase } from '@/application/usecases/booking';
+import { confirmBookingUseCase, ConfirmBookingResult } from '@/application/usecases/booking/ConfirmBooking.usecase';
 
-export function useBookings(stationId: string | undefined) {
+interface UseBookingsOptions {
+  autoLoad?: boolean;
+}
+
+export const useBookings = (stationId?: string, options: UseBookingsOptions = {}) => {
+  const { autoLoad = true } = options;
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
-  const loadBookings = useCallback(async () => {
+  // Fetch bookings
+  const fetchBookings = useCallback(async () => {
     if (!stationId) {
       setBookings([]);
       return;
     }
 
-    setLoading(true);
-    setError(null);
     try {
-      const data = await getBookingsByStationUseCase.execute(stationId);
-      setBookings(data);
-    } catch (e) {
-      const error = e as Error;
+      setLoading(true);
+      setError(null);
+
+      const bookingsData = await getBookingsByStationUseCase.execute(stationId);
+      setBookings(bookingsData);
+    } catch (err: any) {
+      const error = err instanceof Error ? err : new Error(err?.message || 'Failed to fetch bookings');
       setError(error);
-      console.error('[useBookings] Load error:', error);
+      console.error('[useBookings] Error:', error);
     } finally {
       setLoading(false);
     }
   }, [stationId]);
 
-  const checkIn = useCallback(async (data: CheckInData) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const updatedBooking = await checkInBookingUseCase.execute(data);
-      setBookings((prev) =>
-        prev.map((b) => (b.bookingID === updatedBooking.bookingID ? updatedBooking : b))
-      );
-      return updatedBooking;
-    } catch (e) {
-      const error = e as Error;
-      setError(error);
-      throw error;
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  const completeSwap = useCallback(async (data: SwapData) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const updatedBooking = await completeSwapUseCase.execute(data);
-      setBookings((prev) =>
-        prev.map((b) => (b.bookingID === updatedBooking.bookingID ? updatedBooking : b))
-      );
-      return updatedBooking;
-    } catch (e) {
-      const error = e as Error;
-      setError(error);
-      throw error;
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  const searchBooking = useCallback(async (searchTerm: string) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const booking = await searchBookingUseCase.execute(searchTerm);
-      return booking;
-    } catch (e) {
-      const error = e as Error;
-      setError(error);
-      throw error;
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  const updateStatus = useCallback(async (bookingId: string, status: string) => {
-    setLoading(true);
-    setError(null);
-    try {
-      await updateBookingStatusUseCase.execute(bookingId, status);
-      // Optimistically update local state
-      setBookings((prev) =>
-        prev.map((b) => (b.bookingID === bookingId ? { ...b, bookingStatus: status as any } : b))
-      );
-    } catch (e) {
-      const error = e as Error;
-      setError(error);
-      throw error;
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
+  // Auto-fetch on mount and when stationId changes
   useEffect(() => {
-    loadBookings();
-  }, [loadBookings]);
+    if (autoLoad) {
+      fetchBookings();
+    }
+  }, [fetchBookings, autoLoad]);
+
+  // Update booking status
+  const updateStatus = useCallback(async (
+    bookingId: string,
+    status: Booking['bookingStatus']
+  ) => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      await updateBookingStatusUseCase.execute(bookingId, status);
+
+      // Refetch bookings after update
+      await fetchBookings();
+    } catch (err: any) {
+      const error = err instanceof Error ? err : new Error(err?.message || 'Failed to update booking status');
+      setError(error);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  }, [fetchBookings]);
+
+  // Confirm booking
+  const confirm = useCallback(async (bookingId: string): Promise<ConfirmBookingResult> => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const result = await confirmBookingUseCase.execute(bookingId);
+
+      // Update local state
+      setBookings(prev => prev.map(b => 
+        b.bookingID === bookingId 
+          ? { ...b, bookingStatus: 'completed' as any }
+          : b
+      ));
+
+      return result;
+    } catch (err: any) {
+      const error = err instanceof Error ? err : new Error(err?.message || 'Failed to confirm booking');
+      setError(error);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   return {
     bookings,
     loading,
     error,
-    refetch: loadBookings,
-    checkIn,
-    completeSwap,
-    searchBooking,
+    refetch: fetchBookings,
     updateStatus,
+    confirm,
   };
-}
+};
+
+

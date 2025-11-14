@@ -25,8 +25,10 @@ export class SwapTransactionRepository implements ISwapTransactionRepository {
     return response.data.data || response.data;
   }
 
-  async getByStation(stationID: string): Promise<SwapTransaction[]> {
-    const response = await api.get(`${this.basePath}/station/${stationID}`);
+  async getByStation(stationID?: string): Promise<SwapTransaction[]> {
+    // Endpoint: GET /api/stations/swapTransactions
+    // Backend tự động lấy stationID từ token/context, không cần truyền trong path
+    const response = await api.get('/stations/swapTransactions');
     const data = response.data.data || response.data;
     return Array.isArray(data) ? data : [];
   }
@@ -38,16 +40,38 @@ export class SwapTransactionRepository implements ISwapTransactionRepository {
   }
 
   async create(data: CreateSwapTransactionData): Promise<SwapTransaction> {
-    const response = await api.post(this.basePath, data);
-    return response.data.data || response.data;
+    console.log('[SwapTransactionRepository] Creating swap transaction:', {
+      url: `${this.basePath}`,
+      data: {
+        ...data,
+        // Don't log sensitive data
+      },
+    });
+    
+    try {
+      const response = await api.post(this.basePath, data);
+      console.log('[SwapTransactionRepository] Create response:', {
+        status: response.status,
+        data: response.data,
+      });
+      return response.data.data || response.data;
+    } catch (error: any) {
+      console.error('[SwapTransactionRepository] Create failed:', {
+        message: error?.message,
+        response: error?.response?.data,
+        status: error?.response?.status,
+      });
+      throw error;
+    }
   }
 
   async complete(
     id: string,
-    data: CompleteSwapTransactionData
+    data?: CompleteSwapTransactionData // Optional - backend doesn't accept payload
   ): Promise<SwapTransaction> {
     // API: POST /api/swap-transactions/{id}/completed
-    const response = await api.post(`${this.basePath}/${id}/completed`, data);
+    // Backend không nhận payload, chỉ cần transactionID
+    const response = await api.post(`${this.basePath}/${id}/completed`);
     return response.data.data || response.data;
   }
 
@@ -59,8 +83,11 @@ export class SwapTransactionRepository implements ISwapTransactionRepository {
     return response.data.data || response.data;
   }
 
-  async cancel(id: string): Promise<void> {
-    await api.delete(`${this.basePath}/${id}`);
+  async cancel(id: string): Promise<SwapTransaction> {
+    // Backend API: POST /api/swap-transactions/{id}/cancelled
+    // Backend không nhận payload, chỉ cần transactionID
+    const response = await api.post(`${this.basePath}/${id}/cancelled`);
+    return response.data.data || response.data;
   }
 }
 

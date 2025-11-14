@@ -144,6 +144,7 @@ export default withStaffAuth(function StaffDashboard() {
           const bookingTimeStr = b.bookingTime || b.BookingTime || b.time || b.bookingHour || '';
           let dateStr = '--';
           let timeStr = '--';
+          let sortDate: Date | null = null;
           
           if (bookingTimeStr) {
             try {
@@ -152,8 +153,23 @@ export default withStaffAuth(function StaffDashboard() {
               dateStr = dt.toLocaleDateString('vi-VN');
               // Format: HH:mm
               timeStr = dt.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+              sortDate = dt;
             } catch (e) {
               console.warn('[dashboardstaff] Failed to parse date:', bookingTimeStr);
+            }
+          }
+          
+          // Try createdAt or updatedAt as fallback for sorting
+          if (!sortDate) {
+            const createdAtStr = b.createdAt || b.CreatedAt || b.created_at;
+            const updatedAtStr = b.updatedAt || b.UpdatedAt || b.updated_at;
+            const fallbackDateStr = createdAtStr || updatedAtStr;
+            if (fallbackDateStr) {
+              try {
+                sortDate = new Date(fallbackDateStr);
+              } catch (e) {
+                console.warn('[dashboardstaff] Failed to parse createdAt/updatedAt:', fallbackDateStr);
+              }
             }
           }
           
@@ -164,7 +180,15 @@ export default withStaffAuth(function StaffDashboard() {
             time: timeStr,
             status: b.bookingStatus || b.status || 'Booked',
             raw: b,
+            sortDate: sortDate || new Date(0), // Use epoch if no date available (will sort last)
           };
+        });
+        
+        // Sort by booking time (newest first)
+        rows.sort((a, b) => {
+          const dateA = a.sortDate.getTime();
+          const dateB = b.sortDate.getTime();
+          return dateB - dateA; // Descending order (newest first)
         });
         
         if (mounted) setData(rows);
@@ -238,7 +262,6 @@ export default withStaffAuth(function StaffDashboard() {
   const faultyBatteries = inventory?.damaged || 0;
   const totalBatteries = inventory?.total || batteries.length;
   
-  const todaySwaps = transfers.filter(t => t.status === 'Completed').length;
   const todayRevenue = revenue?.totalRevenue || revenue?.revenue || 0;
   
   console.log('[dashboardstaff] Stats:', {
@@ -247,8 +270,7 @@ export default withStaffAuth(function StaffDashboard() {
     totalBatteries,
     batteriesCount: batteries.length,
     activeReservations,
-    queueCount,
-    todaySwaps
+    queueCount
   });
 
   return (
@@ -266,29 +288,7 @@ export default withStaffAuth(function StaffDashboard() {
           </div>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="bg-white/10 backdrop-blur-sm rounded-xl p-5 border border-white/20">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-10 h-10 rounded-full bg-emerald-500 flex items-center justify-center">
-                <TrendingUp className="w-5 h-5 text-white" />
-              </div>
-              <div className="text-sm text-blue-100">Today's Swaps</div>
-            </div>
-            <div className="text-4xl font-bold">{todaySwaps}</div>
-          </div>
-
-          {/* TODO: Revenue card - Hidden until backend grants Staff permission 
-          <div className="bg-white/10 backdrop-blur-sm rounded-xl p-5 border border-white/20">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-10 h-10 rounded-full bg-amber-500 flex items-center justify-center">
-                <DollarSign className="w-5 h-5 text-white" />
-              </div>
-              <div className="text-sm text-blue-100">Revenue</div>
-            </div>
-            <div className="text-4xl font-bold">{todayRevenue.toLocaleString()}</div>
-          </div>
-          */}
-
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="bg-white/10 backdrop-blur-sm rounded-xl p-5 border border-white/20">
             <div className="flex items-center gap-3 mb-2">
               <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center">
@@ -354,6 +354,22 @@ export default withStaffAuth(function StaffDashboard() {
           <Link href="/inventory" className="text-sm text-emerald-700 font-medium hover:text-emerald-800 flex items-center gap-1">
             Manage Inventory <ArrowRight className="w-4 h-4" />
           </Link>
+        </div>
+      </div>
+
+      {/* Swap Transactions Overview */}
+      <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+              <Battery className="w-6 h-6 text-emerald-600" />
+              Swap Transactions Overview
+            </h3>
+            <p className="text-sm text-gray-600 mt-1">Recent swap transactions</p>
+          </div>
+        </div>
+        <div className="text-sm text-gray-500 italic">
+          View detailed swap transactions in <Link href="/reservations" className="text-blue-600 hover:underline">Reservations</Link> page
         </div>
       </div>
 
@@ -470,14 +486,14 @@ export default withStaffAuth(function StaffDashboard() {
             </div>
           </Link>
 
-          <Link href="/swap" className="group relative overflow-hidden bg-gradient-to-br from-emerald-50 to-teal-50 rounded-xl p-6 border border-emerald-200 hover:shadow-lg transition-all">
+          <Link href="/check-in" className="group relative overflow-hidden bg-gradient-to-br from-emerald-50 to-teal-50 rounded-xl p-6 border border-emerald-200 hover:shadow-lg transition-all">
             <div className="flex items-start gap-3 mb-3">
               <div className="w-10 h-10 rounded-full bg-emerald-500 flex items-center justify-center text-white group-hover:scale-110 transition-transform">
                 <Battery className="w-5 h-5" />
               </div>
               <div className="flex-1">
-                <div className="font-semibold text-gray-900 mb-1">Battery Swap</div>
-                <div className="text-sm text-gray-600">Swap batteries for customers</div>
+                <div className="font-semibold text-gray-900 mb-1">Check-in & Swap</div>
+                <div className="text-sm text-gray-600">Complete swap transactions</div>
               </div>
             </div>
           </Link>

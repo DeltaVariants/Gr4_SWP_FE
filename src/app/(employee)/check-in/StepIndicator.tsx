@@ -3,19 +3,17 @@
  * Display progress of check-in flow
  */
 
-import { QrCode, User, DollarSign, Battery, CheckCircle2, ArrowRight } from 'lucide-react';
+import { User, Battery, CheckCircle2, ArrowRight } from 'lucide-react';
 import { CheckInStep } from './types';
 
 interface StepConfig {
   key: CheckInStep;
   label: string;
-  icon: typeof QrCode;
+  icon: typeof User;
 }
 
 const STEPS: StepConfig[] = [
-  { key: 'scan', label: 'Booking', icon: QrCode },
   { key: 'verify', label: 'Verify', icon: User },
-  { key: 'payment', label: 'Payment', icon: DollarSign },
   { key: 'swap', label: 'Swap', icon: Battery },
   { key: 'completed', label: 'Complete', icon: CheckCircle2 },
 ];

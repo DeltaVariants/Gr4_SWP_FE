@@ -51,5 +51,5 @@ export interface ISwapTransactionRepository {
   /**
    * Cancel swap transaction
    */
-  cancel(id: string): Promise<void>;
+  cancel(id: string): Promise<SwapTransaction>;
 }

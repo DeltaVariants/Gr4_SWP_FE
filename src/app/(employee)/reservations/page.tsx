@@ -2,7 +2,7 @@
 
 import { withStaffAuth } from '@/hoc/withAuth';
 import { Table } from '../components/Table';
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useBookings } from '@/presentation/hooks/useBookings';
 import { useToast } from '@/presentation/components/ui/Notification';
@@ -73,7 +73,7 @@ export default withStaffAuth(function ReservationsPage() {
 
   // Use custom hook to fetch bookings - ONLY when user is loaded and has stationId
   // Pass undefined if not ready to prevent premature API calls
-  const { bookings, loading, error, refetch, updateStatus } = useBookings(
+  const { bookings, loading, error, refetch, updateStatus, confirm } = useBookings(
     (!authLoading && stationId) ? stationId : undefined
   );
 
@@ -84,22 +84,72 @@ export default withStaffAuth(function ReservationsPage() {
     }
   }, [error, showToast]);
 
-  // Handle confirm booking - Go directly to check-in, let check-in page update status
-  const handleConfirmBooking = async (bookingId: string) => {
-    console.log('[Reservations] Confirming booking and navigating to check-in:', bookingId);
+  // Handle cancel booking
+  const handleCancelBooking = useCallback(async (bookingId: string) => {
+    if (!window.confirm('Bạn có chắc chắn muốn hủy booking này?')) return;
     
-    // Don't update status here - backend doesn't support "Confirmed" status
-    // Let the check-in page handle status updates (Pending -> Checked when verify)
-    // This avoids 404 errors from backend
-    
-    // Navigate directly to check-in page
-    router.push(`/check-in?reservationId=${bookingId}`);
-  };
+    try {
+      console.log('[Reservations] Cancelling booking:', bookingId);
+      // Backend expects lowercase "cancelled" status
+      await updateStatus(bookingId, 'cancelled');
+      showToast({ type: 'success', message: 'Đã hủy booking thành công!' });
+      // Refetch to update the list
+      await refetch();
+    } catch (err: any) {
+      console.error('[Reservations] Failed to cancel booking:', err);
+      const errorMessage = err?.response?.data?.message || err?.message || 'Không thể hủy booking';
+      showToast({ type: 'error', message: errorMessage });
+    }
+  }, [updateStatus, refetch, showToast]);
 
   // Handle check-in (redirect to check-in page)
-  const handleCheckIn = (bookingId: string) => {
+  const handleCheckIn = useCallback((bookingId: string) => {
     router.push(`/check-in?reservationId=${bookingId}`);
-  };
+  }, [router]);
+
+  // Handle confirm booking - Confirm booking and navigate to check-in page
+  const handleConfirmBooking = useCallback(async (bookingId: string) => {
+    // Prevent multiple calls
+    if (confirmingId === bookingId) {
+      console.log('[Reservations] ⚠️ Already confirming this booking, skipping...');
+      return;
+    }
+    
+    try {
+      console.log('[Reservations] Confirming booking:', bookingId);
+      
+      // Validate bookingId
+      if (!bookingId || bookingId.trim().length === 0) {
+        throw new Error('Booking ID is missing');
+      }
+      
+      setConfirmingId(bookingId);
+      
+      // Confirm booking - Backend sẽ tự động tạo SwapTransaction với status="initiated"
+      // PATCH /api/bookings/{id}?status=completed
+      // Backend trả về SwapTransactionID trong response
+      const result = await confirm(bookingId);
+      
+      console.log('[Reservations] ✅ Booking confirmed, swapTransactionId:', result.swapTransactionId);
+      
+      showToast({ 
+        type: 'success', 
+        message: 'Booking đã được xác nhận! Đang chuyển đến trang xác thực...' 
+      });
+      
+      // Navigate to check-in page với bookingId
+      // swapTransactionId sẽ được lưu trong URL hoặc state nếu cần
+      router.push(`/check-in?bookingId=${bookingId}${result.swapTransactionId ? `&swapTransactionId=${result.swapTransactionId}` : ''}`);
+    } catch (err: any) {
+      console.error('[Reservations] Failed to confirm booking:', err);
+      const errorMessage = err?.response?.data?.message || err?.message || 'Failed to confirm booking';
+      showToast({ 
+        type: 'error', 
+        message: errorMessage
+      });
+      setConfirmingId(null); // Reset on error
+    }
+  }, [confirmingId, router, showToast, confirm]);
 
   // Define columns with dynamic action buttons
   const columns = useMemo(() => [
@@ -124,11 +174,25 @@ export default withStaffAuth(function ReservationsPage() {
             {isPending && (
               <>
                 <button
-                  onClick={() => handleConfirmBooking(row.id)}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium text-white bg-emerald-500 hover:bg-emerald-600 shadow-sm"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleConfirmBooking(row.id);
+                  }}
+                  disabled={confirmingId === row.id}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium text-white bg-emerald-500 hover:bg-emerald-600 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <CheckCircle2 className="w-3.5 h-3.5" />
-                  Confirm & Check-in
+                  {confirmingId === row.id ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      Redirecting...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      Confirm & Check-in
+                    </>
+                  )}
                 </button>
                 <button
                   onClick={() => handleCancelBooking(row.id)}
@@ -167,30 +231,14 @@ export default withStaffAuth(function ReservationsPage() {
         );
       }
     },
-  ], [confirmingId]);
-
-  // Handle cancel booking
-  const handleCancelBooking = async (bookingId: string) => {
-    if (!confirm('Are you sure you want to cancel this booking?')) return;
-    
-    try {
-      console.log('[Reservations] Cancelling booking:', bookingId);
-      // Use updateStatus from hook instead of direct API call
-      await updateStatus(bookingId, 'Cancelled');
-      showToast({ type: 'success', message: 'Booking cancelled successfully!' });
-      refetch();
-    } catch (err: any) {
-      console.error('[Reservations] Failed to cancel booking:', err);
-      showToast({ type: 'error', message: err.message || 'Failed to cancel booking' });
-    }
-  };
+  ], [confirmingId, handleConfirmBooking, handleCancelBooking, handleCheckIn]);
 
   // Transform bookings to table data
   const data = useMemo(() => {
     console.log('[Reservations] Total bookings:', bookings.length);
     console.log('[Reservations] All bookings:', bookings);
     
-    return bookings.map((b) => {
+    const rows = bookings.map((b) => {
       // Log first booking to see structure
       if (bookings.indexOf(b) === 0) {
         console.log('[Reservations] Sample booking data:', b);
@@ -211,6 +259,32 @@ export default withStaffAuth(function ReservationsPage() {
         console.error('[Reservations] No ID found for booking:', b);
       }
       
+      // Get booking time for sorting
+      const bookingTimeStr = (b as any).bookingTime || (b as any).BookingTime || (b as any).time || (b as any).bookingHour || '';
+      let sortDate: Date | null = null;
+      
+      if (bookingTimeStr) {
+        try {
+          sortDate = new Date(bookingTimeStr);
+        } catch (e) {
+          console.warn('[Reservations] Failed to parse bookingTime:', bookingTimeStr);
+        }
+      }
+      
+      // Try createdAt or updatedAt as fallback for sorting
+      if (!sortDate) {
+        const createdAtStr = (b as any).createdAt || (b as any).CreatedAt || (b as any).created_at;
+        const updatedAtStr = (b as any).updatedAt || (b as any).UpdatedAt || (b as any).updated_at;
+        const fallbackDateStr = createdAtStr || updatedAtStr;
+        if (fallbackDateStr) {
+          try {
+            sortDate = new Date(fallbackDateStr);
+          } catch (e) {
+            console.warn('[Reservations] Failed to parse createdAt/updatedAt:', fallbackDateStr);
+          }
+        }
+      }
+      
       return {
         id: bookingId,
         time: b.bookingTime || '--',
@@ -219,8 +293,18 @@ export default withStaffAuth(function ReservationsPage() {
         battery: b.batteryType || '—',
         status,
         raw: b,
+        sortDate: sortDate || new Date(0), // Use epoch if no date available (will sort last)
       };
     });
+    
+    // Sort by booking time (newest first)
+    rows.sort((a, b) => {
+      const dateA = a.sortDate.getTime();
+      const dateB = b.sortDate.getTime();
+      return dateB - dateA; // Descending order (newest first)
+    });
+    
+    return rows;
   }, [bookings]);
 
   // Auto-refresh every 5 seconds to catch status changes

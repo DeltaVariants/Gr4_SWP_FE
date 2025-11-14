@@ -88,6 +88,9 @@ const swapTransactionService = {
     console.log('[SwapTransactionService] Completing swap:', {
       url: SwapTransactionAPI.complete(id),
       payload,
+      payloadStringified: JSON.stringify(payload),
+      payloadKeys: Object.keys(payload),
+      payloadValues: Object.values(payload),
       hasToken: !!headers['Authorization'],
     });
 
@@ -107,20 +110,37 @@ const swapTransactionService = {
     });
 
     if (!res.ok) {
+      // Log chi tiết error để debug
       console.error('[SwapTransactionService] ❌ Swap failed:', {
         status: res.status,
+        statusText: res.statusText,
+        url: SwapTransactionAPI.complete(id),
+        payload,
+        transactionId: id,
         message: data?.message,
         errors: data?.errors,
+        error: data?.error,
         fullResponse: data,
       });
 
+      // Extract error message từ response
       const errorMsg =
         data?.message ||
         data?.errors?.[0]?.msg ||
         data?.error ||
+        data?.errors?.[0]?.message ||
         `HTTP ${res.status}: Failed to complete swap transaction`;
 
-      throw new Error(errorMsg);
+      // Tạo error object với thông tin chi tiết
+      const error = new Error(errorMsg) as any;
+      error.status = res.status;
+      error.statusText = res.statusText;
+      error.response = data;
+      error.url = SwapTransactionAPI.complete(id);
+      error.payload = payload;
+      error.transactionId = id;
+
+      throw error;
     }
 
     return data?.data || data;
