@@ -1,4 +1,3 @@
-"use client";
 import { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import { FaSearch, FaSyncAlt } from "react-icons/fa";
 import {
@@ -12,7 +11,8 @@ import {
 } from "@heroui/react";
 import { useAppDispatch, useAppSelector } from "@/application/hooks/useRedux";
 import { fetchAllBatteries } from "@/application/services/batteryService";
-import { Battery, getBatteryTypeFromId } from "@/domain/entities/Battery";
+import { BatteryDTO } from "@/domain/dto/Battery/BatteryDTO";
+import { getBatteryTypeFromId } from "@/domain/entities/Battery";
 import { Select, SelectOption } from "@/presentation/components/ui/Select";
 import { Input } from "@/presentation/components/ui/Input";
 
@@ -116,17 +116,17 @@ export default function BatteryManagement() {
       // Filter by status
       let matchesStatusFilter = true;
       if (statusFilter === "available") {
-        matchesStatusFilter = battery.batteryStatus === "available";
+        matchesStatusFilter = battery.status === "available";
       } else if (statusFilter === "faulty") {
-        matchesStatusFilter = battery.batteryStatus === "faulty";
+        matchesStatusFilter = battery.status === "faulty";
       } else if (statusFilter === "null") {
-        matchesStatusFilter = battery.batteryStatus === null;
+        matchesStatusFilter = battery.status === null;
       }
 
       // Filter by type (based on batteryID prefix)
       let matchesTypeFilter = true;
       if (typeFilter !== "all") {
-        const batteryType = getBatteryTypeFromId(battery.batteryID);
+        const batteryType = getBatteryTypeFromId(battery.batteryTypeID);
         matchesTypeFilter = batteryType === typeFilter;
       }
 
@@ -195,73 +195,80 @@ export default function BatteryManagement() {
   };
 
   // Render cell content
-  const renderCell = useCallback((battery: Battery, columnKey: React.Key) => {
-    switch (columnKey) {
-      case "batteryID":
-        return <p className="font-medium text-gray-900">{battery.batteryID}</p>;
-      case "type":
-        const batteryType = getBatteryTypeFromId(battery.batteryID);
-        return <span className="text-sm text-gray-900">{batteryType}</span>;
-      case "status":
-        return (
-          <Chip
-            size="sm"
-            variant="flat"
-            color={getStatusColor(battery.batteryStatus)}
-          >
-            {getStatusLabel(battery.batteryStatus)}
-          </Chip>
-        );
-      case "health":
-        return (
-          <div className="flex items-center gap-2">
-            <div className="w-24 bg-gray-200 rounded-full h-2">
-              <div
-                className={`h-2 rounded-full transition-all ${
-                  battery.soH >= 80
-                    ? "bg-green-500"
-                    : battery.soH >= 50
-                    ? "bg-yellow-500"
-                    : "bg-red-500"
-                }`}
-                style={{ width: `${battery.soH}%` }}
-              />
-            </div>
-            <Chip size="sm" variant="flat" color={getHealthColor(battery.soH)}>
-              {battery.soH}%
+  const renderCell = useCallback(
+    (battery: BatteryDTO, columnKey: React.Key) => {
+      switch (columnKey) {
+        case "batteryID":
+          return (
+            <p className="font-medium text-gray-900">{battery.batteryID}</p>
+          );
+        case "type":
+          const batteryType = getBatteryTypeFromId(battery.batteryTypeID);
+          return <span className="text-sm text-gray-900">{batteryType}</span>;
+        case "status":
+          return (
+            <Chip
+              size="sm"
+              variant="flat"
+              color={getStatusColor(battery.status)}
+            >
+              {getStatusLabel(battery.status)}
             </Chip>
-          </div>
-        );
-      case "charge":
-        return (
-          <div className="flex items-center gap-2">
-            <div className="w-24 bg-gray-200 rounded-full h-2">
-              <div
-                className="h-2 rounded-full bg-blue-500 transition-all"
-                style={{ width: `${battery.currentPercentage}%` }}
-              />
+          );
+        case "health":
+          return (
+            <div className="flex items-center gap-2">
+              <div className="w-24 bg-gray-200 rounded-full h-2">
+                <div
+                  className={`h-2 rounded-full transition-all ${
+                    battery.soH >= 80
+                      ? "bg-green-500"
+                      : battery.soH >= 50
+                      ? "bg-yellow-500"
+                      : "bg-red-500"
+                  }`}
+                  style={{ width: `${battery.soH}%` }}
+                />
+              </div>
+              <Chip
+                size="sm"
+                variant="flat"
+                color={getHealthColor(battery.soH)}
+              >
+                {battery.soH}%
+              </Chip>
             </div>
-            <span className="text-sm font-medium text-gray-900">
-              {battery.currentPercentage}%
+          );
+        case "charge":
+          return (
+            <div className="flex items-center gap-2">
+              <div className="w-24 bg-gray-200 rounded-full h-2">
+                <div
+                  className="h-2 rounded-full bg-blue-500 transition-all"
+                  style={{ width: `${battery.percentage}%` }}
+                />
+              </div>
+              <span className="text-sm font-medium text-gray-900">
+                {battery.percentage}%
+              </span>
+            </div>
+          );
+        case "location":
+          return (
+            <span className="text-sm text-gray-600">{battery.position}</span>
+          );
+        case "createdAt":
+          return (
+            <span className="text-sm text-gray-600">
+              {formatDate(new Date().toISOString())}
             </span>
-          </div>
-        );
-      case "location":
-        return (
-          <span className="text-sm text-gray-600">
-            {battery.currentLocationStatus}
-          </span>
-        );
-      case "createdAt":
-        return (
-          <span className="text-sm text-gray-600">
-            {formatDate(battery.createdAt)}
-          </span>
-        );
-      default:
-        return null;
-    }
-  }, []);
+          );
+        default:
+          return null;
+      }
+    },
+    []
+  );
 
   return (
     <div className="h-full flex flex-col overflow-hidden">
@@ -418,7 +425,7 @@ export default function BatteryManagement() {
                 items={items}
                 emptyContent="No batteries found matching your criteria"
               >
-                {(item: Battery) => (
+                {(item: BatteryDTO) => (
                   <TableRow key={item.batteryID}>
                     {(columnKey) => (
                       <TableCell>{renderCell(item, columnKey)}</TableCell>

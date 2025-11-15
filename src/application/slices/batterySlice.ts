@@ -1,4 +1,4 @@
-import { Battery } from "@/domain/entities/Battery";
+import { BatteryDTO } from "@/domain/dto/Battery/BatteryDTO";
 import { createSlice } from "@reduxjs/toolkit";
 import {
   fetchAllBatteries,
@@ -8,8 +8,8 @@ import {
 } from "../services/batteryService";
 
 interface BatteryState {
-  batteries: Battery[];
-  selectedBattery: Battery | null;
+  batteries: BatteryDTO[];
+  selectedBattery: BatteryDTO | null;
   loading: boolean;
   updating: boolean; // Loading state cho update operations
   error: string | null;
