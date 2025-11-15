@@ -2,7 +2,7 @@ import {
   BatteryListResponse,
   UpdateBatteryParams,
   UpdateBatteryResponse,
-} from "../entities/Battery";
+} from "../dto/Battery/BatteryDTO";
 
 export interface GetBatteriesParams {
   pageNumber?: number;

@@ -1,4 +1,4 @@
-import { BatteryListResponse } from "@/domain/entities/Battery";
+import { BatteryListResponse } from "@/domain/dto/Battery/BatteryDTO";
 import {
   IBatteryRepository,
   GetBatteriesParams,

@@ -1,22 +1,27 @@
+/**
+ * Battery Entity - Phản ánh cấu trúc database
+ * Chứa tất cả các trường từ bảng Battery trong database
+ */
 export interface Battery {
-  batteryID: string;
-  soH: number; // State of Health
-  currentLocationStatus: string; // "idle", "in-use", etc.
-  batteryStatus: string | null; // "available", "faulty", null
-  currentPercentage: number;
-  createdAt: string; // ISO 8601 date-time string
+  battery_id: string; // PK
+  battery_type_id: string; // FK
+  last_station_id: string; // FK
+  capacity_kWh: number;
+  position: "in_vehicle" | "at_station_idle" | "in_transit";
+  status: "charging" | "available" | "faulty" | null;
+  SoH: number; // State of Health
+  percentage: number;
+  current_slot_id?: string; // FK (optional)
+  current_vehicle_id?: string; // FK (optional)
 }
 
 /**
  * Utility function to get battery type from batteryID
- * Based on first 3 characters:
- * LAR = "Large"
- * MED = "Medium"
- * SMA = "Small"
+ * Based on battery_type_id
  */
-export const getBatteryTypeFromId = (batteryID: string): string => {
-  const prefix = batteryID.substring(0, 3).toUpperCase();
-  
+export const getBatteryTypeFromId = (batteryTypeId: string): string => {
+  const prefix = batteryTypeId.substring(0, 3).toUpperCase();
+
   switch (prefix) {
     case "LAR":
       return "Large";
@@ -28,27 +33,3 @@ export const getBatteryTypeFromId = (batteryID: string): string => {
       return "Unknown";
   }
 };
-
-export interface BatteryListResponse {
-  success: boolean;
-  message: string;
-  data: Battery[];
-  pagination: {
-    page: number;
-    limit: number;
-    totalItems: number;
-    totalPages: number;
-  };
-}
-
-export interface UpdateBatteryParams {
-  batteryID: string;
-  batterySlotID?: string;
-  currentPercentage?: number;
-}
-
-export interface UpdateBatteryResponse {
-  success: boolean;
-  message: string;
-  data?: Battery;
-}

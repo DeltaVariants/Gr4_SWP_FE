@@ -1,7 +1,7 @@
 import {
   UpdateBatteryParams,
   UpdateBatteryResponse,
-} from "@/domain/entities/Battery";
+} from "@/domain/dto/Battery/BatteryDTO";
 import { IBatteryRepository } from "@/domain/repositories/BatteryRepository";
 
 /**
