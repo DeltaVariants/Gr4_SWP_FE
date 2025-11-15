@@ -9,7 +9,7 @@ import { fetchAllBatteryTypes } from "@/application/services/batteryTypeService"
 import { fetchAllStations } from "@/application/services/stationService";
 import { bookingRepositoryAPI } from "@/infrastructure/repositories/BookingRepositoryAPI.impl";
 import { createBookingUseCase } from "@/application/usecases/booking";
-import { Booking } from "@/domain/entities/Booking";
+import { BookingDTO } from "@/domain/dto/Booking/BookingDTO";
 import {
   FaCalendarAlt,
   FaClock,
@@ -36,7 +36,7 @@ const BookingPage = () => {
   // State management
   const [loading, setLoading] = useState(false);
   const [bookingSuccess, setBookingSuccess] = useState(false);
-  const [bookingData, setBookingData] = useState<Booking | null>(null);
+  const [bookingData, setBookingData] = useState<BookingDTO | null>(null);
   const [error, setError] = useState<string>("");
 
   // Booking form data

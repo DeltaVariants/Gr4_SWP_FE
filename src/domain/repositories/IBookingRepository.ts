@@ -1,12 +1,12 @@
 import {
-  Booking,
+  BookingDTO,
   CreateBookingRequest,
   BookingResponse,
-} from "@/domain/entities/Booking";
+} from "@/domain/dto/Booking/BookingDTO";
 
 export interface IBookingRepository {
-  createBooking(request: CreateBookingRequest): Promise<Booking>;
-  getBookingById(bookingId: string): Promise<Booking>;
-  getAllBookingOfUser(userId: string): Promise<Booking[]>;
-  updateBookingStatus(bookingId: string, status: string): Promise<Booking>;
+  createBooking(request: CreateBookingRequest): Promise<BookingDTO>;
+  getBookingById(bookingId: string): Promise<BookingDTO>;
+  getAllBookingOfUser(userId: string): Promise<BookingDTO[]>;
+  updateBookingStatus(bookingId: string, status: string): Promise<BookingDTO>;
 }

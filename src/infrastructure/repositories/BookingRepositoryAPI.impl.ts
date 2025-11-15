@@ -1,128 +1,144 @@
-import { IBookingRepository } from '@/domain/repositories/IBookingRepository';
-import { Booking, CreateBookingRequest } from '@/domain/entities/Booking';
-import api from '@/lib/api';
+import { IBookingRepository } from "@/domain/repositories/IBookingRepository";
+import {
+  BookingDTO,
+  CreateBookingRequest,
+} from "@/domain/dto/Booking/BookingDTO";
+import api from "@/lib/api";
 
 class BookingRepositoryAPI implements IBookingRepository {
-  async createBooking(request: CreateBookingRequest): Promise<Booking> {
+  async createBooking(request: CreateBookingRequest): Promise<BookingDTO> {
     try {
-      const response = await api.post('/api/bookings', request);
+      const response = await api.post("/api/bookings", request);
 
-      console.log('Create Booking Response:', response.data);
+      console.log("Create Booking Response:", response.data);
 
       // Backend có thể trả về { success, message, data } hoặc trực tiếp data
       const bookingData = response.data.data || response.data;
 
       return this.mapResponseToEntity(bookingData);
     } catch (error) {
-      console.error('Error creating booking:', error);
-      const err = error as { 
-        response?: { 
-          status: number; 
-          statusText: string; 
-          data?: { message?: string } 
-        }; 
-        message?: string 
+      console.error("Error creating booking:", error);
+      const err = error as {
+        response?: {
+          status: number;
+          statusText: string;
+          data?: { message?: string };
+        };
+        message?: string;
       };
-      
+
       if (err.response) {
         throw new Error(
-          `Failed to create booking: ${err.response.status} - ${err.response.data?.message || err.response.statusText}`
+          `Failed to create booking: ${err.response.status} - ${
+            err.response.data?.message || err.response.statusText
+          }`
         );
       }
-      throw new Error(err.message || 'Failed to create booking');
+      throw new Error(err.message || "Failed to create booking");
     }
   }
 
-  async getBookingById(bookingId: string): Promise<Booking> {
+  async getBookingById(bookingId: string): Promise<BookingDTO> {
     try {
       const response = await api.get(`/api/bookings/${bookingId}`);
 
-      console.log('Get Booking Response:', response.data);
+      console.log("Get Booking Response:", response.data);
 
       const bookingData = response.data.data || response.data;
       return this.mapResponseToEntity(bookingData);
     } catch (error) {
-      console.error('Error getting booking:', error);
-      const err = error as { 
-        response?: { 
-          status: number; 
-          statusText: string; 
-          data?: { message?: string } 
-        }; 
-        message?: string 
+      console.error("Error getting booking:", error);
+      const err = error as {
+        response?: {
+          status: number;
+          statusText: string;
+          data?: { message?: string };
+        };
+        message?: string;
       };
-      
+
       if (err.response) {
         throw new Error(
-          `Failed to get booking: ${err.response.status} - ${err.response.data?.message || err.response.statusText}`
+          `Failed to get booking: ${err.response.status} - ${
+            err.response.data?.message || err.response.statusText
+          }`
         );
       }
-      throw new Error(err.message || 'Failed to get booking');
+      throw new Error(err.message || "Failed to get booking");
     }
   }
 
-  async getAllBookingOfUser(userId: string): Promise<Booking[]> {
+  async getAllBookingOfUser(userId: string): Promise<BookingDTO[]> {
     try {
       const response = await api.get(`/api/bookings/user/${userId}`);
 
-      console.log('Get User Bookings Response:', response.data);
+      console.log("Get User Bookings Response:", response.data);
 
       const data = response.data.data || response.data;
-      
+
       // If data is array, map all, otherwise return single item in array
       if (Array.isArray(data)) {
         return data.map((item) => this.mapResponseToEntity(item));
       }
       return [this.mapResponseToEntity(data)];
     } catch (error) {
-      console.error('Error getting user bookings:', error);
-      const err = error as { 
-        response?: { 
-          status: number; 
-          statusText: string; 
-          data?: { message?: string } 
-        }; 
-        message?: string 
+      console.error("Error getting user bookings:", error);
+      const err = error as {
+        response?: {
+          status: number;
+          statusText: string;
+          data?: { message?: string };
+        };
+        message?: string;
       };
-      
+
       if (err.response) {
         throw new Error(
-          `Failed to get user bookings: ${err.response.status} - ${err.response.data?.message || err.response.statusText}`
+          `Failed to get user bookings: ${err.response.status} - ${
+            err.response.data?.message || err.response.statusText
+          }`
         );
       }
-      throw new Error(err.message || 'Failed to get user bookings');
+      throw new Error(err.message || "Failed to get user bookings");
     }
   }
 
-  async updateBookingStatus(bookingId: string, status: string): Promise<Booking> {
+  async updateBookingStatus(
+    bookingId: string,
+    status: string
+  ): Promise<BookingDTO> {
     try {
-      const response = await api.put(`/api/bookings/${bookingId}/status`, { status });
+      const response = await api.put(`/api/bookings/${bookingId}/status`, {
+        status,
+      });
 
-      console.log('Update Booking Status Response:', response.data);
+      console.log("Update Booking Status Response:", response.data);
 
       const bookingData = response.data.data || response.data;
       return this.mapResponseToEntity(bookingData);
     } catch (error) {
-      console.error('Error updating booking status:', error);
-      const err = error as { 
-        response?: { 
-          status: number; 
-          statusText: string; 
-          data?: { message?: string } 
-        }; 
-        message?: string 
+      console.error("Error updating booking status:", error);
+      const err = error as {
+        response?: {
+          status: number;
+          statusText: string;
+          data?: { message?: string };
+        };
+        message?: string;
       };
-      
+
       if (err.response) {
         throw new Error(
-          `Failed to update booking status: ${err.response.status} - ${err.response.data?.message || err.response.statusText}`
+          `Failed to update booking status: ${err.response.status} - ${
+            err.response.data?.message || err.response.statusText
+          }`
         );
       }
-      throw new Error(err.message || 'Failed to update booking status');
+      throw new Error(err.message || "Failed to update booking status");
     }
   }
 
-  private mapResponseToEntity(data: Booking): Booking {
+  private mapResponseToEntity(data: BookingDTO): BookingDTO {
     return {
       bookingID: data.bookingID,
       userName: data.userName,
@@ -132,7 +148,7 @@ class BookingRepositoryAPI implements IBookingRepository {
       planName: data.planName,
       bookingTime: data.bookingTime,
       createdAt: data.createdAt,
-      status: data.status as 'pending' | 'cancelled' | 'completed',
+      status: data.status as "pending" | "cancelled" | "completed",
     };
   }
 }

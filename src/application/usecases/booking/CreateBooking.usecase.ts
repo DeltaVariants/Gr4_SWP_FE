@@ -1,10 +1,13 @@
 import { IBookingRepository } from "@/domain/repositories/IBookingRepository";
-import { Booking, CreateBookingRequest } from "@/domain/entities/Booking";
+import {
+  BookingDTO,
+  CreateBookingRequest,
+} from "@/domain/dto/Booking/BookingDTO";
 
 export async function createBookingUseCase(
   bookingRepository: IBookingRepository,
   request: CreateBookingRequest
-): Promise<Booking> {
+): Promise<BookingDTO> {
   // Validate request
   if (!request.userID) {
     throw new Error("User ID is required");

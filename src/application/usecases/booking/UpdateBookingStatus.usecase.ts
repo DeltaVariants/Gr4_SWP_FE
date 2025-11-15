@@ -1,11 +1,11 @@
 import { IBookingRepository } from "@/domain/repositories/IBookingRepository";
-import { Booking } from "@/domain/entities/Booking";
+import { BookingDTO } from "@/domain/dto/Booking/BookingDTO";
 
 export async function updateBookingStatusUseCase(
   bookingRepository: IBookingRepository,
   bookingId: string,
   status: "pending" | "cancelled" | "completed"
-): Promise<Booking> {
+): Promise<BookingDTO> {
   if (!bookingId) {
     throw new Error("Booking ID is required");
   }
