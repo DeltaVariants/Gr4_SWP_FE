@@ -2,7 +2,7 @@ import {
   BatteryListResponse,
   UpdateBatteryParams,
   UpdateBatteryResponse,
-} from "@/domain/dto/Battery/BatteryDTO";
+} from "@/dto";
 import {
   IBatteryRepository,
   GetBatteriesParams,

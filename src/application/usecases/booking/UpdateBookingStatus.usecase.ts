@@ -1,5 +1,5 @@
 import { IBookingRepository } from "@/domain/repositories/IBookingRepository";
-import { BookingDTO } from "@/domain/dto/Booking/BookingDTO";
+import { BookingDTO } from "@/dto";
 
 export async function updateBookingStatusUseCase(
   bookingRepository: IBookingRepository,

@@ -1,7 +1,4 @@
-import {
-  UpdateBatteryParams,
-  UpdateBatteryResponse,
-} from "@/domain/dto/Battery/BatteryDTO";
+import { UpdateBatteryParams, UpdateBatteryResponse } from "@/dto";
 import { IBatteryRepository } from "@/domain/repositories/BatteryRepository";
 
 /**

@@ -1,4 +1,4 @@
-import { BatteryDTO } from "@/domain/dto/Battery/BatteryDTO";
+import { BatteryDTO } from "@/dto";
 import { createSlice } from "@reduxjs/toolkit";
 import {
   fetchAllBatteries,

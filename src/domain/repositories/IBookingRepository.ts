@@ -1,8 +1,4 @@
-import {
-  BookingDTO,
-  CreateBookingRequest,
-  BookingResponse,
-} from "@/domain/dto/Booking/BookingDTO";
+import { BookingDTO, CreateBookingRequest, BookingResponse } from "@/dto";
 
 export interface IBookingRepository {
   createBooking(request: CreateBookingRequest): Promise<BookingDTO>;

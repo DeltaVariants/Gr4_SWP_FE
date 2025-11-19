@@ -1,8 +1,5 @@
 import { IBookingRepository } from "@/domain/repositories/IBookingRepository";
-import {
-  BookingDTO,
-  CreateBookingRequest,
-} from "@/domain/dto/Booking/BookingDTO";
+import { BookingDTO, CreateBookingRequest } from "@/dto";
 import api from "@/lib/api";
 
 class BookingRepositoryAPI implements IBookingRepository {

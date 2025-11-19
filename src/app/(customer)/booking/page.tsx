@@ -9,7 +9,7 @@ import { fetchAllBatteryTypes } from "@/application/services/batteryTypeService"
 import { fetchAllStations } from "@/application/services/stationService";
 import { bookingRepositoryAPI } from "@/infrastructure/repositories/BookingRepositoryAPI.impl";
 import { createBookingUseCase } from "@/application/usecases/booking";
-import { BookingDTO } from "@/domain/dto/Booking/BookingDTO";
+import { BookingDTO } from "@/dto";
 import {
   FaCalendarAlt,
   FaClock,

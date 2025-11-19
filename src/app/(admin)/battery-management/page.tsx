@@ -11,7 +11,7 @@ import {
 } from "@heroui/react";
 import { useAppDispatch, useAppSelector } from "@/application/hooks/useRedux";
 import { fetchAllBatteries } from "@/application/services/batteryService";
-import { BatteryDTO } from "@/domain/dto/Battery/BatteryDTO";
+import { BatteryDTO } from "@/domain/dto/Duy/BatteryDTO";
 import { getBatteryTypeFromId } from "@/domain/entities/Battery";
 import { Select, SelectOption } from "@/presentation/components/ui/Select";
 import { Input } from "@/presentation/components/ui/Input";
