@@ -1,36 +1,52 @@
 "use client";
 
-
 import { withAuth } from '@/hoc/withAuth';
-import { useState } from 'react';
+import { useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import SideBar, { NavigationItem, UserInfo } from '@/presentation/components/common/SideBar';
 import CustomerSideBar from '@/app/(customer)/home/components/CustomerSideBar';
 import { ProfileLayout } from '@/presentation/components/ui/profile/ProfileLayout';
 import { usePathname } from 'next/navigation';
+import { HiHome, HiClipboardCheck, HiViewGrid, HiCalendar, HiArrowRight } from 'react-icons/hi';
 
 export default withAuth(function ProfilePage() {
   const { user } = useAuth();
   const pathname = usePathname();
-  const [isExpanded, setIsExpanded] = useState(true);
 
-  const navigationItems: NavigationItem[] = [
-    { name: 'Dashboard', path: '/dashboardstaff', icon: <></> },
-    { name: 'Check-in', path: '/check-in', icon: <></> },
-    { name: 'Inventory', path: '/inventory', icon: <></> },
-    { name: 'Reports', path: '/reports', icon: <></> },
-    { name: 'Reservations', path: '/reservations', icon: <></> },
-    { name: 'Swap', path: '/swap', icon: <></> },
-  ];
+  // Use same navigation items as EmployeeLayout for consistency
+  const navigationItems: NavigationItem[] = useMemo(
+    () => [
+      { name: 'Dashboard', path: '/dashboardstaff', icon: <HiHome size={18} /> },
+      { name: 'Check-in & Swap', path: '/check-in', icon: <HiClipboardCheck size={18} /> },
+      { name: 'Inventory', path: '/inventory', icon: <HiViewGrid size={18} /> },
+      { name: 'Battery Transfers', path: '/battery-transfers', icon: <HiArrowRight size={18} /> },
+      { name: 'Reservations', path: '/reservations', icon: <HiCalendar size={18} /> },
+    ],
+    []
+  );
+
+  // Normalize role display: Staff/Employee -> Staff (same as EmployeeLayout)
+  const normalizeRole = (role: string | undefined): string => {
+    if (!role) return 'Staff';
+    const roleLower = role.toLowerCase();
+    if (roleLower.includes('staff') || roleLower.includes('employee')) {
+      return 'Staff';
+    }
+    return role;
+  };
+
+  // Get display name - prefer actual name, fallback to email (same as EmployeeLayout)
+  const displayName = user?.name || user?.email || '';
+  const displayRole = normalizeRole(user?.role);
 
   const userInfo: UserInfo = {
-    initials: user?.name ? user.name.split(' ').map((n) => n[0]).slice(0, 2).join('').toUpperCase() : 'U',
-    name: user?.name || user?.email || 'User',
-    plan: user?.role || undefined,
+    initials: displayName ? displayName.split(' ').map((n) => n[0]).slice(0, 2).join('').toUpperCase() : 'EM',
+    name: displayName,
+    plan: displayRole,
     avatarUrl: user?.avatar,
   };
 
-  // Render appropriate sidebar based on role (simple heuristic)
+  // Render appropriate sidebar based on role
   const roleStr = (user?.role || '').toString().toLowerCase();
   const isEmployee = roleStr === 'staff' || roleStr === 'employee';
 
@@ -38,10 +54,10 @@ export default withAuth(function ProfilePage() {
     <div className="min-h-screen bg-[#f5f5f5] flex">
       {isEmployee ? (
         <SideBar
-          isExpanded={isExpanded}
+          isExpanded={true}
           currentPath={pathname || '/profile'}
           navigationItems={navigationItems}
-          onToggle={() => setIsExpanded((p) => !p)}
+          onToggle={() => {}}
           user={userInfo}
         />
       ) : (

@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { BatterySlot } from '@/domain/entities/BatterySlot';
-import { batterySlotRepository } from '@/infrastructure/repositories/BatterySlotRepository';
+import { BatterySlot } from '@/domain/dto/Hoang/BatterySlot';
+import { batterySlotRepository } from '@/infrastructure/repositories/Hoang/BatterySlotRepository';
 
 export const useBatterySlots = (stationId?: string) => {
   const [slots, setSlots] = useState<BatterySlot[]>([]);

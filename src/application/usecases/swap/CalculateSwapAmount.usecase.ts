@@ -3,7 +3,7 @@
  * Calculate amount based on subscription plan
  */
 
-import { subscriptionRepository } from '@/infrastructure/repositories/SubscriptionRepository';
+import { subscriptionRepository } from '@/infrastructure/repositories/Hoang/SubscriptionRepository';
 
 export interface CalculateSwapAmountInput {
   userId: string;

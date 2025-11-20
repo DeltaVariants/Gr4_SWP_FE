@@ -3,8 +3,8 @@
  * Business logic for fetching bookings by station
  */
 
-import { IBookingRepository } from '@/domain/repositories/IBookingRepository';
-import { Booking } from '@/domain/entities/Booking';
+import { IBookingRepository } from '@/domain/repositories/Hoang/IBookingRepository';
+import { Booking } from '@/domain/dto/Hoang/Booking';
 
 export class GetBookingsByStationUseCase {
   constructor(private bookingRepository: IBookingRepository) {}

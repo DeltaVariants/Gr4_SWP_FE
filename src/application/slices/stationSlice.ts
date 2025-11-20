@@ -1,6 +1,6 @@
-import { Station } from "@/domain/entities/Station";
+import { Station } from "@/domain/dto/Hoang/Station";
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
-import { fetchAllStations } from "../services/stationService";
+import { fetchAllStations } from "../services/Hoang/stationService";
 interface StationState {
   stations: Station[];
   selectedStation: Station | null;

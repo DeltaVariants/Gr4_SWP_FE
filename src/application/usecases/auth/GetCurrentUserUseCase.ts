@@ -3,8 +3,8 @@
  * Business logic for fetching current authenticated user
  */
 
-import { IAuthRepository } from '@/domain/repositories/IAuthRepository';
-import { AuthUser } from '@/domain/entities/Auth';
+import { IAuthRepository } from '@/domain/repositories/Hoang/IAuthRepository';
+import { AuthUser } from '@/domain/dto/Hoang/Auth';
 
 export class GetCurrentUserUseCase {
   constructor(private authRepository: IAuthRepository) {}

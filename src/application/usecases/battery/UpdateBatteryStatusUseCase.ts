@@ -1,5 +1,5 @@
-import { IBatteryRepository } from '@/domain/repositories/IBatteryRepository';
-import { UpdateBatteryStatusData } from '@/domain/entities/Battery';
+import { IBatteryRepository } from '@/domain/repositories/Hoang/IBatteryRepository';
+import { UpdateBatteryStatusData } from '@/domain/dto/Hoang/Battery';
 
 export class UpdateBatteryStatusUseCase {
   constructor(private batteryRepository: IBatteryRepository) {}

@@ -4,9 +4,9 @@
  * Note: Backend có thể yêu cầu batteries, nhưng chúng ta sẽ thử tìm transaction đã tồn tại trước
  */
 
-import { swapTransactionRepository } from '@/infrastructure/repositories/SwapTransactionRepository';
-import { SwapTransaction } from '@/domain/entities/SwapTransaction';
-import { Booking } from '@/domain/entities/Booking';
+import { swapTransactionRepository } from '@/infrastructure/repositories/Hoang/SwapTransactionRepository';
+import { SwapTransaction } from '@/domain/dto/Hoang/SwapTransaction';
+import { Booking } from '@/domain/dto/Hoang/Booking';
 import api from '@/lib/api';
 
 export interface CreateSwapTransactionFromBookingInput {

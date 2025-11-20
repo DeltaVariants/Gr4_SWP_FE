@@ -3,8 +3,8 @@
  * Business logic for searching booking by ID, customer name, or vehicle plate
  */
 
-import { IBookingRepository } from '@/domain/repositories/IBookingRepository';
-import { Booking } from '@/domain/entities/Booking';
+import { IBookingRepository } from '@/domain/repositories/Hoang/IBookingRepository';
+import { Booking } from '@/domain/dto/Hoang/Booking';
 
 export class SearchBookingUseCase {
   constructor(private bookingRepository: IBookingRepository) {}

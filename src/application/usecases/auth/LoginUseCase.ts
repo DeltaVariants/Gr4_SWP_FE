@@ -3,8 +3,8 @@
  * Business logic for user login
  */
 
-import { IAuthRepository } from '@/domain/repositories/IAuthRepository';
-import { LoginCredentials, AuthResponse } from '@/domain/entities/Auth';
+import { IAuthRepository } from '@/domain/repositories/Hoang/IAuthRepository';
+import { LoginCredentials, AuthResponse } from '@/domain/dto/Hoang/Auth';
 
 export class LoginUseCase {
   constructor(private authRepository: IAuthRepository) {}

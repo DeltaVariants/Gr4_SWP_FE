@@ -2,8 +2,8 @@
  * Types cho Check-in Flow
  */
 
-import { Booking } from '@/domain/entities/Booking';
-import { Battery } from '@/domain/entities/Battery';
+import { Booking } from '@/domain/dto/Hoang/Booking';
+import { Battery } from '@/domain/dto/Hoang/Battery';
 
 export type CheckInStep = 'verify' | 'swap' | 'completed';
 

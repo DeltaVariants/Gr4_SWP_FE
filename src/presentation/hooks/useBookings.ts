@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Booking } from '@/domain/entities/Booking';
+import { Booking } from '@/domain/dto/Hoang/Booking';
 import { getBookingsByStationUseCase, updateBookingStatusUseCase } from '@/application/usecases/booking';
 import { confirmBookingUseCase, ConfirmBookingResult } from '@/application/usecases/booking/ConfirmBooking.usecase';
 
@@ -47,13 +47,15 @@ export const useBookings = (stationId?: string, options: UseBookingsOptions = {}
   // Update booking status
   const updateStatus = useCallback(async (
     bookingId: string,
-    status: Booking['bookingStatus']
+    status: Booking['bookingStatus'] | string
   ) => {
     try {
       setLoading(true);
       setError(null);
 
-      await updateBookingStatusUseCase.execute(bookingId, status);
+      // Convert to string if needed (for type compatibility)
+      const statusStr = typeof status === 'string' ? status : String(status);
+      await updateBookingStatusUseCase.execute(bookingId, statusStr);
 
       // Refetch bookings after update
       await fetchBookings();

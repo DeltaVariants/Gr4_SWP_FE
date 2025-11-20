@@ -8,7 +8,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth as useAuthHook } from '@/presentation/hooks/useAuth';
-import { AuthUser, LoginCredentials, RegisterData } from '@/domain/entities/Auth';
+import { AuthUser, LoginCredentials, RegisterData } from '@/domain/dto/Hoang/Auth';
 
 // Định nghĩa kiểu dữ liệu cho context
 interface AuthContextType {
@@ -120,19 +120,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       const response = await authHook.login(credentials);
       
-      // CRITICAL: Load user data IMMEDIATELY after login before redirect
-      // This ensures user data is available when the new page loads
-      console.log('[AuthContext] Login successful, loading user data...');
-      try {
-        await authHook.getCurrentUser();
-        console.log('[AuthContext] User data loaded successfully after login');
-      } catch (userError) {
-        console.error('[AuthContext] Failed to load user after login:', userError);
-        // Continue anyway - user can refresh if needed
-      }
+      // User data is already set by authHook.login() from login response
+      // No need to call getCurrentUser() immediately - it may fail if backend has issues
+      // User data will be refreshed on next page load if needed
+      console.log('[AuthContext] Login successful, user data from login response:', authHook.user);
       
-      // Get role from localStorage (set by login use case)
-      const role = localStorage.getItem('role') || authHook.user?.role || 'EMPLOYEE';
+      // Get role from user data or localStorage
+      const role = authHook.user?.role || localStorage.getItem('role') || 'EMPLOYEE';
       
       // NOTE: No need for session API - middleware reads directly from localStorage
       // Token is already stored in localStorage by LoginUseCase

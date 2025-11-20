@@ -3,7 +3,7 @@
 import React, { useMemo, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import SideBar, { NavigationItem, UserInfo } from '@/presentation/components/common/SideBar';
-import { HiHome, HiClipboardCheck, HiViewGrid, HiCalendar, HiArrowRight } from 'react-icons/hi';
+import { HiHome, HiClipboardCheck, HiViewGrid, HiCalendar } from 'react-icons/hi';
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function EmployeeLayout({ children }: { children: React.ReactNode }) {
@@ -16,7 +16,6 @@ export default function EmployeeLayout({ children }: { children: React.ReactNode
       { name: 'Dashboard', path: '/dashboardstaff', icon: <HiHome size={18} /> },
       { name: 'Check-in & Swap', path: '/check-in', icon: <HiClipboardCheck size={18} /> },
       { name: 'Inventory', path: '/inventory', icon: <HiViewGrid size={18} /> },
-      { name: 'Battery Transfers', path: '/battery-transfers', icon: <HiArrowRight size={18} /> },
       // Reports is Admin-only - Backend API returns 403 Forbidden for Staff/Employee
       // { name: 'Reports', path: '/reports', icon: <HiDocumentReport size={18} /> },
       { name: 'Reservations', path: '/reservations', icon: <HiCalendar size={18} /> },

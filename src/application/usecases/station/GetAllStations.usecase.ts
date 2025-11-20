@@ -1,8 +1,8 @@
 // Nhận tất cả các trạm
 //Viết một hàm async function getAllStationsUseCase(repo: IStationRepository) nhận vào "Hợp đồng" (Lớp 1) và gọi repo.getAll()
 
-import { Station } from "@/domain/entities/Station";
-import { IStationRepository } from "@/domain/repositories/StationRepository";
+import { Station } from "@/domain/dto/Hoang/Station";
+import { IStationRepository } from "@/domain/repositories/Hoang/StationRepository";
 
 export async function getAllStationsUseCase(
   stationRepository: IStationRepository

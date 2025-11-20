@@ -4,8 +4,8 @@
  * Backend automatically creates SwapTransaction with status="initiated" when status="completed"
  */
 
-import { bookingRepository } from '@/infrastructure/repositories/BookingRepository';
-import { Booking } from '@/domain/entities/Booking';
+import { bookingRepository } from '@/infrastructure/repositories/Hoang/BookingRepository';
+import { Booking } from '@/domain/dto/Hoang/Booking';
 
 export interface ConfirmBookingResult {
   booking: Booking;

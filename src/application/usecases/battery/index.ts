@@ -3,7 +3,7 @@
  * Export all configured battery use case instances
  */
 
-import { batteryRepository } from '@/infrastructure/repositories/BatteryRepository';
+import { batteryRepository } from '@/infrastructure/repositories/Hoang/BatteryRepository';
 import { GetBatteriesByStationUseCase } from './GetBatteriesByStationUseCase';
 import { GetBatteryInventoryUseCase } from './GetBatteryInventoryUseCase';
 import { UpdateBatteryStatusUseCase } from './UpdateBatteryStatusUseCase';

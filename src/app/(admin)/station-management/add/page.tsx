@@ -2,14 +2,14 @@
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useState } from "react";
-import { Station } from "@/domain/entities/Station";
+import { Station } from "@/domain/dto/Hoang/Station";
 import { AdminInput } from "../../components/AdminInput";
 import { Modal } from "@/presentation/components/ui/Modal";
-import { stationRepositoryAPI } from "@/infrastructure/repositories/StationRepositoryAPI.impl";
-import { CreateStationRequest } from "@/domain/repositories/StationRepository";
+import { stationRepositoryAPI } from "@/infrastructure/repositories/Hoang/StationRepositoryAPI.impl";
+import { CreateStationRequest } from "@/domain/repositories/Hoang/StationRepository";
 import { createStationUseCase } from "@/application/usecases/station/CreateStation.usecase";
 import { useAppDispatch } from "@/application/hooks/useRedux";
-import { fetchAllStations } from "@/application/services/stationService";
+import { fetchAllStations } from "@/application/services/Hoang/stationService";
 
 export default function AddStation() {
   const router = useRouter();

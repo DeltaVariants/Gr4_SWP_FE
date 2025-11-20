@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { BatteryTransfer } from '@/domain/entities/BatteryTransfer';
-import { batteryTransferRepository } from '@/infrastructure/repositories/BatteryTransferRepository';
+import { BatteryTransfer } from '@/domain/dto/Hoang/BatteryTransfer';
+import { batteryTransferRepository } from '@/infrastructure/repositories/Hoang/BatteryTransferRepository';
 
 interface UseBatteryTransfersOptions {
   transferId?: string;

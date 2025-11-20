@@ -6,8 +6,8 @@
  */
 
 import { useState, useCallback, useEffect } from 'react';
-import { authRepository } from '@/infrastructure/repositories/AuthRepository';
-import { AuthUser, LoginCredentials, RegisterData } from '@/domain/entities/Auth';
+import { authRepository } from '@/infrastructure/repositories/Hoang/AuthRepository';
+import { AuthUser, LoginCredentials, RegisterData } from '@/domain/dto/Hoang/Auth';
 
 export interface AuthHookReturn {
   user: AuthUser | null;

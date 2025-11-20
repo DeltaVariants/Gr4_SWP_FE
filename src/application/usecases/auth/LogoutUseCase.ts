@@ -3,7 +3,7 @@
  * Business logic for user logout
  */
 
-import { IAuthRepository } from '@/domain/repositories/IAuthRepository';
+import { IAuthRepository } from '@/domain/repositories/Hoang/IAuthRepository';
 
 export class LogoutUseCase {
   constructor(private authRepository: IAuthRepository) {}

@@ -6,35 +6,30 @@ import { useMemo, useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useBookings } from '@/presentation/hooks/useBookings';
 import { useToast } from '@/presentation/components/ui/Notification';
-import { Clock, RefreshCw, Filter, Calendar, User, Car, Battery, CheckCircle2, Loader2 } from 'lucide-react';
+import { Clock, RefreshCw, Filter, Calendar, User, Car, Battery, CheckCircle2, Loader2, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 function StatusBadge({ value }: { value: string }) {
+  // Backend returns: Pending, Cancelled, Completed (PascalCase)
+  // Note: "Confirmed" exists in enum but is never returned to frontend (immediately becomes "Completed")
   const valueLower = value.toLowerCase();
   const map: Record<string, { style: string; text: string }> = {
     pending: { 
       style: 'bg-amber-50 text-amber-700 ring-1 ring-amber-200', 
       text: 'Pending' 
     },
-    booked: { 
-      style: 'bg-indigo-50 text-indigo-700 ring-1 ring-indigo-200', 
-      text: 'Waiting' 
-    },
-    queue: { 
-      style: 'bg-indigo-50 text-indigo-700 ring-1 ring-indigo-200', 
-      text: 'Queue' 
-    },
-    checked: { 
-      style: 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200', 
-      text: 'Checked In' 
-    },
-    completed: { 
-      style: 'bg-gray-100 text-gray-600 ring-1 ring-gray-300', 
-      text: 'Completed' 
-    },
     cancelled: { 
       style: 'bg-rose-50 text-rose-700 ring-1 ring-rose-200', 
       text: 'Cancelled' 
+    },
+    completed: { 
+      style: 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200', 
+      text: 'Completed' 
+    },
+    // Handle "confirmed" if it somehow appears (shouldn't happen)
+    confirmed: { 
+      style: 'bg-indigo-50 text-indigo-700 ring-1 ring-indigo-200', 
+      text: 'Confirmed' 
     },
   };
   const config = map[valueLower] || { 
@@ -51,14 +46,46 @@ function StatusBadge({ value }: { value: string }) {
 export default withStaffAuth(function ReservationsPage() {
   const router = useRouter();
   const [q, setQ] = useState('');
-  const [filterStatus, setFilterStatus] = useState<string>('pending'); // pending, waiting, checked-in, cancelled, all
+  const [filterStatus, setFilterStatus] = useState<string>('all'); // completed, cancelled, all (pending hidden if not used)
   const [autoRefresh, setAutoRefresh] = useState(true);
-  const [confirmingId, setConfirmingId] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10); // 10 items per page
   const { showToast } = useToast();
   const { user, loading: authLoading } = useAuth();
 
-  // Get stationId from user profile (backend now includes this in /api/auth/me)
-  const stationId = (user as any)?.stationId || (user as any)?.StationId || (user as any)?.stationID;
+  // Get stationId from user profile - resolve from stationName if needed
+  const [stationId, setStationId] = useState<string | undefined>(
+    (user as any)?.stationId || (user as any)?.StationId || (user as any)?.stationID
+  );
+  
+  // Resolve stationID from stationName if not available
+  useEffect(() => {
+    const resolveStationId = async () => {
+      // If stationId is already a valid GUID, use it
+      if (stationId && /^[0-9a-f-]{36}$/i.test(stationId)) {
+        return;
+      }
+      
+      // If user has stationName but no valid stationId, try to resolve it
+      const stationName = user?.stationName;
+      if (stationName && !stationId) {
+        try {
+          const { getStationIdByName } = await import('@/application/services/Hoang/stationService');
+          const resolvedId = await getStationIdByName(stationName);
+          if (resolvedId) {
+            console.log('[Reservations] Resolved stationID from stationName:', resolvedId);
+            setStationId(resolvedId);
+          }
+        } catch (e) {
+          console.error('[Reservations] Error resolving stationID from name:', e);
+        }
+      }
+    };
+    
+    if (user && !authLoading) {
+      resolveStationId();
+    }
+  }, [user, stationId, authLoading]);
   
   // Debug log
   useEffect(() => {
@@ -66,6 +93,7 @@ export default withStaffAuth(function ReservationsPage() {
       hasUser: !!user,
       userId: user?.userId,
       stationId,
+      stationName: user?.stationName,
       authLoading,
       userKeys: user ? Object.keys(user) : []
     });
@@ -73,7 +101,7 @@ export default withStaffAuth(function ReservationsPage() {
 
   // Use custom hook to fetch bookings - ONLY when user is loaded and has stationId
   // Pass undefined if not ready to prevent premature API calls
-  const { bookings, loading, error, refetch, updateStatus, confirm } = useBookings(
+  const { bookings, loading, error, refetch, updateStatus } = useBookings(
     (!authLoading && stationId) ? stationId : undefined
   );
 
@@ -86,70 +114,29 @@ export default withStaffAuth(function ReservationsPage() {
 
   // Handle cancel booking
   const handleCancelBooking = useCallback(async (bookingId: string) => {
-    if (!window.confirm('Bạn có chắc chắn muốn hủy booking này?')) return;
+    if (!window.confirm('Are you sure you want to cancel this booking?')) return;
     
     try {
       console.log('[Reservations] Cancelling booking:', bookingId);
-      // Backend expects lowercase "cancelled" status
-      await updateStatus(bookingId, 'cancelled');
-      showToast({ type: 'success', message: 'Đã hủy booking thành công!' });
+      // Backend expects lowercase "cancelled" but frontend type uses PascalCase
+      await updateStatus(bookingId, 'Cancelled');
+      showToast({ type: 'success', message: 'Booking cancelled successfully!' });
       // Refetch to update the list
       await refetch();
+      // Reset to page 1 if current page becomes empty
+      setCurrentPage(1);
     } catch (err: any) {
       console.error('[Reservations] Failed to cancel booking:', err);
-      const errorMessage = err?.response?.data?.message || err?.message || 'Không thể hủy booking';
+      const errorMessage = err?.response?.data?.message || err?.message || 'Failed to cancel booking';
       showToast({ type: 'error', message: errorMessage });
     }
   }, [updateStatus, refetch, showToast]);
 
   // Handle check-in (redirect to check-in page)
+  // Flow mới: Đi thẳng đến check-in, không cần confirm trước
   const handleCheckIn = useCallback((bookingId: string) => {
-    router.push(`/check-in?reservationId=${bookingId}`);
+    router.push(`/check-in?bookingId=${bookingId}`);
   }, [router]);
-
-  // Handle confirm booking - Confirm booking and navigate to check-in page
-  const handleConfirmBooking = useCallback(async (bookingId: string) => {
-    // Prevent multiple calls
-    if (confirmingId === bookingId) {
-      console.log('[Reservations] ⚠️ Already confirming this booking, skipping...');
-      return;
-    }
-    
-    try {
-      console.log('[Reservations] Confirming booking:', bookingId);
-      
-      // Validate bookingId
-      if (!bookingId || bookingId.trim().length === 0) {
-        throw new Error('Booking ID is missing');
-      }
-      
-      setConfirmingId(bookingId);
-      
-      // Confirm booking - Backend sẽ tự động tạo SwapTransaction với status="initiated"
-      // PATCH /api/bookings/{id}?status=completed
-      // Backend trả về SwapTransactionID trong response
-      const result = await confirm(bookingId);
-      
-      console.log('[Reservations] ✅ Booking confirmed, swapTransactionId:', result.swapTransactionId);
-      
-      showToast({ 
-        type: 'success', 
-        message: 'Booking đã được xác nhận! Đang chuyển đến trang xác thực...' 
-      });
-      
-      // Navigate to check-in page với bookingId
-      // swapTransactionId sẽ được lưu trong URL hoặc state nếu cần
-      router.push(`/check-in?bookingId=${bookingId}${result.swapTransactionId ? `&swapTransactionId=${result.swapTransactionId}` : ''}`);
-    } catch (err: any) {
-      console.error('[Reservations] Failed to confirm booking:', err);
-      const errorMessage = err?.response?.data?.message || err?.message || 'Failed to confirm booking';
-      showToast({ 
-        type: 'error', 
-        message: errorMessage
-      });
-      setConfirmingId(null); // Reset on error
-    }
-  }, [confirmingId, router, showToast, confirm]);
 
   // Define columns with dynamic action buttons
   const columns = useMemo(() => [
@@ -162,63 +149,41 @@ export default withStaffAuth(function ReservationsPage() {
       key: 'actions', 
       header: 'Actions', 
       render: (row: any) => {
+        // Backend returns: Pending, Cancelled, Completed (PascalCase)
+        // Note: "Confirmed" exists in enum but is never returned (immediately becomes "Completed")
         const statusLower = (row.status || '').toLowerCase();
         const isPending = statusLower === 'pending';
-        const isWaiting = ['booked', 'queue'].includes(statusLower);
-        const isChecked = ['checked', 'completed'].includes(statusLower);
+        const isCompleted = statusLower === 'completed'; // Booking đã completed (có subscription) - SwapTransaction đã được tạo
         const isCancelled = statusLower === 'cancelled';
 
         return (
           <div className="flex items-center gap-2">
-            {/* Pending: Show Confirm (go to check-in) + Cancel buttons */}
+            {/* Pending: Staff không xử lý pending bookings (chỉ customer tự xử lý thanh toán) */}
             {isPending && (
+              <span className="text-xs text-amber-600 font-medium">
+                ⏳ Waiting for payment/subscription
+              </span>
+            )}
+
+            {/* Completed: Booking đã completed (có subscription) - SwapTransaction đã được tạo tự động
+                → Hiển thị nút "Continue Swap" để staff complete swap transaction */}
+            {isCompleted && (
               <>
                 <button
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    handleConfirmBooking(row.id);
-                  }}
-                  disabled={confirmingId === row.id}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium text-white bg-emerald-500 hover:bg-emerald-600 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                  onClick={() => handleCheckIn(row.id)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium text-white bg-emerald-600 hover:bg-emerald-700 shadow-sm"
                 >
-                  {confirmingId === row.id ? (
-                    <>
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                      Redirecting...
-                    </>
-                  ) : (
-                    <>
-                      <CheckCircle2 className="w-3.5 h-3.5" />
-                      Confirm & Check-in
-                    </>
-                  )}
+                  <Battery className="w-3.5 h-3.5" />
+                  Continue Swap
                 </button>
                 <button
                   onClick={() => handleCancelBooking(row.id)}
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium text-white bg-red-500 hover:bg-red-600 shadow-sm"
+                  title="Cancel booking"
                 >
-                  Cancel
+                  <X className="w-3.5 h-3.5" />
                 </button>
               </>
-            )}
-
-            {/* Waiting (Booked/Queue): Show Check-in button */}
-            {isWaiting && (
-              <button
-                onClick={() => handleCheckIn(row.id)}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium text-white bg-[#0062FF] hover:bg-[#0052d6] shadow-sm"
-              >
-                <CheckCircle2 className="w-3.5 h-3.5" />
-                Check-in
-              </button>
-            )}
-
-            {/* Checked/Completed: Show status text */}
-            {isChecked && (
-              <span className="text-xs text-emerald-600 font-medium">
-                ✓ {statusLower === 'checked' ? 'Checked In' : 'Completed'}
-              </span>
             )}
 
             {/* Cancelled: Show cancelled text */}
@@ -231,7 +196,7 @@ export default withStaffAuth(function ReservationsPage() {
         );
       }
     },
-  ], [confirmingId, handleConfirmBooking, handleCancelBooking, handleCheckIn]);
+  ], [handleCancelBooking, handleCheckIn]);
 
   // Transform bookings to table data
   const data = useMemo(() => {
@@ -245,22 +210,26 @@ export default withStaffAuth(function ReservationsPage() {
         console.log('[Reservations] Available keys:', Object.keys(b));
       }
       
-      // Support both 'status' and 'bookingStatus' field names from API
-      const status = (b as any).status || b.bookingStatus || 'Booked';
+      // Backend BookingDTOs fields (PascalCase):
+      // - BookingID, UserName, VehicleName, StationName, BatteryType, PlanName, BookingTime, CreatedAt, Status
+      const status = (b as any).Status || (b as any).status || b.bookingStatus || 'Pending';
       
-      // Extract driver and vehicle info - try multiple possible field names
-      const driverName = (b as any).customerName || (b as any).driverName || (b as any).userName || (b as any).fullName || '—';
-      const vehiclePlate = (b as any).vehiclePlate || (b as any).licensePlate || (b as any).vehicleId || (b as any).plateNumber || '—';
+      // Extract driver name - Backend returns UserName (PascalCase)
+      const driverName = (b as any).UserName || (b as any).userName || (b as any).customerName || (b as any).driverName || (b as any).fullName || '—';
       
-      // Try different ID field names
-      const bookingId = b.bookingID || (b as any).id || (b as any).BookingID || (b as any).bookingId;
+      // Extract vehicle info - Backend returns VehicleName (tên xe), not license plate
+      // Note: Backend BookingDTOs doesn't include LicensePlate, only VehicleName
+      const vehicleInfo = (b as any).VehicleName || (b as any).vehicleName || (b as any).vehiclePlate || (b as any).licensePlate || (b as any).vehicleId || (b as any).plateNumber || '—';
+      
+      // Extract booking ID - Backend returns BookingID (PascalCase)
+      const bookingId = (b as any).BookingID || b.bookingID || (b as any).id || (b as any).bookingId;
       
       if (!bookingId) {
         console.error('[Reservations] No ID found for booking:', b);
       }
       
-      // Get booking time for sorting
-      const bookingTimeStr = (b as any).bookingTime || (b as any).BookingTime || (b as any).time || (b as any).bookingHour || '';
+      // Get booking time - Backend returns BookingTime (PascalCase, DateTime)
+      const bookingTimeStr = (b as any).BookingTime || (b as any).bookingTime || (b as any).time || (b as any).bookingHour || '';
       let sortDate: Date | null = null;
       
       if (bookingTimeStr) {
@@ -285,12 +254,32 @@ export default withStaffAuth(function ReservationsPage() {
         }
       }
       
+      // Format booking time for display
+      let displayTime = '--';
+      if (bookingTimeStr) {
+        try {
+          const date = new Date(bookingTimeStr);
+          if (!isNaN(date.getTime())) {
+            // Format: "YYYY-MM-DD HH:mm" or "DD/MM/YYYY HH:mm"
+            displayTime = date.toLocaleString('vi-VN', {
+              year: 'numeric',
+              month: '2-digit',
+              day: '2-digit',
+              hour: '2-digit',
+              minute: '2-digit',
+            });
+          }
+        } catch (e) {
+          console.warn('[Reservations] Failed to format bookingTime:', bookingTimeStr);
+        }
+      }
+      
       return {
         id: bookingId,
-        time: b.bookingTime || '--',
+        time: displayTime,
         driver: driverName,
-        vehicle: vehiclePlate,
-        battery: b.batteryType || '—',
+        vehicle: vehicleInfo, // VehicleName from backend (tên xe)
+        battery: (b as any).BatteryType || b.batteryType || '—', // Backend returns BatteryType (PascalCase)
         status,
         raw: b,
         sortDate: sortDate || new Date(0), // Use epoch if no date available (will sort last)
@@ -317,21 +306,21 @@ export default withStaffAuth(function ReservationsPage() {
     return () => clearInterval(interval);
   }, [autoRefresh, refetch]);
 
+  // Reset to page 1 when filter or search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [q, filterStatus]);
+
   const filtered = useMemo(() => {
     let items = data;
     
-    // Filter by status tab
+    // Filter by status tab - Backend returns: Pending, Cancelled, Completed
+    // Note: "Confirmed" exists in enum but is never returned to frontend
     if (filterStatus === 'pending') {
-      // Pending: status = Pending (not checked in)
       items = items.filter(d => d.status.toLowerCase() === 'pending');
-    } else if (filterStatus === 'waiting') {
-      // Waiting: status = Booked, Queue (confirmed, waiting to process)
-      items = items.filter(d => ['booked', 'queue'].includes(d.status.toLowerCase()));
-    } else if (filterStatus === 'checked-in') {
-      // Checked in: status = Checked, Completed
-      items = items.filter(d => ['checked', 'completed'].includes(d.status.toLowerCase()));
+    } else if (filterStatus === 'completed') {
+      items = items.filter(d => d.status.toLowerCase() === 'completed');
     } else if (filterStatus === 'cancelled') {
-      // Cancelled: status = Cancelled
       items = items.filter(d => d.status.toLowerCase() === 'cancelled');
     }
     // 'all' shows everything
@@ -349,11 +338,25 @@ export default withStaffAuth(function ReservationsPage() {
     return items;
   }, [q, data, filterStatus]);
 
-  // Count by status (case-insensitive)
+  // Count by status (case-insensitive) - Backend returns: Pending, Cancelled, Completed
+  // Note: "Pending" may not appear if users always have subscription before booking
   const pendingCount = data.filter(d => d.status.toLowerCase() === 'pending').length;
-  const waitingCount = data.filter(d => ['booked', 'queue'].includes(d.status.toLowerCase())).length;
-  const checkedCount = data.filter(d => ['checked', 'completed'].includes(d.status.toLowerCase())).length;
+  const completedCount = data.filter(d => d.status.toLowerCase() === 'completed').length;
   const cancelledCount = data.filter(d => d.status.toLowerCase() === 'cancelled').length;
+
+  // Pagination logic
+  const totalPages = Math.ceil(filtered.length / itemsPerPage);
+  const paginatedData = useMemo(() => {
+    const startIdx = (currentPage - 1) * itemsPerPage;
+    const endIdx = startIdx + itemsPerPage;
+    return filtered.slice(startIdx, endIdx);
+  }, [filtered, currentPage, itemsPerPage]);
+
+  const goToPage = (page: number) => {
+    if (page >= 1 && page <= totalPages) {
+      setCurrentPage(page);
+    }
+  };
 
   // Show loading if auth is still loading or no stationId yet
   const isInitializing = authLoading || !stationId;
@@ -361,39 +364,30 @@ export default withStaffAuth(function ReservationsPage() {
   return (
     <div className="space-y-6">
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl p-5 border border-amber-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="text-sm text-amber-700 font-medium mb-1">Pending</div>
-              <div className="text-3xl font-bold text-amber-900">{pendingCount}</div>
-            </div>
-            <div className="w-12 h-12 rounded-full bg-amber-500 flex items-center justify-center text-white">
-              <Clock className="w-6 h-6" />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-xl p-5 border border-indigo-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="text-sm text-indigo-700 font-medium mb-1">Waiting</div>
-              <div className="text-3xl font-bold text-indigo-900">{waitingCount}</div>
-            </div>
-            <div className="w-12 h-12 rounded-full bg-indigo-500 flex items-center justify-center text-white">
-              <User className="w-6 h-6" />
+      <div className={`grid grid-cols-1 ${pendingCount > 0 ? 'md:grid-cols-3' : 'md:grid-cols-2'} gap-4`}>
+        {/* Only show Pending card if there are pending bookings */}
+        {pendingCount > 0 && (
+          <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl p-5 border border-amber-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-sm text-amber-700 font-medium mb-1">Pending</div>
+                <div className="text-3xl font-bold text-amber-900">{pendingCount}</div>
+              </div>
+              <div className="w-12 h-12 rounded-full bg-amber-500 flex items-center justify-center text-white">
+                <Clock className="w-6 h-6" />
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
         <div className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-xl p-5 border border-emerald-200">
           <div className="flex items-center justify-between">
             <div>
-              <div className="text-sm text-emerald-700 font-medium mb-1">Checked In</div>
-              <div className="text-3xl font-bold text-emerald-900">{checkedCount}</div>
+              <div className="text-sm text-emerald-700 font-medium mb-1">Completed</div>
+              <div className="text-3xl font-bold text-emerald-900">{completedCount}</div>
             </div>
             <div className="w-12 h-12 rounded-full bg-emerald-500 flex items-center justify-center text-white">
-              <CheckCircle2 className="w-6 h-6" />
+              <Battery className="w-6 h-6" />
             </div>
           </div>
         </div>
@@ -415,35 +409,28 @@ export default withStaffAuth(function ReservationsPage() {
       <div className="bg-white rounded-xl shadow-sm p-4 border border-gray-100">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex items-center gap-2 flex-wrap">
+            {/* Only show Pending filter if there are pending bookings */}
+            {pendingCount > 0 && (
+              <button
+                onClick={() => setFilterStatus('pending')}
+                className={`px-4 py-2 rounded-lg font-medium text-sm transition-all ${
+                  filterStatus === 'pending'
+                    ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-white shadow-md'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                Pending
+              </button>
+            )}
             <button
-              onClick={() => setFilterStatus('pending')}
+              onClick={() => setFilterStatus('completed')}
               className={`px-4 py-2 rounded-lg font-medium text-sm transition-all ${
-                filterStatus === 'pending'
-                  ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-white shadow-md'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}
-            >
-              Pending
-            </button>
-            <button
-              onClick={() => setFilterStatus('waiting')}
-              className={`px-4 py-2 rounded-lg font-medium text-sm transition-all ${
-                filterStatus === 'waiting'
-                  ? 'bg-gradient-to-r from-indigo-500 to-indigo-600 text-white shadow-md'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}
-            >
-              Waiting
-            </button>
-            <button
-              onClick={() => setFilterStatus('checked-in')}
-              className={`px-4 py-2 rounded-lg font-medium text-sm transition-all ${
-                filterStatus === 'checked-in'
+                filterStatus === 'completed'
                   ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-md'
                   : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
               }`}
             >
-              Checked In
+              Completed
             </button>
             <button
               onClick={() => setFilterStatus('cancelled')}
@@ -515,7 +502,66 @@ export default withStaffAuth(function ReservationsPage() {
           <p className="text-gray-600">No bookings found</p>
         </div>
       ) : (
-        <Table columns={columns} data={filtered} />
+        <>
+          <Table columns={columns} data={paginatedData} />
+          
+          {/* Pagination Controls */}
+          {totalPages > 1 && (
+            <div className="mt-6 flex items-center justify-center border-t border-gray-200 pt-4">
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => goToPage(currentPage - 1)}
+                  disabled={currentPage === 1}
+                  className="h-9 px-3 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                >
+                  Previous
+                </button>
+                
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => {
+                    // Show first page, last page, current page, and pages around current
+                    const showPage = 
+                      page === 1 || 
+                      page === totalPages || 
+                      (page >= currentPage - 1 && page <= currentPage + 1);
+                    
+                    const showEllipsis = 
+                      (page === currentPage - 2 && currentPage > 3) ||
+                      (page === currentPage + 2 && currentPage < totalPages - 2);
+                    
+                    if (showEllipsis) {
+                      return <span key={page} className="px-2 text-gray-500">...</span>;
+                    }
+                    
+                    if (!showPage) return null;
+                    
+                    return (
+                      <button
+                        key={page}
+                        onClick={() => goToPage(page)}
+                        className={`h-9 w-9 rounded-lg text-sm font-medium transition-all ${
+                          page === currentPage
+                            ? 'bg-blue-600 text-white shadow-sm'
+                            : 'text-gray-700 hover:bg-gray-100'
+                        }`}
+                      >
+                        {page}
+                      </button>
+                    );
+                  })}
+                </div>
+                
+                <button
+                  onClick={() => goToPage(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                  className="h-9 px-3 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

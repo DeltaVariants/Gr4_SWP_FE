@@ -3,8 +3,8 @@
  * Get available batteries at station for swap
  */
 
-import { batteryRepository } from '@/infrastructure/repositories/BatteryRepository';
-import { Battery } from '@/domain/entities/Battery';
+import { batteryRepository } from '@/infrastructure/repositories/Hoang/BatteryRepository';
+import { Battery } from '@/domain/dto/Hoang/Battery';
 
 export interface GetAvailableBatteriesInput {
   stationId: string;

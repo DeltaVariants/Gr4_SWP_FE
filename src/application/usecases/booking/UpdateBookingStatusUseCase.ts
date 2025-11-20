@@ -3,7 +3,7 @@
  * Business logic for updating booking status
  */
 
-import { IBookingRepository } from '@/domain/repositories/IBookingRepository';
+import { IBookingRepository } from '@/domain/repositories/Hoang/IBookingRepository';
 
 export class UpdateBookingStatusUseCase {
   constructor(private bookingRepository: IBookingRepository) {}

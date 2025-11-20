@@ -3,8 +3,8 @@
  * Business logic for completing battery swap
  */
 
-import { IBookingRepository } from '@/domain/repositories/IBookingRepository';
-import { Booking, SwapData } from '@/domain/entities/Booking';
+import { IBookingRepository } from '@/domain/repositories/Hoang/IBookingRepository';
+import { Booking, SwapData } from '@/domain/dto/Hoang/Booking';
 
 export class CompleteSwapUseCase {
   constructor(private bookingRepository: IBookingRepository) {}

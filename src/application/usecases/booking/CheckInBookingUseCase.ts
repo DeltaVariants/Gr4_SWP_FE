@@ -3,8 +3,8 @@
  * Business logic for checking in a booking
  */
 
-import { IBookingRepository } from '@/domain/repositories/IBookingRepository';
-import { Booking, CheckInData } from '@/domain/entities/Booking';
+import { IBookingRepository } from '@/domain/repositories/Hoang/IBookingRepository';
+import { Booking, CheckInData } from '@/domain/dto/Hoang/Booking';
 
 export class CheckInBookingUseCase {
   constructor(private bookingRepository: IBookingRepository) {}

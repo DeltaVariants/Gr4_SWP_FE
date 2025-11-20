@@ -3,9 +3,9 @@
  * Employee checks in customer with vehicle info
  */
 
-import { bookingRepository } from '@/infrastructure/repositories/BookingRepository';
-import { vehicleRepository } from '@/infrastructure/repositories/VehicleRepository';
-import { Booking } from '@/domain/entities/Booking';
+import { bookingRepository } from '@/infrastructure/repositories/Hoang/BookingRepository';
+import { vehicleRepository } from '@/infrastructure/repositories/Hoang/VehicleRepository';
+import { Booking } from '@/domain/dto/Hoang/Booking';
 
 export interface CheckInCustomerInput {
   bookingId: string;

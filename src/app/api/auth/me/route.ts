@@ -40,7 +40,7 @@ export async function GET(req: NextRequest) {
     
     for (let i = 0; i < retries; i++) {
       try {
-        resp = await fetch(`${API_URL}/Auth/me`, {
+        resp = await fetch(`${API_URL}/me`, {
           method: 'GET',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -75,10 +75,10 @@ export async function GET(req: NextRequest) {
     }
 
     const contentType = resp.headers.get('content-type') || '';
-    let data: any = {};
+    let backendResponse: any = {};
     let raw = '';
     if (contentType.includes('application/json')) {
-      data = await resp.json().catch(() => ({}));
+      backendResponse = await resp.json().catch(() => ({}));
     } else {
       raw = await resp.text().catch(() => '');
     }
@@ -94,30 +94,91 @@ export async function GET(req: NextRequest) {
           const maskedIncomingAuth = incomingAuth ? (() => {
             try { const t = incomingAuth.replace(/^Bearer\s+/i, ''); return `${t.slice(0,8)}...(${t.length}ch)`; } catch { return 'present'; }
           })() : null;
-          console.log('[proxy auth me] backend returned status:', resp.status, 'message:', data?.message || raw || 'no message');
-          console.log('[proxy auth me] forwarded incomingAuth present:', !!incomingAuth, 'masked:', maskedIncomingAuth);
-          console.log('[proxy auth me] forwarded cookie header present:', !!incomingCookie, 'tokenCookie:', maskedCookie);
+          
+          console.error('[proxy auth me] ❌ Backend error:', resp.status);
+          console.error('[proxy auth me] Backend URL called:', `${API_URL}/me`);
+          console.error('[proxy auth me] Backend response:', JSON.stringify(backendResponse, null, 2));
+          console.error('[proxy auth me] Forwarded incomingAuth present:', !!incomingAuth, 'masked:', maskedIncomingAuth);
+          console.error('[proxy auth me] Forwarded cookie header present:', !!incomingCookie, 'tokenCookie:', maskedCookie);
+          
+          // Decode token to check user info (for debugging)
+          if (tokenCookie) {
+            try {
+              const parts = tokenCookie.split('.');
+              if (parts.length >= 2) {
+                const payload = JSON.parse(atob(parts[1]));
+                console.error('[proxy auth me] Token payload:', {
+                  userId: payload.nameid || payload.unique_name,
+                  email: payload.email,
+                  role: payload.role,
+                  stationID: payload.StationID || payload.stationID,
+                });
+              }
+            } catch (e) {
+              console.error('[proxy auth me] Could not decode token:', e);
+            }
+          }
         }
-      } catch (e) {}
+      } catch (e) {
+        console.error('[proxy auth me] Error in logging:', e);
+      }
 
-      const message = data?.message || data?.error || raw || 'Failed to fetch profile';
+      // Backend returns ApiResponse format: { Success: false, Message: "...", Data: null }
+      // Or camelCase: { success: false, message: "...", data: null }
+      const message = backendResponse?.Message || backendResponse?.message || backendResponse?.error || raw || 'Failed to fetch profile';
       const status = resp.status || 500;
+      
+      // Log specific error for staff users
+      if (message.includes('Object reference not set') || message.includes('NullReferenceException')) {
+        console.error('[proxy auth me] ⚠️ Backend NullReferenceException - likely _stationService not injected when user has StationID');
+      }
+      
       return NextResponse.json({ success: false, message }, { status });
     }
 
-    // Log stationId/stationName for debugging
+    // Backend returns ApiResponse format: { Success: true, Message: "OK", Data: {...} }
+    // ASP.NET Core may serialize as camelCase: { success: true, message: "OK", data: {...} }
+    // Extract data from ApiResponse.Data (handle both PascalCase and camelCase)
+    const userData = backendResponse?.Data || backendResponse?.data || backendResponse;
+    
+    // Validate that we got user data
+    if (!userData || typeof userData !== 'object') {
+      console.error('[auth/me] Invalid user data structure:', backendResponse);
+      return NextResponse.json(
+        { success: false, message: 'Invalid response format from backend' },
+        { status: 500 }
+      );
+    }
+    
+    // Log full response structure for debugging (staff needs StationID)
     if (process.env.NODE_ENV === 'development') {
-      const stationId = data?.stationId || data?.StationID || data?.stationID || data?.StationId;
-      const stationName = data?.stationName || data?.StationName;
-      console.log('[auth/me] User data received');
+      const stationId = userData?.stationId || userData?.StationID || userData?.stationID || userData?.StationId;
+      const stationName = userData?.stationName || userData?.StationName;
+      const roleName = userData?.roleName || userData?.RoleName;
+      
+      console.log('[auth/me] Backend response structure:', {
+        hasSuccess: 'Success' in backendResponse || 'success' in backendResponse,
+        hasData: 'Data' in backendResponse || 'data' in backendResponse,
+        responseKeys: Object.keys(backendResponse || {}),
+        userDataKeys: Object.keys(userData || {}),
+      });
+      
+      console.log('[auth/me] User data received:');
+      console.log('[auth/me] - roleName:', roleName || 'NOT FOUND');
       console.log('[auth/me] - stationId:', stationId || 'NOT FOUND');
       console.log('[auth/me] - stationName:', stationName || 'NOT FOUND');
-      if (!stationId && !stationName && data) {
-        console.log('[auth/me] - Available keys:', Object.keys(data));
+      
+      // Warn if staff role but no StationID
+      if ((roleName === 'Staff' || roleName === 'STAFF' || roleName === 'Employee') && !stationId) {
+        console.warn('[auth/me] ⚠️ Staff user but no StationID found! This may cause issues.');
+      }
+      
+      if (!stationId && !stationName && userData) {
+        console.log('[auth/me] - Available userData keys:', Object.keys(userData));
       }
     }
 
-    return NextResponse.json({ success: true, data });
+    return NextResponse.json({ success: true, data: userData });
   } catch (e) {
     console.error('[auth/me] Error:', e);
     return NextResponse.json({ success: false, message: 'Internal server error' }, { status: 500 });

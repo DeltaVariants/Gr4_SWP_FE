@@ -3,8 +3,8 @@
  * Business logic for user registration
  */
 
-import { IAuthRepository } from '@/domain/repositories/IAuthRepository';
-import { RegisterData, AuthResponse } from '@/domain/entities/Auth';
+import { IAuthRepository } from '@/domain/repositories/Hoang/IAuthRepository';
+import { RegisterData, AuthResponse } from '@/domain/dto/Hoang/Auth';
 
 export class RegisterUseCase {
   constructor(private authRepository: IAuthRepository) {}

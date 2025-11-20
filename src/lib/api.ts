@@ -4,11 +4,16 @@ import { refreshAccessToken } from "./refreshToken";
 // Tạo instance axios với cấu hình mặc định
 // ENV đã có /api suffix nên không cần thêm
 const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL,
+  baseURL: process.env.NEXT_PUBLIC_API_URL || 'https://gr4-swp-be2-sp25.onrender.com/api',
   headers: {
     "Content-Type": "application/json",
   },
 });
+
+// Log warning if API URL is not set (only in development)
+if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development' && !process.env.NEXT_PUBLIC_API_URL) {
+  console.warn('[API] NEXT_PUBLIC_API_URL not set, using fallback:', api.defaults.baseURL);
+}
 
 // Thêm interceptor cho request
 api.interceptors.request.use(

@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { Battery, BatteryInventory, UpdateBatteryStatusData } from '@/domain/entities/Battery';
+import { Battery, BatteryInventory, UpdateBatteryStatusData } from '@/domain/dto/Hoang/Battery';
 import {
   getBatteriesByStationUseCase,
   getBatteryInventoryUseCase,

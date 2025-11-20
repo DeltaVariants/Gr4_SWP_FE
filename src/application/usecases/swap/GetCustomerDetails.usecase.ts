@@ -3,11 +3,11 @@
  * Get customer info including subscription for verification
  */
 
-import { userRepository } from '@/infrastructure/repositories/UserRepository';
-import { vehicleRepository } from '@/infrastructure/repositories/VehicleRepository';
-import { subscriptionRepository } from '@/infrastructure/repositories/SubscriptionRepository';
-import { User, UserSubscription } from '@/domain/entities/User';
-import { Vehicle } from '@/domain/entities/Vehicle';
+import { userRepository } from '@/infrastructure/repositories/Hoang/UserRepository';
+import { vehicleRepository } from '@/infrastructure/repositories/Hoang/VehicleRepository';
+import { subscriptionRepository } from '@/infrastructure/repositories/Hoang/SubscriptionRepository';
+import { User, UserSubscription } from '@/domain/dto/Hoang/User';
+import { Vehicle } from '@/domain/dto/Hoang/Vehicle';
 
 export interface CustomerDetails {
   user: User;

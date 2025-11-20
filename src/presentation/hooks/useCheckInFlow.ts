@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { Booking } from '@/domain/entities/Booking';
+import { Booking } from '@/domain/dto/Hoang/Booking';
 
 type CheckInStep = 'verify' | 'swap' | 'completed';
 

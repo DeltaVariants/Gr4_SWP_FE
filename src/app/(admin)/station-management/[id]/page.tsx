@@ -3,7 +3,7 @@ import { useEffect } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useAppDispatch, useAppSelector } from "@/application/hooks/useRedux";
-import { fetchAllStations } from "@/application/services/stationService";
+import { fetchAllStations } from "@/application/services/Hoang/stationService";
 
 export default function StationDetail() {
   const params = useParams();

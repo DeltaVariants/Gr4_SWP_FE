@@ -113,13 +113,27 @@ export default withStaffAuth(function InventoryPage() {
   const stationId = user?.stationId;
 
   // Use custom hook to fetch batteries and inventory
-  const { batteries, inventory, loading, error, refetch, updateStatus } = useBatteries(stationId);
+  const { batteries, inventory, loading, error, refetch, refetchInventory, updateStatus } = useBatteries(stationId);
   
   // Use custom hook to fetch battery slots
   const { slots: batterySlots, loading: slotsLoading, error: slotsError, refetch: refetchSlots } = useBatterySlots(stationId);
   
   // Use custom hook to fetch bookings for this station (to check if slots are booked)
   const { bookings, loading: bookingsLoading } = useBookings(stationId, { autoLoad: true });
+  
+  // Listen for inventory refresh events (triggered after swap completion)
+  useEffect(() => {
+    const handleInventoryRefresh = () => {
+      console.log('[Inventory] 🔄 Refreshing inventory after swap completion...');
+      refetch();
+      refetchInventory();
+    };
+    
+    window.addEventListener('inventory-refresh', handleInventoryRefresh);
+    return () => {
+      window.removeEventListener('inventory-refresh', handleInventoryRefresh);
+    };
+  }, [refetch, refetchInventory]);
   
 
   // Show error toast if any

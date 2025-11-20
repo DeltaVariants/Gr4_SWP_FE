@@ -3,11 +3,11 @@
  * Complete the battery swap transaction
  */
 
-import { swapTransactionRepository } from '@/infrastructure/repositories/SwapTransactionRepository';
-import { bookingRepository } from '@/infrastructure/repositories/BookingRepository';
-import { batteryRepository } from '@/infrastructure/repositories/BatteryRepository';
-import { subscriptionRepository } from '@/infrastructure/repositories/SubscriptionRepository';
-import { SwapTransaction } from '@/domain/entities/SwapTransaction';
+import { swapTransactionRepository } from '@/infrastructure/repositories/Hoang/SwapTransactionRepository';
+import { bookingRepository } from '@/infrastructure/repositories/Hoang/BookingRepository';
+import { batteryRepository } from '@/infrastructure/repositories/Hoang/BatteryRepository';
+import { subscriptionRepository } from '@/infrastructure/repositories/Hoang/SubscriptionRepository';
+import { SwapTransaction } from '@/domain/dto/Hoang/SwapTransaction';
 
 export interface CompleteBatterySwapInput {
   bookingId: string;

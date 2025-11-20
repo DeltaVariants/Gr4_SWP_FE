@@ -5,12 +5,12 @@ import { StatCard } from '../components/StatCard';
 import { Table } from '../components/Table';
 import Link from 'next/link';
 import { useMemo, useState, useEffect } from 'react';
-import bookingService from '@/application/services/bookingService';
-import reportsService from '@/application/services/reportsService';
+import bookingService from '@/application/services/Hoang/bookingService';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/presentation/components/ui/Notification';
 import { useBatteries } from '@/presentation/hooks/useBatteries';
-import { Calendar, Battery, DollarSign, AlertTriangle, TrendingUp, Clock, RefreshCw, ArrowRight } from 'lucide-react';
+import { swapTransactionRepository } from '@/infrastructure/repositories/Hoang/SwapTransactionRepository';
+import { Calendar, Battery, AlertTriangle, Clock, RefreshCw, ArrowRight, Repeat } from 'lucide-react';
 
 function StatusBadge({ value }: { value: string }) {
   const statusLower = (value || '').toLowerCase();
@@ -46,6 +46,49 @@ function StatusBadge({ value }: { value: string }) {
   );
 }
 
+function SwapStatusBadge({ value }: { value: string }) {
+  const statusLower = (value || '').toLowerCase();
+  
+  // Backend enum: initiated, in_progress, completed, cancelled, paid, failed
+  const map: Record<string, { style: string; label: string }> = {
+    initiated: { 
+      style: 'bg-blue-50 text-blue-700 ring-1 ring-blue-200',
+      label: 'Initiated'
+    },
+    'in_progress': { 
+      style: 'bg-amber-50 text-amber-700 ring-1 ring-amber-200',
+      label: 'In Progress'
+    },
+    completed: { 
+      style: 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200',
+      label: 'Completed'
+    },
+    cancelled: { 
+      style: 'bg-rose-50 text-rose-700 ring-1 ring-rose-200',
+      label: 'Cancelled'
+    },
+    paid: { 
+      style: 'bg-green-50 text-green-700 ring-1 ring-green-200',
+      label: 'Paid'
+    },
+    failed: { 
+      style: 'bg-red-50 text-red-700 ring-1 ring-red-200',
+      label: 'Failed'
+    },
+  };
+  
+  const config = map[statusLower] || { 
+    style: 'bg-gray-50 text-gray-600 ring-1 ring-gray-200',
+    label: value || 'Unknown'
+  };
+  
+  return (
+    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${config.style}`} title={`Status: ${value}`}>
+      {config.label}
+    </span>
+  );
+}
+
 const columns = [
   { key: 'name', header: 'Customer' },
   { key: 'date', header: 'Date' },
@@ -59,10 +102,12 @@ export default withStaffAuth(function StaffDashboard() {
   const [q, setQ] = useState('');
   const [data, setData] = useState<any[]>(initialData);
   const [loading, setLoading] = useState(false);
-  const [revenue, setRevenue] = useState<any>(null);
-  const [transfers, setTransfers] = useState<any[]>([]);
+  const [swapTransactions, setSwapTransactions] = useState<any[]>([]);
+  const [loadingSwaps, setLoadingSwaps] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [currentPageSwaps, setCurrentPageSwaps] = useState(1);
   const [itemsPerPage] = useState(10); // 10 items per page
+  const [itemsPerPageSwaps] = useState(10); // 10 items per page for swaps
   const { showToast } = useToast();
   const { user, isAuthenticated } = useAuth();
   
@@ -70,54 +115,124 @@ export default withStaffAuth(function StaffDashboard() {
   const stationId = user?.stationId;
   
   // Use useBatteries hook (same as Inventory page) to get station-specific batteries
-  const { batteries, inventory } = useBatteries(stationId);
-
-  // Load local transfers for today's swap count
+  const { batteries, inventory, refetch, refetchInventory } = useBatteries(stationId);
+  
+  // Listen for inventory refresh events (triggered after swap completion)
   useEffect(() => {
+    const handleInventoryRefresh = () => {
+      console.log('[Dashboard] 🔄 Refreshing inventory after swap completion...');
+      refetch();
+      refetchInventory();
+      // Also refresh swap transactions
+      loadSwapTransactions();
+    };
+    
+    window.addEventListener('inventory-refresh', handleInventoryRefresh);
+    return () => {
+      window.removeEventListener('inventory-refresh', handleInventoryRefresh);
+    };
+  }, [refetch, refetchInventory]);
+  
+  // Load swap transactions history
+  const loadSwapTransactions = async () => {
+    if (!stationId) return;
+    
     try {
-      const raw = localStorage.getItem('localTransfers_v1');
-      const list = raw ? JSON.parse(raw) : [];
-      // Filter today's transfers
-      const today = new Date().toDateString();
-      const todayTransfers = list.filter((t: any) => {
-        const transferDate = new Date(t.createdAt).toDateString();
-        return transferDate === today;
+      setLoadingSwaps(true);
+      const swaps = await swapTransactionRepository.getByStation(stationId);
+      console.log('[Dashboard] ✅ Loaded swap transactions:', swaps);
+      // Backend trả về SwapTransactionResponse với UserName, LicensePlate, BookingTime, Cost, SwapStatus
+      
+      // Sort by booking time (newest first) - similar to bookings
+      const sortedSwaps = (swaps || []).sort((a: any, b: any) => {
+        const timeA = a.BookingTime || a.bookingTime || a.swapDate || a.CreatedAt || a.createdAt || '';
+        const timeB = b.BookingTime || b.bookingTime || b.swapDate || b.CreatedAt || b.createdAt || '';
+        
+        if (!timeA && !timeB) return 0;
+        if (!timeA) return 1; // Put items without date at the end
+        if (!timeB) return -1;
+        
+        try {
+          const dateA = new Date(timeA).getTime();
+          const dateB = new Date(timeB).getTime();
+          return dateB - dateA; // Descending order (newest first)
+        } catch (e) {
+          return 0;
+        }
       });
-      setTransfers(todayTransfers);
-    } catch (e) {
-      setTransfers([]);
+      
+      setSwapTransactions(sortedSwaps);
+    } catch (error: any) {
+      console.error('[Dashboard] ❌ Failed to load swap transactions:', error);
+      showToast({
+        type: 'error',
+        message: 'Failed to load swap transaction history',
+      });
+    } finally {
+      setLoadingSwaps(false);
     }
-  }, []);
+  };
+  
+  // Load swap transactions on mount
+  useEffect(() => {
+    loadSwapTransactions();
+  }, [stationId]);
 
   useEffect(() => {
     let mounted = true;
     const load = async () => {
       setLoading(true);
       try {
-        // Pass stationId when available; some backend endpoints require station-scoped requests
-        let stationID = (user as any)?.stationId || (user as any)?.stationName;
-        // If user object doesn't have stationId yet, try to get it from /api/auth/me
-        if (!stationID && typeof window !== 'undefined') {
+        // Get stationId from user context (from login response)
+        let stationID = user?.stationId;
+        const stationName = user?.stationName;
+        
+        // If stationID is not a valid GUID, try to resolve it from stationName
+        if (!stationID || !/^[0-9a-f-]{36}$/i.test(stationID)) {
+          if (stationName) {
+            try {
+              // Try to get stationID from stationName using stationService
+              const { getStationIdByName } = await import('@/application/services/Hoang/stationService');
+              const resolvedId = await getStationIdByName(stationName);
+              if (resolvedId) {
+                stationID = resolvedId;
+                console.log('[dashboardstaff] Resolved stationID from stationName:', stationID);
+              }
+            } catch (e) {
+              console.error('[dashboardstaff] Error resolving stationID from name:', e);
+            }
+          }
+        }
+        
+        // If still no stationID, try to get it from /api/auth/me as fallback
+        // But only if user is authenticated (to avoid unnecessary calls)
+        if (!stationID && isAuthenticated && typeof window !== 'undefined') {
           try {
-            const meRes = await fetch('/api/auth/me', { cache: 'no-store' });
-            const mePayload = await meRes.json().catch(() => ({}));
-            
-            const src = mePayload?.data ?? mePayload?.user ?? mePayload ?? {};
-            const candidate = src?.data ?? src; // sometimes payload.data.data
-            stationID =
-              candidate?.stationId || candidate?.StationID || candidate?.stationID || candidate?.StationId ||
-              candidate?.stationName || candidate?.StationName ||
-              candidate?.station || candidate?.station_id || candidate?.Station || candidate?.Station_Id || undefined;
-            if (stationID) {
-              console.log('[dashboardstaff] Found stationID:', stationID);
-            } else if (process.env.NODE_ENV === 'development') {
-              // surface payload for debugging in dev
-              console.log('[dashboardstaff] No stationID found in /api/auth/me');
-              console.log('[dashboardstaff] Available keys:', Object.keys(candidate));
+            const meRes = await fetch('/api/auth/me', { cache: 'no-store', credentials: 'include' });
+            if (meRes.ok) {
+              const mePayload = await meRes.json().catch(() => ({}));
+              
+              const src = mePayload?.data ?? mePayload?.user ?? mePayload ?? {};
+              const candidate = src?.data ?? src; // sometimes payload.data.data
+              stationID =
+                candidate?.stationId || candidate?.StationID || candidate?.stationID || candidate?.StationId || undefined;
+              if (stationID) {
+                console.log('[dashboardstaff] Found stationID from /api/auth/me:', stationID);
+              }
+            } else {
+              // Backend error (500, etc.) - use cached user data or skip
+              console.warn('[dashboardstaff] /api/auth/me returned', meRes.status, '- using user context data');
             }
           } catch (e) {
             console.error('[dashboardstaff] Error fetching /api/auth/me:', e);
+            // Continue with user context data or undefined
           }
+        }
+        
+        // If still no stationID, log warning but continue (backend may auto-filter by token)
+        if (!stationID && process.env.NODE_ENV === 'development') {
+          console.warn('[dashboardstaff] No stationID available - user:', user);
+          console.warn('[dashboardstaff] Backend may auto-filter bookings by JWT token');
         }
 
         // Load bookings
@@ -173,12 +288,16 @@ export default withStaffAuth(function StaffDashboard() {
             }
           }
           
+          // Backend trả về Status (PascalCase) với giá trị: "Pending", "Confirmed", "Cancelled", "Completed"
+          // Map từ backend field Status hoặc status (camelCase)
+          const backendStatus = b.Status || b.status || b.bookingStatus || 'Pending';
+          
           return {
             id: b.bookingID || b.id || b.BookingID || b.bookingId,
             name: customerName,
             date: dateStr,
             time: timeStr,
-            status: b.bookingStatus || b.status || 'Booked',
+            status: backendStatus, // Backend trả về: "Pending", "Confirmed", "Cancelled", "Completed"
             raw: b,
             sortDate: sortDate || new Date(0), // Use epoch if no date available (will sort last)
           };
@@ -194,20 +313,6 @@ export default withStaffAuth(function StaffDashboard() {
         if (mounted) setData(rows);
 
         // NOTE: Batteries now loaded via useBatteries hook (same as Inventory page)
-        
-        // TODO: Load revenue report - Currently disabled due to 403 permission
-        // Backend requires Admin role for /reports/daily-revenue endpoint
-        // Uncomment when backend grants Staff access
-        /*
-        try {
-          const today = new Date().toISOString().split('T')[0];
-          const revenueData = await reportsService.getRevenueReportInDay({ date: today });
-          if (mounted) setRevenue(revenueData);
-        } catch (e: any) {
-          console.warn('[Dashboard] ⚠️ Could not load revenue data:', e?.message);
-          if (mounted) setRevenue(null);
-        }
-        */
 
       } catch (e: any) {
         showToast({ type: 'error', message: e?.message || 'Failed to load data' });
@@ -238,7 +343,7 @@ export default withStaffAuth(function StaffDashboard() {
     setCurrentPage(1);
   }, [q]);
 
-  // Pagination logic
+  // Pagination logic for bookings
   const totalPages = Math.ceil(filtered.length / itemsPerPage);
   const paginatedData = useMemo(() => {
     const startIdx = (currentPage - 1) * itemsPerPage;
@@ -252,9 +357,28 @@ export default withStaffAuth(function StaffDashboard() {
     }
   };
 
+  // Pagination logic for swap transactions
+  const totalPagesSwaps = Math.ceil(swapTransactions.length / itemsPerPageSwaps);
+  const paginatedSwapTransactions = useMemo(() => {
+    const startIdx = (currentPageSwaps - 1) * itemsPerPageSwaps;
+    const endIdx = startIdx + itemsPerPageSwaps;
+    return swapTransactions.slice(startIdx, endIdx);
+  }, [swapTransactions, currentPageSwaps, itemsPerPageSwaps]);
+
+  const goToPageSwaps = (page: number) => {
+    if (page >= 1 && page <= totalPagesSwaps) {
+      setCurrentPageSwaps(page);
+    }
+  };
+
   // Calculate stats
-  const activeReservations = data.filter(d => d.status === 'Booked').length;
-  const queueCount = data.filter(d => d.status === 'Queue').length;
+  // Backend BookingStatus enum: pending, confirmed, cancelled, completed
+  // Backend trả về status là PascalCase: Pending, Confirmed, Cancelled, Completed
+  // Staff chỉ xử lý completed bookings (đã có subscription và SwapTransaction)
+  const activeReservations = data.filter(d => {
+    const status = (d.status || '').toLowerCase();
+    return status === 'completed'; // Staff chỉ xử lý completed bookings
+  }).length;
   
   // Use inventory data from useBatteries hook (same as Inventory page)
   // This ensures consistency between Dashboard and Inventory
@@ -262,15 +386,12 @@ export default withStaffAuth(function StaffDashboard() {
   const faultyBatteries = inventory?.damaged || 0;
   const totalBatteries = inventory?.total || batteries.length;
   
-  const todayRevenue = revenue?.totalRevenue || revenue?.revenue || 0;
-  
   console.log('[dashboardstaff] Stats:', {
     fullBatteries,
     faultyBatteries,
     totalBatteries,
     batteriesCount: batteries.length,
-    activeReservations,
-    queueCount
+    activeReservations
   });
 
   return (
@@ -304,7 +425,7 @@ export default withStaffAuth(function StaffDashboard() {
               <div className="w-10 h-10 rounded-full bg-rose-500 flex items-center justify-center">
                 <AlertTriangle className="w-5 h-5 text-white" />
               </div>
-              <div className="text-sm text-blue-100">Faulty Batteries</div>
+              <div className="text-sm text-blue-100">Damaged Batteries</div>
             </div>
             <div className="text-4xl font-bold">{faultyBatteries}</div>
           </div>
@@ -312,11 +433,11 @@ export default withStaffAuth(function StaffDashboard() {
       </div>
 
       {/* Current Status */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-6 border border-blue-200">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <div className="text-sm text-blue-700 font-medium mb-1">Waiting for Swap</div>
+              <div className="text-sm text-blue-700 font-medium mb-1">Ready to Swap</div>
               <div className="text-3xl font-bold text-blue-900">{activeReservations}</div>
             </div>
             <div className="w-12 h-12 rounded-full bg-blue-500 flex items-center justify-center text-white">
@@ -326,19 +447,6 @@ export default withStaffAuth(function StaffDashboard() {
           <Link href="/reservations" className="text-sm text-blue-700 font-medium hover:text-blue-800 flex items-center gap-1">
             View Details <ArrowRight className="w-4 h-4" />
           </Link>
-        </div>
-
-        <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl p-6 border border-amber-200">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <div className="text-sm text-amber-700 font-medium mb-1">In Queue</div>
-              <div className="text-3xl font-bold text-amber-900">{queueCount}</div>
-            </div>
-            <div className="w-12 h-12 rounded-full bg-amber-500 flex items-center justify-center text-white">
-              <Clock className="w-6 h-6" />
-            </div>
-          </div>
-          <div className="text-sm text-amber-700">Avg wait: ~6 mins</div>
         </div>
 
         <div className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-xl p-6 border border-emerald-200">
@@ -357,20 +465,137 @@ export default withStaffAuth(function StaffDashboard() {
         </div>
       </div>
 
-      {/* Swap Transactions Overview */}
+      
+
+      {/* Recent Swap Transactions */}
       <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
         <div className="flex items-center justify-between mb-6">
           <div>
             <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-              <Battery className="w-6 h-6 text-emerald-600" />
-              Swap Transactions Overview
+              <Repeat className="w-6 h-6 text-emerald-600" />
+              Recent Swap Transactions
             </h3>
-            <p className="text-sm text-gray-600 mt-1">Recent swap transactions</p>
+            <p className="text-sm text-gray-600 mt-1">All swap transactions at this station (total: {swapTransactions.length})</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <button 
+              onClick={loadSwapTransactions}
+              disabled={loadingSwaps}
+              className="h-10 w-10 rounded-lg bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-all disabled:opacity-50"
+              title="Refresh"
+            >
+              <RefreshCw className={`w-5 h-5 text-gray-600 ${loadingSwaps ? 'animate-spin' : ''}`} />
+            </button>
           </div>
         </div>
-        <div className="text-sm text-gray-500 italic">
-          View detailed swap transactions in <Link href="/reservations" className="text-blue-600 hover:underline">Reservations</Link> page
-        </div>
+        
+        {loadingSwaps ? (
+          <div className="p-12 text-center">
+            <RefreshCw className="w-12 h-12 text-emerald-500 animate-spin mx-auto mb-4" />
+            <p className="text-gray-600">Loading swap transactions...</p>
+          </div>
+        ) : swapTransactions.length === 0 ? (
+          <div className="p-12 text-center">
+            <Repeat className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+            <p className="text-gray-600">No swap transactions found</p>
+          </div>
+        ) : (
+          <>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-gray-200">
+                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Customer</th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">License Plate</th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Booking Time</th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Cost</th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {paginatedSwapTransactions.map((swap: any, index: number) => {
+                    const userName = swap.UserName || swap.userName || swap.driverName || '—';
+                    const licensePlate = swap.LicensePlate || swap.licensePlate || swap.vehiclePlate || '—';
+                    const bookingTime = swap.BookingTime || swap.bookingTime || swap.swapDate || '—';
+                    const cost = swap.Cost || swap.cost || swap.amount || 0;
+                    const status = swap.SwapStatus || swap.swapStatus || swap.status || '—';
+                    
+                    return (
+                      <tr key={swap.SwapTransactionID || swap.swapTransactionID || index} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                        <td className="py-3 px-4 text-sm text-gray-900 font-medium">{userName}</td>
+                        <td className="py-3 px-4 text-sm text-gray-600">{licensePlate}</td>
+                        <td className="py-3 px-4 text-sm text-gray-600">{bookingTime}</td>
+                        <td className="py-3 px-4 text-sm text-gray-900 font-medium">
+                          {typeof cost === 'number' ? `₫${cost.toLocaleString('vi-VN')}` : cost}
+                        </td>
+                        <td className="py-3 px-4">
+                          <SwapStatusBadge value={status} />
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            
+            {/* Pagination Controls for Swap Transactions */}
+            {totalPagesSwaps > 1 && (
+              <div className="mt-6 flex items-center justify-center border-t border-gray-200 pt-4">
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => goToPageSwaps(currentPageSwaps - 1)}
+                    disabled={currentPageSwaps === 1}
+                    className="h-9 px-3 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                  >
+                    Previous
+                  </button>
+                  
+                  <div className="flex items-center gap-1">
+                    {Array.from({ length: totalPagesSwaps }, (_, i) => i + 1).map(page => {
+                      // Show first page, last page, current page, and pages around current
+                      const showPage = 
+                        page === 1 || 
+                        page === totalPagesSwaps || 
+                        (page >= currentPageSwaps - 1 && page <= currentPageSwaps + 1);
+                      
+                      const showEllipsis = 
+                        (page === currentPageSwaps - 2 && currentPageSwaps > 3) ||
+                        (page === currentPageSwaps + 2 && currentPageSwaps < totalPagesSwaps - 2);
+                      
+                      if (showEllipsis) {
+                        return <span key={page} className="px-2 text-gray-500">...</span>;
+                      }
+                      
+                      if (!showPage) return null;
+                      
+                      return (
+                        <button
+                          key={page}
+                          onClick={() => goToPageSwaps(page)}
+                          className={`h-9 w-9 rounded-lg text-sm font-medium transition-all ${
+                            page === currentPageSwaps
+                              ? 'bg-blue-600 text-white shadow-sm'
+                              : 'text-gray-700 hover:bg-gray-100'
+                          }`}
+                        >
+                          {page}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  
+                  <button
+                    onClick={() => goToPageSwaps(currentPageSwaps + 1)}
+                    disabled={currentPageSwaps === totalPagesSwaps}
+                    className="h-9 px-3 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            )}
+          </>
+        )}
       </div>
 
       {/* All Bookings */}
@@ -473,7 +698,7 @@ export default withStaffAuth(function StaffDashboard() {
       {/* Quick Actions */}
       <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
         <h3 className="text-xl font-bold text-gray-900 mb-4">Quick Actions</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           <Link href="/reservations" className="group relative overflow-hidden bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-6 border border-blue-200 hover:shadow-lg transition-all">
             <div className="flex items-start gap-3 mb-3">
               <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center text-white group-hover:scale-110 transition-transform">
@@ -506,18 +731,6 @@ export default withStaffAuth(function StaffDashboard() {
               <div className="flex-1">
                 <div className="font-semibold text-gray-900 mb-1">Inventory</div>
                 <div className="text-sm text-gray-600">Manage battery inventory</div>
-              </div>
-            </div>
-          </Link>
-
-          <Link href="/reports" className="group relative overflow-hidden bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl p-6 border border-purple-200 hover:shadow-lg transition-all">
-            <div className="flex items-start gap-3 mb-3">
-              <div className="w-10 h-10 rounded-full bg-purple-500 flex items-center justify-center text-white group-hover:scale-110 transition-transform">
-                <TrendingUp className="w-5 h-5" />
-              </div>
-              <div className="flex-1">
-                <div className="font-semibold text-gray-900 mb-1">Reports</div>
-                <div className="text-sm text-gray-600">View reports</div>
               </div>
             </div>
           </Link>

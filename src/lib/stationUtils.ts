@@ -2,7 +2,7 @@
  * Utility functions for working with station data
  */
 
-import { AuthUser } from '@/domain/entities/Auth';
+import { AuthUser } from '@/domain/dto/Hoang/Auth';
 
 /**
  * Get station name from user object
@@ -67,7 +67,7 @@ export async function getStationIdForApiAsync(user: AuthUser | null): Promise<st
   // If stationName is available, try to fetch stationId from API
   if (user.stationName) {
     try {
-      const { getStationIdByName } = await import('@/application/services/stationService');
+      const { getStationIdByName } = await import('@/application/services/Hoang/stationService');
       const stationId = await getStationIdByName(user.stationName);
       
       if (stationId) {
@@ -83,7 +83,7 @@ export async function getStationIdForApiAsync(user: AuthUser | null): Promise<st
   // Fallback: if stationId is a name (not a GUID), try to use it for search
   if (user.stationId && !/^[0-9a-f-]{36}$/i.test(user.stationId)) {
     try {
-      const { getStationIdByName } = await import('@/application/services/stationService');
+      const { getStationIdByName } = await import('@/application/services/Hoang/stationService');
       const stationId = await getStationIdByName(user.stationId);
       
       if (stationId) {

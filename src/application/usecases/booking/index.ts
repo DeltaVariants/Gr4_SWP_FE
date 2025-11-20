@@ -3,7 +3,7 @@
  * Export all configured booking use case instances
  */
 
-import { bookingRepository } from '@/infrastructure/repositories/BookingRepository';
+import { bookingRepository } from '@/infrastructure/repositories/Hoang/BookingRepository';
 import { GetBookingsByStationUseCase } from './GetBookingsByStationUseCase';
 import { CheckInBookingUseCase } from './CheckInBookingUseCase';
 import { CompleteSwapUseCase } from './CompleteSwapUseCase';

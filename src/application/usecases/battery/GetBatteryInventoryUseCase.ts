@@ -3,8 +3,8 @@
  * Business logic for fetching battery inventory
  */
 
-import { IBatteryRepository } from '@/domain/repositories/IBatteryRepository';
-import { BatteryInventory } from '@/domain/entities/Battery';
+import { IBatteryRepository } from '@/domain/repositories/Hoang/IBatteryRepository';
+import { BatteryInventory } from '@/domain/dto/Hoang/Battery';
 
 export class GetBatteryInventoryUseCase {
   constructor(private batteryRepository: IBatteryRepository) {}

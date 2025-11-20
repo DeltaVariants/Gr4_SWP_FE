@@ -3,8 +3,8 @@
  * Process payment for battery swap
  */
 
-import { paymentRepository } from '@/infrastructure/repositories/PaymentRepository';
-import { Payment } from '@/domain/entities/Payment';
+import { paymentRepository } from '@/infrastructure/repositories/Hoang/PaymentRepository';
+import { Payment } from '@/domain/dto/Hoang/Payment';
 
 export interface ProcessPaymentInput {
   userId: string;

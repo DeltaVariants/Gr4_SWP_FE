@@ -22,7 +22,10 @@ import {
 import { SwapStepProps } from './types';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/presentation/components/ui/Notification';
-import { swapTransactionRepository } from '@/infrastructure/repositories/SwapTransactionRepository';
+import { swapTransactionRepository } from '@/infrastructure/repositories/Hoang/SwapTransactionRepository';
+import { batteryRepository } from '@/infrastructure/repositories/Hoang/BatteryRepository';
+import { OldBatteryConditionLog } from './OldBatteryConditionLog';
+import { Battery as BatteryType } from '@/domain/dto/Hoang/Battery';
 
 export function SwapStep({
   bookingData,
@@ -37,24 +40,93 @@ export function SwapStep({
   const [loading, setLoading] = useState(false);
   const [loadingTransaction, setLoadingTransaction] = useState(true);
   const [swapTransaction, setSwapTransaction] = useState<any>(null);
+  const [oldBattery, setOldBattery] = useState<BatteryType | null>(null);
+  const [newBattery, setNewBattery] = useState<BatteryType | null>(null);
+  const [loadingBatteries, setLoadingBatteries] = useState(false);
 
-  // Load SwapTransaction details
+  // Load SwapTransaction details and batteries
   useEffect(() => {
-    const loadSwapTransaction = async () => {
+    const loadData = async () => {
       if (!swapTransactionId) {
         setLoadingTransaction(false);
         showToast({
           type: 'error',
-          message: 'SwapTransaction ID not found. Please confirm booking first.',
+          message: 'SwapTransaction ID not found. Please verify booking first.',
         });
         return;
       }
 
       try {
+        setLoadingBatteries(true);
         console.debug('[SwapStep] Loading SwapTransaction:', swapTransactionId);
         const transaction = await swapTransactionRepository.getById(swapTransactionId);
         console.debug('[SwapStep] ✅ Loaded SwapTransaction:', transaction);
         setSwapTransaction(transaction);
+
+        // Load old battery if exists
+        // Backend trả về OldBatteryID (PascalCase) - có thể null nếu customer mới
+        const oldBatteryId = transaction?.OldBatteryID || transaction?.oldBatteryID || transaction?.oldBatteryId;
+        console.log('[SwapStep] 🔍 OldBatteryID from transaction:', {
+          OldBatteryID: transaction?.OldBatteryID,
+          oldBatteryID: transaction?.oldBatteryID,
+          oldBatteryId: transaction?.oldBatteryId,
+          resolved: oldBatteryId,
+          transactionKeys: transaction ? Object.keys(transaction) : []
+        });
+        
+        if (oldBatteryId && oldBatteryId.trim().length > 0) {
+          try {
+            console.debug('[SwapStep] 📥 Loading old battery details:', oldBatteryId);
+            const oldBatteryData = await batteryRepository.getById(oldBatteryId);
+            console.debug('[SwapStep] ✅ Loaded old battery data:', {
+              batteryId: oldBatteryData.batteryId,
+              batteryType: oldBatteryData.batteryType,
+              soH: oldBatteryData.soH,
+              currentPercentage: oldBatteryData.currentPercentage,
+              status: oldBatteryData.status,
+              currentLocation: oldBatteryData.currentLocation,
+              allFields: oldBatteryData
+            });
+            setOldBattery(oldBatteryData);
+          } catch (error: any) {
+            console.error('[SwapStep] ❌ Failed to load old battery:', {
+              batteryId: oldBatteryId,
+              error: error?.message,
+              response: error?.response?.data,
+              status: error?.response?.status
+            });
+            // Continue without old battery (customer may be new or battery not found)
+            // Set oldBattery to null để component hiển thị đúng
+            setOldBattery(null);
+          }
+        } else {
+          console.debug('[SwapStep] ℹ️ No old battery ID (customer may be new)');
+          setOldBattery(null);
+        }
+
+        // Load new battery (already selected by backend)
+        // Backend trả về NewBatteryID (PascalCase) - required field
+        const newBatteryId = transaction?.NewBatteryID || transaction?.newBatteryID || transaction?.newBatteryId;
+        if (newBatteryId && newBatteryId.trim().length > 0) {
+          try {
+            console.debug('[SwapStep] Loading new battery:', newBatteryId);
+            const newBatteryData = await batteryRepository.getById(newBatteryId);
+            console.debug('[SwapStep] ✅ Loaded new battery:', newBatteryData);
+            setNewBattery(newBatteryData);
+          } catch (error: any) {
+            console.error('[SwapStep] ❌ Failed to load new battery:', error);
+            showToast({
+              type: 'error',
+              message: `Failed to load new battery: ${error?.message || 'Unknown error'}`,
+            });
+          }
+        } else {
+          console.error('[SwapStep] ❌ New battery ID is missing in SwapTransaction');
+          showToast({
+            type: 'error',
+            message: 'New battery ID not found in swap transaction. Please contact support.',
+          });
+        }
       } catch (error: any) {
         console.error('[SwapStep] ❌ Failed to load SwapTransaction:', error);
         showToast({
@@ -63,17 +135,18 @@ export function SwapStep({
         });
       } finally {
         setLoadingTransaction(false);
+        setLoadingBatteries(false);
       }
     };
 
-    loadSwapTransaction();
+    loadData();
   }, [swapTransactionId, showToast]);
 
   const handleConfirmSwap = async () => {
     if (!swapTransactionId) {
       showToast({
         type: 'error',
-        message: 'SwapTransaction ID not found. Please confirm booking first.',
+        message: 'SwapTransaction ID not found. Please verify booking first.',
       });
       return;
     }
@@ -84,10 +157,14 @@ export function SwapStep({
       console.debug('[SwapStep] 📤 Completing SwapTransaction:', swapTransactionId);
       console.debug('[SwapStep] ℹ️ Current status:', swapStatus);
       
-      // Backend API: POST /api/swap-transactions/{id}/completed
-      // Backend có thể xử lý status="initiated" trực tiếp, không cần update thành "inprogress"
-      console.debug('[SwapStep] ℹ️ Backend API: POST /api/swap-transactions/{id}/completed (no payload needed)');
-      const result = await swapTransactionRepository.complete(swapTransactionId);
+      // Get SoH from old battery (if available)
+      const soH = oldBattery?.soH || oldBattery?.stateOfHealth;
+      console.debug('[SwapStep] ℹ️ Old battery SoH:', soH);
+      
+      // Backend API: POST /api/swap-transactions/{id}/completed?Soh={soh}
+      // Backend có thể xử lý status="initiated" trực tiếp
+      console.debug('[SwapStep] ℹ️ Backend API: POST /api/swap-transactions/{id}/completed?Soh=', soH);
+      const result = await swapTransactionRepository.complete(swapTransactionId, soH);
 
       console.debug('[SwapStep] ✅ SwapTransaction completed successfully!');
       console.debug('[SwapStep] ✅ Response:', result);
@@ -188,7 +265,7 @@ export function SwapStep({
   const swapStatus = swapTransaction?.swapStatus || swapTransaction?.SwapStatus || swapTransaction?.status || 'N/A';
   const cost = swapTransaction?.cost || swapTransaction?.Cost || 0;
 
-  if (loadingTransaction) {
+  if (loadingTransaction || loadingBatteries) {
     return (
       <div className="bg-white rounded-2xl shadow-lg p-8 border border-gray-100">
         <div className="py-12 text-center">
@@ -232,9 +309,115 @@ export function SwapStep({
       </div>
 
       {/* Swap Information */}
-      <div className="max-w-lg mx-auto space-y-6">
+      <div className="max-w-3xl mx-auto space-y-6">
+        {/* Old Battery Section */}
+        {oldBatteryId && oldBatteryId !== 'N/A' && (
+          <OldBatteryConditionLog
+            oldBattery={oldBattery}
+            oldBatteryId={oldBatteryId}
+          />
+        )}
+
+        {/* New Battery Section */}
+        <div className="bg-white rounded-lg border border-gray-200 p-6 space-y-4">
+          <div className="flex items-center gap-2 mb-4">
+            <BatteryCharging className="w-5 h-5 text-emerald-500" />
+            <h3 className="text-lg font-semibold text-gray-900">New Battery (Selected by System)</h3>
+          </div>
+
+          {newBattery ? (
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Battery ID</label>
+                <div className="text-sm font-medium text-gray-900">{newBattery.batteryId || newBatteryId}</div>
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Battery Type</label>
+                <div className="text-sm font-medium text-gray-900">{newBattery.batteryType || 'N/A'}</div>
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">State of Health (SoH)</label>
+                <div className="flex items-center gap-2">
+                  {typeof newBattery.soH === 'number' ? (
+                    <>
+                      <div className="flex-1 bg-gray-200 rounded-full h-2">
+                        <div 
+                          className={`h-2 rounded-full ${
+                            newBattery.soH >= 80 ? 'bg-green-500' : 
+                            newBattery.soH >= 60 ? 'bg-yellow-500' : 
+                            newBattery.soH >= 40 ? 'bg-orange-500' : 
+                            'bg-red-500'
+                          }`}
+                          style={{ width: `${newBattery.soH}%` }}
+                        />
+                      </div>
+                      <span className="text-sm font-medium text-gray-900 min-w-[3rem] text-right">
+                        {newBattery.soH}%
+                      </span>
+                    </>
+                  ) : (
+                    <span className="text-sm font-medium text-gray-500">{newBattery.soH || 'N/A'}</span>
+                  )}
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Current Percentage</label>
+                <div className="flex items-center gap-2">
+                  {typeof newBattery.currentPercentage === 'number' ? (
+                    <>
+                      <div className="flex-1 bg-gray-200 rounded-full h-2">
+                        <div 
+                          className={`h-2 rounded-full ${
+                            newBattery.currentPercentage >= 80 ? 'bg-green-500' : 
+                            newBattery.currentPercentage >= 50 ? 'bg-yellow-500' : 
+                            newBattery.currentPercentage >= 20 ? 'bg-orange-500' : 
+                            'bg-red-500'
+                          }`}
+                          style={{ width: `${newBattery.currentPercentage}%` }}
+                        />
+                      </div>
+                      <span className="text-sm font-medium text-gray-900 min-w-[3rem] text-right">
+                        {newBattery.currentPercentage}%
+                      </span>
+                    </>
+                  ) : (
+                    <span className="text-sm font-medium text-gray-500">{newBattery.currentPercentage || 'N/A'}</span>
+                  )}
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Status</label>
+                <div className="text-sm font-medium text-gray-900">
+                  <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs ${
+                    newBattery.status === 'Available' ? 'bg-green-100 text-green-800' :
+                    newBattery.status === 'In-Use' ? 'bg-blue-100 text-blue-800' :
+                    newBattery.status === 'Charging' ? 'bg-yellow-100 text-yellow-800' :
+                    newBattery.status === 'Maintenance' ? 'bg-purple-100 text-purple-800' :
+                    newBattery.status === 'Damaged' ? 'bg-red-100 text-red-800' :
+                    'bg-gray-100 text-gray-800'
+                  }`}>
+                    {newBattery.status || 'N/A'}
+                  </span>
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Current Location</label>
+                <div className="text-sm font-medium text-gray-900">
+                  {newBattery.currentLocation || newBattery?.CurrentLocation || 'N/A'}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="text-sm text-gray-600">
+              Battery ID: <code className="px-2 py-1 bg-gray-100 rounded font-mono">{newBatteryId}</code>
+              <p className="text-xs text-gray-500 mt-2">Loading battery details...</p>
+            </div>
+          )}
+        </div>
+
+        {/* Transaction Details */}
         <div className="bg-gray-50 rounded-lg p-6 space-y-4">
-          <h3 className="font-bold text-lg text-gray-900 mb-4">Swap Transaction Details:</h3>
+          <h3 className="font-bold text-lg text-gray-900 mb-4">Transaction Details:</h3>
           <div className="space-y-3">
             <div className="flex justify-between items-center">
               <span className="text-gray-600">Transaction ID:</span>
@@ -251,20 +434,6 @@ export function SwapStep({
               }`}>
                 {swapStatus}
               </span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-gray-600">Old Battery (OUT):</span>
-              <code className="px-2 py-1 bg-red-100 text-red-800 rounded font-mono text-sm flex items-center gap-1">
-                <Battery className="w-4 h-4" />
-                {oldBatteryId}
-              </code>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-gray-600">New Battery (IN):</span>
-              <code className="px-2 py-1 bg-green-100 text-green-800 rounded font-mono text-sm flex items-center gap-1">
-                <BatteryCharging className="w-4 h-4" />
-                {newBatteryId}
-              </code>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-gray-600">Booking ID:</span>

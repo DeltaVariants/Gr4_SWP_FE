@@ -3,7 +3,7 @@
  * Export all configured auth use case instances
  */
 
-import { authRepository } from '@/infrastructure/repositories/AuthRepository';
+import { authRepository } from '@/infrastructure/repositories/Hoang/AuthRepository';
 import { LoginUseCase } from './LoginUseCase';
 import { RegisterUseCase } from './RegisterUseCase';
 import { LogoutUseCase } from './LogoutUseCase';

@@ -3,8 +3,8 @@
  * Business logic for fetching batteries by station
  */
 
-import { IBatteryRepository } from '@/domain/repositories/IBatteryRepository';
-import { Battery } from '@/domain/entities/Battery';
+import { IBatteryRepository } from '@/domain/repositories/Hoang/IBatteryRepository';
+import { Battery } from '@/domain/dto/Hoang/Battery';
 
 export class GetBatteriesByStationUseCase {
   constructor(private batteryRepository: IBatteryRepository) {}
