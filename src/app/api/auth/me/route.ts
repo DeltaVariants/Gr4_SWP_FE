@@ -152,9 +152,25 @@ export async function GET(req: NextRequest) {
     
     // Log full response structure for debugging (staff needs StationID)
     if (process.env.NODE_ENV === 'development') {
-      const stationId = userData?.stationId || userData?.StationID || userData?.stationID || userData?.StationId;
-      const stationName = userData?.stationName || userData?.StationName;
-      const roleName = userData?.roleName || userData?.RoleName;
+      // Try all possible field name variations (backend may use different casing)
+      const stationId = userData?.stationID || 
+                       userData?.StationID || 
+                       userData?.stationId || 
+                       userData?.StationId ||
+                       userData?.station_id ||
+                       (userData as any)?.StationID;
+      const stationName = userData?.stationName || 
+                         userData?.StationName || 
+                         userData?.station_name ||
+                         (userData as any)?.StationName;
+      const roleName = userData?.roleName || 
+                      userData?.RoleName || 
+                      userData?.role ||
+                      (userData as any)?.RoleName;
+      
+      // Check if user is staff/employee (needs stationID) or customer/driver (doesn't need stationID)
+      const isStaffRole = roleName === 'Staff' || roleName === 'STAFF' || roleName === 'Employee' || roleName === 'EMPLOYEE';
+      const isCustomerRole = roleName === 'Customer' || roleName === 'CUSTOMER' || roleName === 'Driver' || roleName === 'DRIVER';
       
       console.log('[auth/me] Backend response structure:', {
         hasSuccess: 'Success' in backendResponse || 'success' in backendResponse,
@@ -165,15 +181,23 @@ export async function GET(req: NextRequest) {
       
       console.log('[auth/me] User data received:');
       console.log('[auth/me] - roleName:', roleName || 'NOT FOUND');
-      console.log('[auth/me] - stationId:', stationId || 'NOT FOUND');
-      console.log('[auth/me] - stationName:', stationName || 'NOT FOUND');
       
-      // Warn if staff role but no StationID
-      if ((roleName === 'Staff' || roleName === 'STAFF' || roleName === 'Employee') && !stationId) {
-        console.warn('[auth/me] ⚠️ Staff user but no StationID found! This may cause issues.');
+      // Only log stationID/stationName for staff roles (customers don't have stations)
+      if (isStaffRole) {
+        console.log('[auth/me] - stationId:', stationId || 'NOT FOUND');
+        console.log('[auth/me] - stationName:', stationName || 'NOT FOUND');
+        
+        // Warn if staff role but no StationID
+        if (!stationId) {
+          console.warn('[auth/me] ⚠️ Staff user but no StationID found! This may cause issues.');
+        }
+      } else if (isCustomerRole) {
+        // Customer/Driver roles don't need stationID - this is normal
+        console.log('[auth/me] - Customer/Driver role - stationID not required');
       }
       
-      if (!stationId && !stationName && userData) {
+      // Only log available keys if staff role and missing station info
+      if (isStaffRole && !stationId && !stationName && userData) {
         console.log('[auth/me] - Available userData keys:', Object.keys(userData));
       }
     }
