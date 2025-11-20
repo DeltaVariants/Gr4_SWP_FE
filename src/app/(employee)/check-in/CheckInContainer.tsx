@@ -110,7 +110,8 @@ export default function CheckInContainer() {
         
         console.log('[CheckIn] Booking status:', { bookingStatus, statusLower });
         
-        // Nếu booking đã completed → Tìm SwapTransaction đã tồn tại và đi thẳng đến SwapStep
+        // Nếu booking đã completed → Tìm SwapTransaction đã tồn tại nhưng VẪN HIỂN THỊ VerifyStep trước
+        // Staff cần xem thông tin khách hàng trước khi thực hiện swap
         if (statusLower === 'completed') {
           console.log('[CheckIn] ⚡ Booking already completed - finding existing SwapTransaction...');
           
@@ -179,27 +180,24 @@ export default function CheckInContainer() {
             }
           };
           
-          // Tìm SwapTransaction với retry
+          // Tìm SwapTransaction với retry (nhưng KHÔNG tự động chuyển sang SwapStep)
           try {
             const foundSwapId = await findSwapTransaction();
             
             if (foundSwapId) {
               console.log('[CheckIn] ✅ Found existing SwapTransaction:', foundSwapId);
               setSwapTransactionId(foundSwapId);
-              // Đi thẳng đến SwapStep (bỏ qua VerifyStep)
-              goToSwap();
-              return;
+              // KHÔNG tự động chuyển sang SwapStep - để staff xem thông tin khách hàng trước
+              // Staff sẽ click "Continue" trong VerifyStep để chuyển sang SwapStep
+              console.log('[CheckIn] 💡 SwapTransaction found but staying on VerifyStep for staff to review customer info');
             } else {
               // Không tìm thấy SwapTransaction sau nhiều lần thử
-              // Theo backend logic, nếu booking completed thì SwapTransaction phải được tạo
-              // Nhưng để tránh block user, vẫn cho phép đi đến VerifyStep để staff có thể xử lý
               console.warn('[CheckIn] ⚠️ Booking is completed but SwapTransaction not found after retries. This may be a backend error.');
               console.warn('[CheckIn] 💡 Proceeding to VerifyStep - staff can manually verify to find/create swap transaction.');
               showToast({
                 type: 'info',
-                message: 'Booking is completed. Swap transaction not found. Please click Verify to find or create it.',
+                message: 'Booking is completed. Swap transaction not found. Please click Continue to find or create it.',
               });
-              // Vẫn ở VerifyStep để staff có thể xử lý
             }
           } catch (swapError) {
             console.error('[CheckIn] ❌ Failed to load swap transactions:', swapError);
@@ -207,7 +205,6 @@ export default function CheckInContainer() {
               type: 'error',
               message: 'Failed to load swap transaction. Please try again or contact support.',
             });
-            // Vẫn ở VerifyStep để staff có thể xử lý
           }
         } else {
           // Booking status = "pending" hoặc "confirmed" → Giữ flow Verify → Swap
@@ -247,8 +244,6 @@ export default function CheckInContainer() {
       
       // Nếu booking đã completed → Tìm SwapTransaction đã tồn tại (không gọi updateStatus)
       if (statusLower === 'completed') {
-        console.log('[CheckIn] 📋 Booking already completed - finding SwapTransaction...');
-        
         // Tìm SwapTransaction đã tồn tại
         let foundSwapId: string | null = null;
         
@@ -276,7 +271,6 @@ export default function CheckInContainer() {
           }
           
           if (foundSwapId) {
-            console.log('[CheckIn] ✅ Found SwapTransaction:', foundSwapId);
             setSwapTransactionId(foundSwapId);
             goToSwap();
             return;
@@ -284,7 +278,6 @@ export default function CheckInContainer() {
             throw new Error('SwapTransaction not found for this completed booking. Please contact support.');
           }
         } catch (swapError: any) {
-          console.error('[CheckIn] ❌ Failed to find SwapTransaction:', swapError);
           showToast({
             type: 'error',
             message: swapError?.message || 'SwapTransaction not found. Please contact support.',
@@ -295,7 +288,6 @@ export default function CheckInContainer() {
       
       // Booking chưa completed → Staff không xử lý pending bookings
       // Pending bookings cần customer thanh toán/tạo subscription trước
-      console.error('[CheckIn] ❌ Booking is not completed. Staff only handles completed bookings.');
       showToast({
         type: 'error',
         message: 'This booking is pending. Customer needs to complete payment/subscription first. Staff only handles completed bookings.',
@@ -303,7 +295,6 @@ export default function CheckInContainer() {
       setLoading(false);
       return;
     } catch (error: any) {
-      console.error('[CheckIn] ❌ Failed to update booking status:', error);
       const errorMessage = error?.message || 'Failed to create swap transaction';
       showToast({
         type: 'error',
