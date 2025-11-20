@@ -10,7 +10,7 @@ export const ProfileLayout = () => {
       <div className="max-w-5xl mx-auto">
         <div className="mb-6">
           <h1 className="text-3xl font-extrabold text-gray-900">Personal Profile</h1>
-          <p className="text-sm text-gray-600 mt-1">Manage your account information, security, and contact details</p>
+          <p className="text-sm text-black mt-1">Manage your account information, security, and contact details</p>
         </div>
 
         <div className="bg-gradient-to-r from-white to-slate-50 rounded-xl shadow-xl p-6">
@@ -20,7 +20,7 @@ export const ProfileLayout = () => {
                 <User className="w-10 h-10" />
               </div>
               <h2 className="mt-4 text-xl font-semibold text-gray-900">Your Information</h2>
-              <p className="mt-1 text-sm text-gray-600">Update your profile, change password, and customize your personal information.</p>
+              <p className="mt-1 text-sm text-black">Update your profile, change password, and customize your personal information.</p>
             </div>
 
             <div className="col-span-2">

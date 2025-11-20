@@ -5,9 +5,11 @@ import { useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import SideBar, { NavigationItem, UserInfo } from '@/presentation/components/common/SideBar';
 import CustomerSideBar from '@/app/(customer)/home/components/CustomerSideBar';
+import AdminSidebar from '@/app/(admin)/components/AdminSidebar';
 import { ProfileLayout } from '@/presentation/components/ui/profile/ProfileLayout';
 import { usePathname } from 'next/navigation';
-import { HiHome, HiClipboardCheck, HiViewGrid, HiCalendar, HiArrowRight } from 'react-icons/hi';
+import { HiHome, HiClipboardCheck, HiViewGrid, HiCalendar } from 'react-icons/hi';
+import { isAdminRole, isStaffRole } from '@/lib/roleUtils';
 
 export default withAuth(function ProfilePage() {
   const { user } = useAuth();
@@ -19,7 +21,6 @@ export default withAuth(function ProfilePage() {
       { name: 'Dashboard', path: '/dashboardstaff', icon: <HiHome size={18} /> },
       { name: 'Check-in & Swap', path: '/check-in', icon: <HiClipboardCheck size={18} /> },
       { name: 'Inventory', path: '/inventory', icon: <HiViewGrid size={18} /> },
-      { name: 'Battery Transfers', path: '/battery-transfers', icon: <HiArrowRight size={18} /> },
       { name: 'Reservations', path: '/reservations', icon: <HiCalendar size={18} /> },
     ],
     []
@@ -47,12 +48,15 @@ export default withAuth(function ProfilePage() {
   };
 
   // Render appropriate sidebar based on role
-  const roleStr = (user?.role || '').toString().toLowerCase();
-  const isEmployee = roleStr === 'staff' || roleStr === 'employee';
+  const role = user?.role;
+  const isAdmin = isAdminRole(role);
+  const isEmployee = isStaffRole(role);
 
   return (
     <div className="min-h-screen bg-[#f5f5f5] flex">
-      {isEmployee ? (
+      {isAdmin ? (
+        <AdminSidebar currentPath={pathname || '/profile'} />
+      ) : isEmployee ? (
         <SideBar
           isExpanded={true}
           currentPath={pathname || '/profile'}

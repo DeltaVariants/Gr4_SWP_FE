@@ -28,6 +28,12 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Backend validation:
+    // - OldPassword: StringLength(6, MinimumLength = 6) - at least 6 characters
+    // - NewPassword: MinLength(6) - at least 6 characters
+    // - ConfirmNewPassword: MinLength(6) - at least 6 characters
+    // Note: Let backend validate OldPassword - it might be correct but short
+    
     if (newPassword.length < 6) {
       return NextResponse.json(
         { success: false, message: 'New password must be at least 6 characters' },
@@ -43,7 +49,15 @@ export async function POST(req: NextRequest) {
       ConfirmNewPassword: newPassword, // Use newPassword as confirmation
     };
 
-    // Call backend API: POST /api/auth/change-password
+    // Call backend API: POST /api/Auth/change-password
+    console.log('[change-password] Calling backend:', `${API_URL}/Auth/change-password`);
+    console.log('[change-password] Token present:', !!token);
+    console.log('[change-password] Payload:', JSON.stringify({ 
+      OldPassword: '***', 
+      NewPassword: '***', 
+      ConfirmNewPassword: '***' 
+    }));
+    
     const response = await fetch(`${API_URL}/Auth/change-password`, {
       method: 'POST',
       headers: {
@@ -52,15 +66,66 @@ export async function POST(req: NextRequest) {
       },
       body: JSON.stringify(backendPayload),
     });
+    
+    console.log('[change-password] Response status:', response.status);
+    console.log('[change-password] Response headers:', Object.fromEntries(response.headers.entries()));
 
-    const data = await response.json().catch(() => ({}));
+    // Handle response - try to parse as JSON, fallback to text
+    let data: any = {};
+    try {
+      const text = await response.text();
+      if (text) {
+        try {
+          data = JSON.parse(text);
+        } catch (e) {
+          // If not JSON, treat as plain text error message
+          data = { message: text };
+        }
+      }
+    } catch (e) {
+      console.error('[change-password] Failed to read response:', e);
+      data = { message: 'Failed to read response from server' };
+    }
+    
+    console.log('[change-password] Response status:', response.status);
+    console.log('[change-password] Response data:', JSON.stringify(data, null, 2));
 
     if (!response.ok) {
-      const message = data?.message || data?.Message || 'Failed to change password';
-      return NextResponse.json({ success: false, message }, { status: response.status });
+      // Try to extract error message from various possible formats
+      console.log('[change-password] Error response - full data:', JSON.stringify(data, null, 2));
+      
+      // Check for validation errors (ASP.NET Core format)
+      let errorMessage = 
+        data?.message || 
+        data?.Message || 
+        data?.error ||
+        data?.Error;
+      
+      // Handle ASP.NET Core validation errors
+      if (data?.errors && typeof data.errors === 'object') {
+        const validationErrors: string[] = [];
+        for (const [key, value] of Object.entries(data.errors)) {
+          if (Array.isArray(value)) {
+            validationErrors.push(`${key}: ${value.join(', ')}`);
+          } else if (typeof value === 'string') {
+            validationErrors.push(`${key}: ${value}`);
+          }
+        }
+        if (validationErrors.length > 0) {
+          errorMessage = validationErrors.join('; ');
+        }
+      }
+      
+      // Fallback
+      if (!errorMessage) {
+        errorMessage = typeof data === 'string' ? data : `Failed to change password (${response.status})`;
+      }
+      
+      console.log('[change-password] Extracted error message:', errorMessage);
+      return NextResponse.json({ success: false, message: errorMessage }, { status: response.status });
     }
 
-    return NextResponse.json({ success: true, message: 'Password changed successfully' });
+    return NextResponse.json({ success: true, message: data?.message || 'Password changed successfully' });
   } catch (error: any) {
     console.error('[change-password] Error:', error);
     return NextResponse.json(
