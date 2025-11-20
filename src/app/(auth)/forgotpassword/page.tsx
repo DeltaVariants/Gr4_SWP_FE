@@ -1,6 +1,6 @@
 'use client';
 
-import { ForgotPasswordLayout } from '@/presentation/components/ui/auth/forgotpassword/ForgotPasswordLayout';
+import { ForgotPasswordLayout } from '../components/forgotpassword/ForgotPasswordLayout';
 
 export default function ForgotPasswordPage() {
   return <ForgotPasswordLayout />;

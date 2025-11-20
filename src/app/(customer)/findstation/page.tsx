@@ -1,4 +1,6 @@
 "use client";
+
+import { withCustomerAuth } from '@/hoc/withAuth';
 import React from "react";
 import { MapSection } from "../../../presentation";
 import MapSideBar from "@/presentation/components/features/MapSection/MapSideBar";
@@ -17,4 +19,4 @@ const FindStationPage = () => {
   );
 };
 
-export default FindStationPage;
+export default withCustomerAuth(FindStationPage);

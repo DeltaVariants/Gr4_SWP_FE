@@ -1,4 +1,3 @@
-"use client";
 import { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import { FaSearch, FaSyncAlt } from "react-icons/fa";
 import {
@@ -440,4 +439,4 @@ export default function BatteryManagement() {
       </div>
     </div>
   );
-}
+});

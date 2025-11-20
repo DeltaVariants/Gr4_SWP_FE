@@ -1,4 +1,8 @@
-export default function AdminDashboard() {
+'use client';
+
+
+import { withAdminAuth } from '@/hoc/withAuth';
+export default withAdminAuth(function AdminDashboard() {
   return (
     <div className="p-6">
       <div className="bg-white rounded-lg shadow-sm p-6">
@@ -10,4 +14,4 @@ export default function AdminDashboard() {
       </div>
     </div>
   );
-}
+});

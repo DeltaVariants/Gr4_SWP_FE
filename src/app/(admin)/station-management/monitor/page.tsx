@@ -4,7 +4,7 @@ import Link from "next/link";
 export default function StationMonitor() {
   return (
     <div>
-      <div>
+      <div className="mb-6">
         <Link
           href="/station-management"
           className="text-indigo-600 hover:text-indigo-700 mb-2 inline-block"

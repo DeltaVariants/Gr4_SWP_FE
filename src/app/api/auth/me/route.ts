@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://gr4-swp-be2-sp25.onrender.com';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://gr4-swp-be2-sp25.onrender.com/api';
 
 export async function GET(req: NextRequest) {
   try {
@@ -10,7 +10,8 @@ export async function GET(req: NextRequest) {
     if (incomingAuth) {
       token = incomingAuth.replace(/^Bearer\s+/i, '');
     } else {
-      token = req.cookies.get('token')?.value;
+      // Try both cookie names (accessToken is new, token is legacy)
+      token = req.cookies.get('accessToken')?.value || req.cookies.get('token')?.value;
     }
 
     if (!token) {
@@ -19,7 +20,7 @@ export async function GET(req: NextRequest) {
         if (process.env.NODE_ENV === 'development') {
           const incomingAuth = req.headers.get('authorization');
           const incomingCookie = req.headers.get('cookie');
-          const tokenCookie = req.cookies.get('token')?.value;
+          const tokenCookie = req.cookies.get('accessToken')?.value || req.cookies.get('token')?.value;
           const maskedCookie = tokenCookie ? `${tokenCookie.slice(0,8)}...(${tokenCookie.length}ch)` : null;
           const maskedIncomingAuth = incomingAuth ? (() => {
             try { const t = incomingAuth.replace(/^Bearer\s+/i, ''); return `${t.slice(0,8)}...(${t.length}ch)`; } catch { return 'present'; }
@@ -32,21 +33,52 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
     }
 
-    const resp = await fetch(`${API_URL}/api/Auth/me`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      cache: 'no-store',
-    });
-
+    // Retry logic for 502 errors (backend cold start)
+    let resp;
+    let retries = 3;
+    let lastError;
     
+    for (let i = 0; i < retries; i++) {
+      try {
+        resp = await fetch(`${API_URL}/me`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          signal: AbortSignal.timeout(10000), // 10s timeout
+        });
+        
+        // If we get 502, retry after delay
+        if (resp.status === 502 && i < retries - 1) {
+          console.log(`[auth/me] Got 502, retrying (${i + 1}/${retries})...`);
+          await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1))); // Exponential backoff
+          continue;
+        }
+        
+        break; // Success or non-502 error, exit retry loop
+      } catch (error) {
+        lastError = error;
+        if (i < retries - 1) {
+          console.log(`[auth/me] Fetch error, retrying (${i + 1}/${retries})...`);
+          await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1)));
+        }
+      }
+    }
+    
+    if (!resp) {
+      console.error('[auth/me] All retries failed:', lastError);
+      return NextResponse.json(
+        { success: false, message: 'Backend temporarily unavailable' },
+        { status: 503 }
+      );
+    }
+
     const contentType = resp.headers.get('content-type') || '';
-    let data: any = {};
+    let backendResponse: any = {};
     let raw = '';
     if (contentType.includes('application/json')) {
-      data = await resp.json().catch(() => ({}));
+      backendResponse = await resp.json().catch(() => ({}));
     } else {
       raw = await resp.text().catch(() => '');
     }
@@ -57,24 +89,98 @@ export async function GET(req: NextRequest) {
         if (process.env.NODE_ENV === 'development') {
           const incomingAuth = req.headers.get('authorization');
           const incomingCookie = req.headers.get('cookie');
-          const tokenCookie = req.cookies.get('token')?.value;
+          const tokenCookie = req.cookies.get('accessToken')?.value || req.cookies.get('token')?.value;
           const maskedCookie = tokenCookie ? `${tokenCookie.slice(0,8)}...(${tokenCookie.length}ch)` : null;
           const maskedIncomingAuth = incomingAuth ? (() => {
             try { const t = incomingAuth.replace(/^Bearer\s+/i, ''); return `${t.slice(0,8)}...(${t.length}ch)`; } catch { return 'present'; }
           })() : null;
-          console.log('[proxy auth me] backend returned status:', resp.status, 'message:', data?.message || raw || 'no message');
-          console.log('[proxy auth me] forwarded incomingAuth present:', !!incomingAuth, 'masked:', maskedIncomingAuth);
-          console.log('[proxy auth me] forwarded cookie header present:', !!incomingCookie, 'tokenCookie:', maskedCookie);
+          
+          console.error('[proxy auth me] ❌ Backend error:', resp.status);
+          console.error('[proxy auth me] Backend URL called:', `${API_URL}/me`);
+          console.error('[proxy auth me] Backend response:', JSON.stringify(backendResponse, null, 2));
+          console.error('[proxy auth me] Forwarded incomingAuth present:', !!incomingAuth, 'masked:', maskedIncomingAuth);
+          console.error('[proxy auth me] Forwarded cookie header present:', !!incomingCookie, 'tokenCookie:', maskedCookie);
+          
+          // Decode token to check user info (for debugging)
+          if (tokenCookie) {
+            try {
+              const parts = tokenCookie.split('.');
+              if (parts.length >= 2) {
+                const payload = JSON.parse(atob(parts[1]));
+                console.error('[proxy auth me] Token payload:', {
+                  userId: payload.nameid || payload.unique_name,
+                  email: payload.email,
+                  role: payload.role,
+                  stationID: payload.StationID || payload.stationID,
+                });
+              }
+            } catch (e) {
+              console.error('[proxy auth me] Could not decode token:', e);
+            }
+          }
         }
-      } catch (e) {}
+      } catch (e) {
+        console.error('[proxy auth me] Error in logging:', e);
+      }
 
-      const message = data?.message || data?.error || raw || 'Failed to fetch profile';
+      // Backend returns ApiResponse format: { Success: false, Message: "...", Data: null }
+      // Or camelCase: { success: false, message: "...", data: null }
+      const message = backendResponse?.Message || backendResponse?.message || backendResponse?.error || raw || 'Failed to fetch profile';
       const status = resp.status || 500;
+      
+      // Log specific error for staff users
+      if (message.includes('Object reference not set') || message.includes('NullReferenceException')) {
+        console.error('[proxy auth me] ⚠️ Backend NullReferenceException - likely _stationService not injected when user has StationID');
+      }
+      
       return NextResponse.json({ success: false, message }, { status });
     }
 
-    return NextResponse.json({ success: true, data });
+    // Backend returns ApiResponse format: { Success: true, Message: "OK", Data: {...} }
+    // ASP.NET Core may serialize as camelCase: { success: true, message: "OK", data: {...} }
+    // Extract data from ApiResponse.Data (handle both PascalCase and camelCase)
+    const userData = backendResponse?.Data || backendResponse?.data || backendResponse;
+    
+    // Validate that we got user data
+    if (!userData || typeof userData !== 'object') {
+      console.error('[auth/me] Invalid user data structure:', backendResponse);
+      return NextResponse.json(
+        { success: false, message: 'Invalid response format from backend' },
+        { status: 500 }
+      );
+    }
+    
+    // Log full response structure for debugging (staff needs StationID)
+    if (process.env.NODE_ENV === 'development') {
+      const stationId = userData?.stationId || userData?.StationID || userData?.stationID || userData?.StationId;
+      const stationName = userData?.stationName || userData?.StationName;
+      const roleName = userData?.roleName || userData?.RoleName;
+      
+      console.log('[auth/me] Backend response structure:', {
+        hasSuccess: 'Success' in backendResponse || 'success' in backendResponse,
+        hasData: 'Data' in backendResponse || 'data' in backendResponse,
+        responseKeys: Object.keys(backendResponse || {}),
+        userDataKeys: Object.keys(userData || {}),
+      });
+      
+      console.log('[auth/me] User data received:');
+      console.log('[auth/me] - roleName:', roleName || 'NOT FOUND');
+      console.log('[auth/me] - stationId:', stationId || 'NOT FOUND');
+      console.log('[auth/me] - stationName:', stationName || 'NOT FOUND');
+      
+      // Warn if staff role but no StationID
+      if ((roleName === 'Staff' || roleName === 'STAFF' || roleName === 'Employee') && !stationId) {
+        console.warn('[auth/me] ⚠️ Staff user but no StationID found! This may cause issues.');
+      }
+      
+      if (!stationId && !stationName && userData) {
+        console.log('[auth/me] - Available userData keys:', Object.keys(userData));
+      }
+    }
+
+    return NextResponse.json({ success: true, data: userData });
   } catch (e) {
+    console.error('[auth/me] Error:', e);
     return NextResponse.json({ success: false, message: 'Internal server error' }, { status: 500 });
   }
 }

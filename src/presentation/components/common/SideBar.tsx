@@ -184,17 +184,18 @@ const SideBar: React.FC<SideBarUIProps> = ({
             )}
           </div>
           <div
-            className={`transition-opacity duration-200 ${
+            className={`transition-opacity duration-200 min-w-0 flex-1 ${
               isExpanded
                 ? "opacity-100 delay-150"
                 : "opacity-0 absolute left-full"
             }`}
           >
             {displayedName && (
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 min-w-0 flex-1">
                 <Link
                   href="/profile"
-                  className="text-sm font-medium text-gray-800 whitespace-nowrap hover:underline"
+                  className="text-sm font-medium text-gray-800 hover:underline truncate min-w-0 flex-1"
+                  title={displayedName}
                 >
                   {displayedName}
                 </Link>
@@ -203,7 +204,7 @@ const SideBar: React.FC<SideBarUIProps> = ({
               </div>
             )}
             {user?.plan && (
-              <p className="text-xs text-gray-500 whitespace-nowrap">
+              <p className="text-xs text-gray-500 truncate" title={user.plan}>
                 {user.plan}
               </p>
             )}

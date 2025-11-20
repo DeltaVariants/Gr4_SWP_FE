@@ -2,7 +2,7 @@
 
 import { Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { ResetPasswordLayout } from '@/presentation/components/ui/auth/resetpassword/ResetPasswordLayout';
+import { ResetPasswordLayout } from '../components/resetpassword/ResetPasswordLayout';
 
 function ResetPasswordContent() {
   const searchParams = useSearchParams();

@@ -177,8 +177,32 @@ export class AuthRepositoryAPI implements IAuthRepository {
       });
 
       if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Failed to refresh token: ${errorText}`);
+        let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+        
+        try {
+          const contentType = response.headers.get("content-type");
+          if (contentType?.includes("application/json")) {
+            const errorData = await response.json();
+            errorMessage = errorData.message || errorData.error || errorMessage;
+          } else {
+            const errorText = await response.text();
+            if (errorText) {
+              errorMessage = errorText;
+            }
+          }
+        } catch (parseError) {
+          // If we can't parse the error, use the status text
+          console.warn("[AuthRepository] Could not parse error response:", parseError);
+        }
+        
+        // Log the error for debugging
+        console.error("[AuthRepository] Refresh token failed:", {
+          status: response.status,
+          statusText: response.statusText,
+          message: errorMessage,
+        });
+        
+        throw new Error(errorMessage || "Failed to refresh token");
       }
 
       const data = await response.json();
@@ -199,6 +223,13 @@ export class AuthRepositoryAPI implements IAuthRepository {
       };
     } catch (error) {
       const err = error as Error;
+      
+      // Handle network errors
+      if (err.message.includes("fetch") || err.message.includes("Network") || err.message.includes("Failed to fetch")) {
+        throw new Error("Network error: Unable to connect to server. Please check your internet connection.");
+      }
+      
+      // Re-throw with original message if it's already an Error
       throw new Error(err.message || "Không thể làm mới token");
     }
   }

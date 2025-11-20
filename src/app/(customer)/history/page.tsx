@@ -1,3 +1,7 @@
+'use client';
+
+
+import { withCustomerAuth } from '@/hoc/withAuth';
 import React from "react";
 
 const HistoryPage = () => {
@@ -6,4 +10,4 @@ const HistoryPage = () => {
   );
 };
 
-export default HistoryPage;
+export default withCustomerAuth(HistoryPage);

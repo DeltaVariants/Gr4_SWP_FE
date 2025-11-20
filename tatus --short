@@ -1,0 +1,154 @@
+warning: in the working copy of 'src/app/(employee)/check-in/page.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/contexts/AuthContext.tsx', LF will be replaced by CRLF the next time Git touches it
+src/app/(auth)/google-callback/page.tsx:27: trailing whitespace.
+[32m+[m[41m    [m
+src/app/(auth)/google-callback/page.tsx:44: trailing whitespace.
+[32m+[m[41m        [m
+src/app/(auth)/google-callback/page.tsx:49: trailing whitespace.
+[32m+[m[41m        [m
+src/app/(auth)/google-callback/page.tsx:61: trailing whitespace.
+[32m+[m[41m            [m
+src/app/(auth)/google-callback/page.tsx:70: trailing whitespace.
+[32m+[m[41m            [m
+src/app/(auth)/google-callback/page.tsx:88: trailing whitespace.
+[32m+[m[41m            [m
+src/app/(auth)/google-callback/page.tsx:92: trailing whitespace.
+[32m+[m[41m              [m
+src/app/(auth)/google-callback/page.tsx:101: trailing whitespace.
+[32m+[m[41m              [m
+src/app/(auth)/google-callback/page.tsx:122: trailing whitespace.
+[32m+[m[32m            body: JSON.stringify({[m[41m [m
+src/app/(auth)/google-callback/page.tsx:142: trailing whitespace.
+[32m+[m[41m        [m
+src/app/(auth)/google-callback/page.tsx:162: trailing whitespace.
+[32m+[m[41m    [m
+src/app/(auth)/logout/page.tsx:12: trailing whitespace.
+[32m+[m[41m      [m
+src/app/(auth)/logout/page.tsx:22: trailing whitespace.
+[32m+[m[41m      [m
+src/app/(auth)/logout/page.tsx:30: trailing whitespace.
+[32m+[m[41m      [m
+src/app/(auth)/logout/page.tsx:41: trailing whitespace.
+[32m+[m[41m      [m
+src/app/(auth)/logout/page.tsx:43: trailing whitespace.
+[32m+[m[41m      [m
+src/app/(customer)/home/page.tsx:24: trailing whitespace.
+[32m+[m[41m    [m
+src/app/(customer)/home/page.tsx:28: trailing whitespace.
+[32m+[m[41m      [m
+src/app/(customer)/home/page.tsx:34: trailing whitespace.
+[32m+[m[41m      [m
+src/app/(customer)/home/page.tsx:44: trailing whitespace.
+[32m+[m[41m    [m
+src/app/(employee)/dashboardstaff/page.tsx:7: trailing whitespace.
+[32m+[m[32m *[m[41m [m
+src/app/(employee)/dashboardstaff/page.tsx:9: trailing whitespace.
+[32m+[m[32m *[m[41m [m
+src/app/(employee)/dashboardstaff/page.tsx:15: trailing whitespace.
+[32m+[m[32m *[m[41m [m
+src/app/(employee)/dashboardstaff/page.tsx:20: trailing whitespace.
+[32m+[m[32m *[m[41m [m
+src/app/(employee)/dashboardstaff/page.tsx:25: trailing whitespace.
+[32m+[m[32m *[m[41m [m
+src/app/(employee)/dashboardstaff/page.tsx:30: trailing whitespace.
+[32m+[m[32m *[m[41m [m
+src/app/(employee)/dashboardstaff/page.tsx:48: trailing whitespace.
+[32m+[m[41m  [m
+src/app/(employee)/dashboardstaff/page.tsx:50: trailing whitespace.
+[32m+[m[32m    pending: {[m[41m [m
+src/app/(employee)/dashboardstaff/page.tsx:54: trailing whitespace.
+[32m+[m[32m    booked: {[m[41m [m
+src/app/(employee)/dashboardstaff/page.tsx:58: trailing whitespace.
+[32m+[m[32m    queue: {[m[41m [m
+src/app/(employee)/dashboardstaff/page.tsx:62: trailing whitespace.
+[32m+[m[32m    checked: {[m[41m [m
+src/app/(employee)/dashboardstaff/page.tsx:67: trailing whitespace.
+[32m+[m[41m  [m
+src/app/(employee)/dashboardstaff/page.tsx:68: trailing whitespace.
+[32m+[m[32m  const config = map[statusLower] || {[m[41m [m
+src/app/(employee)/dashboardstaff/page.tsx:72: trailing whitespace.
+[32m+[m[41m  [m
+src/app/(employee)/dashboardstaff/page.tsx:107: trailing whitespace.
+[32m+[m[41m  [m
+src/app/(employee)/dashboardstaff/page.tsx:110: trailing whitespace.
+[32m+[m[41m  [m
+src/app/(employee)/dashboardstaff/page.tsx:130: trailing whitespace.
+[32m+[m[32m   *[m[41m [m
+src/app/(employee)/dashboardstaff/page.tsx:183: trailing whitespace.
+[32m+[m[41m  [m
+src/app/(employee)/dashboardstaff/page.tsx:189: trailing whitespace.
+[32m+[m[41m  [m
+src/app/(employee)/dashboardstaff/page.tsx:195: trailing whitespace.
+[32m+[m[41m  [m
+src/app/(employee)/dashboardstaff/page.tsx:198: trailing whitespace.
+[32m+[m[41m  [m
+src/app/(employee)/dashboardstaff/page.tsx:202: trailing whitespace.
+[32m+[m[41m  [m
+src/app/(employee)/inventory/page.tsx:13: trailing whitespace.
+[32m+[m[32m    Available: {[m[41m [m
+src/app/(employee)/inventory/page.tsx:17: trailing whitespace.
+[32m+[m[32m    Damaged: {[m[41m [m
+src/app/(employee)/inventory/page.tsx:22: trailing whitespace.
+[32m+[m[41m  [m
+src/app/(employee)/inventory/page.tsx:23: trailing whitespace.
+[32m+[m[32m  const config = map[value] || {[m[41m [m
+src/app/(employee)/inventory/page.tsx:27: trailing whitespace.
+[32m+[m[41m  [m
+src/app/(employee)/inventory/page.tsx:52: trailing whitespace.
+[32m+[m[32m    Damaged: {[m[41m [m
+src/app/(employee)/inventory/page.tsx:131: trailing whitespace.
+[32m+[m[32m      toast.showToast({[m[41m [m
+src/app/(employee)/inventory/page.tsx:132: trailing whitespace.
+[32m+[m[32m        message: error.message || 'Không thể load batteries',[m[41m [m
+src/app/(employee)/inventory/page.tsx:133: trailing whitespace.
+[32m+[m[32m        type: 'error'[m[41m [m
+src/app/(employee)/inventory/page.tsx:179: trailing whitespace.
+[32m+[m[32m    const payload = {[m[41m [m
+src/app/(employee)/inventory/page.tsx:180: trailing whitespace.
+[32m+[m[32m      batteryId: id,[m[41m [m
+src/app/(employee)/inventory/page.tsx:181: trailing whitespace.
+[32m+[m[32m      status: newStatus as 'Available' | 'In-Use' | 'Charging' | 'Maintenance' | 'Damaged',[m[41m [m
+src/app/(employee)/inventory/page.tsx:182: trailing whitespace.
+[32m+[m[32m      reason: reason || undefined[m[41m [m
+src/app/(employee)/reports/page.tsx:22: trailing whitespace.
+[32m+[m[41m  [m
+src/app/(employee)/reports/page.tsx:25: trailing whitespace.
+[32m+[m[41m  [m
+src/app/(employee)/reports/page.tsx:28: trailing whitespace.
+[32m+[m[41m  [m
+src/app/(employee)/reservations/page.tsx:15: trailing whitespace.
+[32m+[m[32m    pending: {[m[41m [m
+src/app/(employee)/reservations/page.tsx:16: trailing whitespace.
+[32m+[m[32m      style: 'bg-amber-50 text-amber-700 ring-1 ring-amber-200',[m[41m [m
+src/app/(employee)/reservations/page.tsx:17: trailing whitespace.
+[32m+[m[32m      text: 'Chờ xác nhận'[m[41m [m
+src/app/(employee)/reservations/page.tsx:19: trailing whitespace.
+[32m+[m[32m    booked: {[m[41m [m
+src/app/(employee)/reservations/page.tsx:20: trailing whitespace.
+[32m+[m[32m      style: 'bg-indigo-50 text-indigo-700 ring-1 ring-indigo-200',[m[41m [m
+src/app/(employee)/reservations/page.tsx:21: trailing whitespace.
+[32m+[m[32m      text: 'Đang chờ'[m[41m [m
+src/app/(employee)/reservations/page.tsx:23: trailing whitespace.
+[32m+[m[32m    queue: {[m[41m [m
+src/app/(employee)/reservations/page.tsx:24: trailing whitespace.
+[32m+[m[32m      style: 'bg-indigo-50 text-indigo-700 ring-1 ring-indigo-200',[m[41m [m
+src/app/(employee)/reservations/page.tsx:25: trailing whitespace.
+[32m+[m[32m      text: 'Hàng đợi'[m[41m [m
+src/app/(employee)/reservations/page.tsx:27: trailing whitespace.
+[32m+[m[32m    checked: {[m[41m [m
+src/app/(employee)/reservations/page.tsx:28: trailing whitespace.
+[32m+[m[32m      style: 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200',[m[41m [m
+src/app/(employee)/reservations/page.tsx:29: trailing whitespace.
+[32m+[m[32m      text: 'Đã check-in'[m[41m [m
+src/app/(employee)/reservations/page.tsx:31: trailing whitespace.
+[32m+[m[32m    completed: {[m[41m [m
+src/app/(employee)/reservations/page.tsx:32: trailing whitespace.
+[32m+[m[32m      style: 'bg-gray-100 text-gray-600 ring-1 ring-gray-300',[m[41m [m
+src/app/(employee)/reservations/page.tsx:33: trailing whitespace.
+[32m+[m[32m      text: 'Hoàn thành'[m[41m [m
+src/app/(employee)/reservations/page.tsx:35: trailing whitespace.
+[32m+[m[32m    cancelled: {[m[41m [m
+src/app/(employee)/reservations/page.tsx:36: trailing whitespace.
+[32m+[m[32m      style: 'bg-rose-50 text-rose-700 ring-1 ring-rose-200',[m[41m [m
+src/app/(employee)/reservations/page.tsx:37: trailing whitespace.
+[32m+[m[32m  

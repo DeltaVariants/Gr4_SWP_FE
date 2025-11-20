@@ -114,11 +114,17 @@ const Sidebar = () => {
             <HiUser size={20} />
           </div>
           {isExpanded && (
-            <div>
-              <Link href="/profile" className="font-medium hover:underline">
+            <div className="min-w-0 flex-1">
+              <Link 
+                href="/profile" 
+                className="font-medium hover:underline truncate block"
+                title={displayedName}
+              >
                 {displayedName}
               </Link>
-              <div className="text-sm text-blue-200">{displayedPlan}</div>
+              <div className="text-sm text-blue-200 truncate" title={displayedPlan}>
+                {displayedPlan}
+              </div>
             </div>
           )}
         </div>

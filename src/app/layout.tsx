@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
 import Script from "next/script";
 import "./globals.css";
+import "@/lib/errorHandler"; // Global error handler
 import { ReduxProvider } from "../application/providers/ReduxProvider";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ToastProvider } from "@/presentation/components/ui/Notification";
+import { ErrorBoundary } from "@/presentation/components/ErrorBoundary";
 import Providers from "./provider";
 
 export const metadata: Metadata = {
@@ -45,13 +47,15 @@ export default function RootLayout({
           src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"
           strategy="lazyOnload"
         />
-        <Providers>
-          <AuthProvider>
-            <ToastProvider>
-              <ReduxProvider>{children}</ReduxProvider>
-            </ToastProvider>
-          </AuthProvider>
-        </Providers>
+        <ErrorBoundary>
+          <Providers>
+            <AuthProvider>
+              <ToastProvider>
+                <ReduxProvider>{children}</ReduxProvider>
+              </ToastProvider>
+            </AuthProvider>
+          </Providers>
+        </ErrorBoundary>
       </body>
     </html>
   );

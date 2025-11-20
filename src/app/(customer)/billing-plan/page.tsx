@@ -1,5 +1,6 @@
 "use client";
 
+import { withCustomerAuth } from '@/hoc/withAuth';
 import React, { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAppSelector, useAppDispatch } from "@/application/hooks/useRedux";

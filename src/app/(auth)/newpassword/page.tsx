@@ -2,7 +2,7 @@
 
 import { Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import NewPasswordLayout from '@/presentation/components/ui/auth/newpassword/NewPasswordLayout';
+import NewPasswordLayout from '../components/newpassword/NewPasswordLayout';
 
 function NewPasswordContent() {
   const searchParams = useSearchParams();

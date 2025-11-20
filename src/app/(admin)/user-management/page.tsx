@@ -1,4 +1,5 @@
 "use client";
+import { withAdminAuth } from '@/hoc/withAuth';
 import { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { FaPlus, FaSearch, FaSyncAlt } from "react-icons/fa";
@@ -26,7 +27,7 @@ type RoleFilterOption = "all" | "Admin" | "Staff" | "Driver";
 // Cache duration in milliseconds (5 minutes)
 const CACHE_DURATION = 5 * 60 * 1000;
 
-export default function UserManagement() {
+export default withAdminAuth(function UserManagement() {
   const dispatch = useAppDispatch();
   const router = useRouter();
   const { users, loading, error, lastFetched } = useAppSelector(
@@ -252,6 +253,7 @@ export default function UserManagement() {
     [handleDeleteClick, router]
   );
 
+
   return (
     <div className="h-full flex flex-col overflow-hidden">
       {/* Filter Bar with Action Buttons */}
@@ -458,4 +460,4 @@ export default function UserManagement() {
       </Modal>
     </div>
   );
-}
+});

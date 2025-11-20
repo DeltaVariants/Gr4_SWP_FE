@@ -102,21 +102,40 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (tokenStorage.isTokenExpired()) {
           const refreshToken = tokenStorage.getRefreshToken();
           if (refreshToken) {
-            // Try to refresh token
-            const newTokens = await refreshTokenUseCase.execute(refreshToken);
-            tokenStorage.saveTokens(newTokens);
-            await sessionCookie.setSession({
-              token: newTokens.token,
-              role: user?.roleName || UserRole.CUSTOMER,
-            });
+            try {
+              // Try to refresh token
+              const newTokens = await refreshTokenUseCase.execute(refreshToken);
+              tokenStorage.saveTokens(newTokens);
+              await sessionCookie.setSession({
+                token: newTokens.token,
+                role: user?.roleName || UserRole.CUSTOMER,
+              });
+            } catch (refreshError) {
+              // Refresh token failed - clear tokens and stop here
+              const err = refreshError as Error;
+              console.warn("[AuthContext] Token refresh failed:", err.message);
+              tokenStorage.clearTokens();
+              await sessionCookie.clearSession();
+              setUser(null);
+              setIsAuthenticated(false);
+              return; // Don't try to refresh user if token refresh failed
+            }
           } else {
-            throw new Error("Refresh token not available");
+            // No refresh token available
+            console.warn("[AuthContext] No refresh token available");
+            tokenStorage.clearTokens();
+            await sessionCookie.clearSession();
+            setUser(null);
+            setIsAuthenticated(false);
+            return;
           }
         }
 
+        // If we got here, token is valid (either not expired or successfully refreshed)
         await refreshUser();
       } catch (error) {
-        console.error("Error checking auth:", error);
+        const err = error as Error;
+        console.error("[AuthContext] Error checking auth:", err.message);
         // Clear invalid tokens
         tokenStorage.clearTokens();
         await sessionCookie.clearSession();

@@ -1,345 +1,204 @@
-'use client';
+﻿'use client';
 
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+/**
+ * Auth Context - Clean Architecture Version
+ * Sử dụng hooks từ presentation layer
+ */
+
+import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { authService, LoginRequest, User, RegisterRequest } from '@/services/authService';
+import { useAuth as useAuthHook } from '@/presentation/hooks/useAuth';
+import { AuthUser, LoginCredentials, RegisterData } from '@/domain/dto/Hoang/Auth';
 
 // Định nghĩa kiểu dữ liệu cho context
 interface AuthContextType {
-  user: User | null;
+  user: AuthUser | null;
   loading: boolean;
+  error: Error | null;
   isAuthenticated: boolean;
-  login: (credentials: LoginRequest) => Promise<{ success: boolean; message?: string }>;
-  register: (userData: RegisterRequest) => Promise<{ success: boolean; message?: string }>;
+  isAdmin: boolean;
+  isStaff: boolean;
+  isCustomer: boolean;
+  login: (credentials: LoginCredentials) => Promise<{ success: boolean; message?: string; [key: string]: any }>;
+  register: (data: RegisterData) => Promise<void>;
   logout: () => Promise<void>;
-  refreshUser: () => Promise<void>;
+  getCurrentUser: () => Promise<AuthUser>;
+  verifyEmail: (data: { token: string }) => Promise<void>;
   googleLogin: () => void;
-  forgotPassword: (email: string) => Promise<{ success: boolean; message?: string }>;
-  verifyEmail: (token: string) => Promise<{ success: boolean; message?: string }>;
-  resetPassword: (token: string, newPassword: string) => Promise<{ success: boolean; message?: string }>;
-  setUser: (user: User | null) => void;
-  setIsAuthenticated: (authenticated: boolean) => void;
 }
 
-// Tạo context với giá trị mặc định
-const AuthContext = createContext<AuthContextType>({
-  user: null,
-  loading: false,
-  isAuthenticated: false,
-  login: async () => ({ success: false }),
-  register: async () => ({ success: false }),
-  logout: async () => {},
-  refreshUser: async () => {},
-  googleLogin: () => {},
-  forgotPassword: async () => ({ success: false }),
-  verifyEmail: async () => ({ success: false }),
-  resetPassword: async () => ({ success: false }),
-  setUser: () => {},
-  setIsAuthenticated: () => {},
-});
+// Tạo context
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // Hook để sử dụng AuthContext
-export const useAuth = () => useContext(AuthContext);
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+};
 
 // Provider component
-export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
+  const authHook = useAuthHook();
+  const [isInitialized, setIsInitialized] = useState(false);
   const router = useRouter();
 
-  // Kiểm tra auth khi app khởi động
+  // Load user on mount if token exists
   useEffect(() => {
-    const checkAuth = async () => {
+    let isMounted = true; // Prevent state updates after unmount
+    
+    const initAuth = async () => {
       const token = localStorage.getItem('accessToken');
-      if (!token) return;
-      try {
-        await refreshUser();
-      } catch (error) {
-        console.error('Error checking auth:', error);
-        // Token không hợp lệ, xóa tokens và reset state
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
-        setUser(null);
-        setIsAuthenticated(false);
+      console.log('[AuthContext] Initializing auth, token exists:', !!token);
+      
+      if (token) {
+        // Check if authHook already has user (from previous load or cache)
+        if (authHook.user) {
+          console.log('[AuthContext] User already loaded in hook, skipping API call');
+          if (isMounted) {
+            setIsInitialized(true);
+            console.log('[AuthContext] Initialization complete (user exists)');
+          }
+          return;
+        }
+        
+        // Try to get fresh user data from API
+        try {
+          console.log('[AuthContext] Loading user data from API...');
+          const userData = await authHook.getCurrentUser();
+          
+          if (isMounted) {
+            console.log('[AuthContext] User loaded successfully:', userData);
+            // Cache is automatically updated by authHook
+          }
+        } catch (error: any) {
+          if (!isMounted) return;
+          
+          // Silent error handling - don't spam console with errors
+          if (error?.message?.includes('Session expired') || error?.message?.includes('401')) {
+            console.warn('[AuthContext] Session expired during init - clearing auth data');
+            // Clear all auth data on 401
+            localStorage.removeItem('accessToken');
+            localStorage.removeItem('refreshToken');
+            localStorage.removeItem('role');
+            localStorage.removeItem('userInfo');
+          } else if (error?.message?.includes('Network') || error?.message?.includes('timeout')) {
+            console.warn('[AuthContext] Network error during init - will retry on next action');
+            // Keep token for retry later
+          } else {
+            console.error('[AuthContext] Failed to load user on init:', error?.message || error);
+            // Clear tokens for unknown errors
+            localStorage.removeItem('accessToken');
+            localStorage.removeItem('refreshToken');
+            localStorage.removeItem('role');
+            localStorage.removeItem('userInfo');
+          }
+        }
+      } else {
+        console.log('[AuthContext] No token found, skipping user load');
+      }
+      
+      if (isMounted) {
+        setIsInitialized(true);
+        console.log('[AuthContext] Initialization complete');
       }
     };
 
-    checkAuth();
+    initAuth();
+    
+    // Cleanup function to prevent memory leaks
+    return () => {
+      isMounted = false;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Chỉ chạy một lần khi component mount
+  }, []); // Only run once on mount
 
-  // Lấy thông tin user từ API
-  const refreshUser = async () => {
+  // Login wrapper with redirect
+  const login = async (credentials: LoginCredentials) => {
     try {
-      const userData = await authService.getCurrentUser();
-      setUser(userData);
-      setIsAuthenticated(true);
-    } catch (error) {
-      console.error('Error refreshing user:', error);
-      throw error;
+      const response = await authHook.login(credentials);
+      
+      // User data is already set by authHook.login() from login response
+      // No need to call getCurrentUser() immediately - it may fail if backend has issues
+      // User data will be refreshed on next page load if needed
+      console.log('[AuthContext] Login successful, user data from login response:', authHook.user);
+      
+      // Get role from user data or localStorage
+      const role = authHook.user?.role || localStorage.getItem('role') || 'EMPLOYEE';
+      
+      // NOTE: No need for session API - middleware reads directly from localStorage
+      // Token is already stored in localStorage by LoginUseCase
+
+      // Redirect based on role
+      let redirectPath = '/';
+      
+      if (role === 'ADMIN') {
+        redirectPath = '/dashboard';
+      } else if (role === 'STAFF' || role === 'EMPLOYEE') {
+        redirectPath = '/dashboardstaff';
+      } else if (role === 'CUSTOMER' || role === 'DRIVER') {
+        redirectPath = '/home';
+      }
+
+      console.log('[AuthContext] Redirecting to:', redirectPath);
+      
+      // Use router.replace to avoid going back to login
+      router.replace(redirectPath);
+      
+      // Return response for LoginForm compatibility
+      return { ...response, success: true };
+    } catch (error: any) {
+      // Return error response for LoginForm
+      return { success: false, message: error?.message || 'Login failed' };
     }
   };
 
-  // Hàm đăng nhập
-  const login = async (credentials: LoginRequest) => {
-    setLoading(true);
-    try {
-      // Gọi API đăng nhập
-      const response = await authService.login(credentials);
-
-      // Normalize response to accept various BE shapes
-      const res: any = response || {};
-      console.log('Login response:', res);
-
-      // Backend trả về: { token, refreshToken, expiresAt, authDTO }
-      const accessToken = res.token ?? res.Token ?? res.data?.token ?? res.data?.Token ?? res.accessToken ?? res.data?.accessToken;
-      const refreshToken = res.refreshToken ?? res.RefreshToken ?? res.data?.refreshToken ?? res.data?.RefreshToken;
-      const rawAuth = res.authDTO ?? res.AuthDTO ?? res.data?.authDTO ?? res.data?.AuthDTO ?? res.user ?? res.User ?? res.data?.user ?? null;
-
-      if (!accessToken) {
-        console.error('Login did not return access token. Response:', res);
-        throw new Error(res?.message || 'Đăng nhập thất bại: không nhận được token');
-      }
-
-      // Save tokens to localStorage
-      try {
-        localStorage.setItem('accessToken', accessToken);
-        if (refreshToken) localStorage.setItem('refreshToken', refreshToken);
-      } catch (e) {
-        console.warn('Failed to write tokens to localStorage', e);
-      }
-
-      // Parse user info from authDTO
-      let user: User | null = null;
-      if (rawAuth) {
-        user = {
-          id: rawAuth.userID ?? rawAuth.UserID ?? rawAuth.id ?? rawAuth.Id ?? rawAuth.ID ?? '',
-          email: rawAuth.email ?? rawAuth.Email ?? '',
-          name: rawAuth.username ?? rawAuth.Username ?? rawAuth.name ?? rawAuth.Name ?? '',
-          role: rawAuth.roleName ?? rawAuth.RoleName ?? rawAuth.role ?? rawAuth.Role ?? 'EMPLOYEE',
-          phone: rawAuth.phoneNumber ?? rawAuth.PhoneNumber ?? rawAuth.phone ?? rawAuth.Phone ?? '',
-          stationId: rawAuth.stationId ?? rawAuth.StationID ?? rawAuth.stationID ?? rawAuth.StationId ?? rawAuth.stationName ?? undefined,
-        };
-        console.log('Parsed user:', user);
-      }
-
-      // Thiết lập cookie server-side để tránh race condition với middleware
-      try {
-        await fetch('/api/auth/session', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
-            token: accessToken, 
-            role: user?.role ?? 'EMPLOYEE', 
-            maxAge: 60 * 60 
-          }), // 1h
-        });
-      } catch (e) {
-        console.warn('Setting server session failed (non-fatal):', e);
-      }
-
-      // Set user state
-      if (user) {
-        setUser(user);
-        setIsAuthenticated(true);
-      } else {
-        try {
-          await refreshUser();
-        } catch (e) {
-          console.warn('refreshUser failed after login:', e);
-        }
-      }
-      
-      // Redirect dựa vào role
-      const redirectRole = user?.role || 'EMPLOYEE';
-      const redirectPath = getRedirectPathByRole(redirectRole);
-      
-      console.log('Redirecting to:', redirectPath, 'for role:', redirectRole);
-      
-      // Dùng replace để tránh quay lại trang login khi Back
-      try {
-        router.replace(redirectPath);
-      } catch {}
-      
-      // Fallback hard redirect nếu client router gặp vấn đề
-      setTimeout(() => {
-        if (typeof window !== 'undefined' && window.location.pathname.includes('/login')) {
-          window.location.href = redirectPath;
-        }
-      }, 200);
-      
-      return { success: true };
-    } catch (error) {
-      const err = error as Error;
-      console.error('Login error:', err);
-      return { 
-        success: false, 
-        message: err.message || 'Đăng nhập thất bại' 
-      };
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Hàm đăng ký
-  const register = async (userData: RegisterRequest) => {
-    setLoading(true);
-    try {
-      const response = await authService.register(userData);
-      return { 
-        success: true, 
-        message: 'Đăng ký thành công! Vui lòng kiểm tra email để xác thực tài khoản.' 
-      };
-    } catch (error) {
-      const err = error as Error;
-      console.error('Register error:', err);
-      return { 
-        success: false, 
-        message: err.message || 'Đăng ký thất bại' 
-      };
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Hàm đăng xuất
+  // Logout wrapper with redirect
   const logout = async () => {
+    await authHook.logout();
+    
+    // Clear server-side session
     try {
-      // Gọi API logout (optional)
-      await authService.logout();
-      // Xóa cookie token/role phía server để middleware không coi là đã đăng nhập
-      try {
-        await fetch('/api/auth/logout-local', { method: 'POST' });
-      } catch {}
-    } catch (error) {
-      console.error('Logout API error:', error);
-    } finally {
-      // Xóa tokens và reset state
-      localStorage.removeItem('accessToken');
-      localStorage.removeItem('refreshToken');
-      setUser(null);
-      setIsAuthenticated(false);
-      router.replace('/login');
+      await fetch('/api/auth/logout-local', { method: 'POST' });
+    } catch (e) {
+      console.warn('[AuthContext] Clearing server session failed:', e);
     }
+
+    // Redirect to login
+    router.replace('/login');
   };
 
-  // Hàm quên mật khẩu
-  const forgotPassword = async (email: string) => {
-    setLoading(true);
-    try {
-      await authService.forgotPassword(email);
-      return { 
-        success: true, 
-        message: 'Email reset mật khẩu đã được gửi!' 
-      };
-    } catch (error) {
-      const err = error as Error;
-      console.error('Forgot password error:', err);
-      return { 
-        success: false, 
-        message: err.message || 'Gửi email thất bại' 
-      };
-    } finally {
-      setLoading(false);
-    }
+  // Register wrapper
+  const register = async (data: RegisterData) => {
+    await authHook.register(data);
+    // After registration, redirect to login or verify email page
+    router.push('/login?registered=true');
   };
 
-  // Hàm xác thực email
-  const verifyEmail = async (token: string) => {
-    setLoading(true);
-    try {
-      await authService.verifyEmail(token);
-      return { 
-        success: true, 
-        message: 'Email đã được xác thực thành công!' 
-      };
-    } catch (error) {
-      const err = error as Error;
-      console.error('Verify email error:', err);
-      return { 
-        success: false, 
-        message: err.message || 'Xác thực email thất bại' 
-      };
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Hàm reset mật khẩu
-  const resetPassword = async (token: string, newPassword: string) => {
-    setLoading(true);
-    try {
-      await authService.resetPassword(token, newPassword);
-      return { 
-        success: true, 
-        message: 'Mật khẩu đã được reset thành công!' 
-      };
-    } catch (error) {
-      const err = error as Error;
-      console.error('Reset password error:', err);
-      return { 
-        success: false, 
-        message: err.message || 'Reset mật khẩu thất bại' 
-      };
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Helper function để xác định redirect path dựa vào role
-  const getRedirectPathByRole = (_role?: string): string => {
-    if (!_role) return '/home';
-    const role = String(_role).trim().toUpperCase();
-    // Map role names (case-insensitive) to application routes
-    switch (role) {
-      case 'ADMIN':
-      case 'ADMINISTRATOR':
-        return '/admin';
-      case 'EMPLOYEE':
-      case 'STAFF':
-        return '/dashboardstaff';
-      case 'DRIVER':
-      case 'CUSTOMER':
-      case 'CLIENT':
-        // Redirect drivers/customers to the public home page
-        return '/home';
-      default:
-        return '/home';
-    }
-  };
-
-  // Google Login handler - Use existing backend API
+  // Google login handler
   const googleLogin = () => {
-    console.log('Starting Google login with existing API...');
-    // IMPORTANT: Redirect trực tiếp tới domain BE để cookie correlation/state
-    // được đặt trên cùng một host với callback (/signin-google), tránh lỗi
-    // "The oauth state was missing or invalid" khi đi qua proxy rewrite.
-    // Đảm bảo NEXT_PUBLIC_API_URL trỏ đúng tới BE (ví dụ: https://gr4-swp-be2-sp25.onrender.com)
-    // Gọi route FE để server-side redirect sang BE, đảm bảo cookie/state OAuth đúng domain
-  // Updated: endpoint now lives under /api/auth/google-login
-  window.location.href = `/api/auth/google-login`;
+    console.log('[AuthContext] Starting Google login...');
+    window.location.href = '/api/auth/google-login';
   };
 
-  const contextValue: AuthContextType = {
-    user,
-    loading,
-    isAuthenticated,
+  const value: AuthContextType = {
+    user: authHook.user,
+    loading: !isInitialized || authHook.loading, // Loading if not initialized OR hook is loading
+    error: authHook.error,
+    isAuthenticated: authHook.isAuthenticated,
+    isAdmin: authHook.isAdmin,
+    isStaff: authHook.isStaff,
+    isCustomer: authHook.isCustomer,
     login,
     register,
     logout,
-    refreshUser,
+    getCurrentUser: authHook.getCurrentUser,
+    verifyEmail: authHook.verifyEmail,
     googleLogin,
-    forgotPassword,
-    verifyEmail,
-    resetPassword,
-    setUser,
-    setIsAuthenticated,
   };
 
-  return (
-    <AuthContext.Provider value={contextValue}>
-      {children}
-    </AuthContext.Provider>
-  );
+  // Don't block render - let pages handle loading state via withAuth HOC
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

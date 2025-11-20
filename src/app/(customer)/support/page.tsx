@@ -1,3 +1,7 @@
+'use client';
+
+
+import { withCustomerAuth } from '@/hoc/withAuth';
 import React from "react";
 
 const SupportPage = () => {
@@ -6,4 +10,4 @@ const SupportPage = () => {
   );
 };
 
-export default SupportPage;
+export default withCustomerAuth(SupportPage);
