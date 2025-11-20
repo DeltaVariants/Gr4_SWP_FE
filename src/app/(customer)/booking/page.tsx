@@ -18,6 +18,7 @@ import {
   FaBatteryFull,
   FaCheckCircle,
   FaSpinner,
+  FaHistory,
 } from "react-icons/fa";
 
 const BookingPage = () => {
@@ -38,6 +39,9 @@ const BookingPage = () => {
   const [bookingSuccess, setBookingSuccess] = useState(false);
   const [bookingData, setBookingData] = useState<BookingDTO | null>(null);
   const [error, setError] = useState<string>("");
+  const [showAllBookings, setShowAllBookings] = useState(false);
+  const [allBookings, setAllBookings] = useState<any[]>([]);
+  const [loadingBookings, setLoadingBookings] = useState(false);
 
   // Booking form data
   const [stationId, setStationId] = useState("");
@@ -91,6 +95,73 @@ const BookingPage = () => {
     stations.length,
   ]);
 
+  // Fetch all bookings
+  const fetchAllBookings = async () => {
+    console.log("fetchAllBookings called");
+    setLoadingBookings(true);
+    try {
+      let token = localStorage.getItem("accessToken");
+      
+      // Fallback: try to get from cookie
+      if (!token) {
+        const cookies = document.cookie.split(';');
+        const tokenCookie = cookies.find(c => c.trim().startsWith('accessToken='));
+        if (tokenCookie) {
+          token = tokenCookie.split('=')[1];
+        }
+      }
+      
+      console.log("Token exists:", !!token);
+      if (!token) {
+        console.log("No token found in localStorage or cookie");
+        setError("Vui lòng đăng nhập lại để xem booking");
+        setLoadingBookings(false);
+        return;
+      }
+
+      const response = await fetch("/api/booking/get-user", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      const result = await response.json();
+      console.log("=== BOOKINGS API DEBUG ===");
+      console.log("Full response:", JSON.stringify(result, null, 2));
+      console.log("Response structure:", {
+        success: result.success,
+        hasData: !!result.data,
+        dataType: typeof result.data,
+        isArray: Array.isArray(result.data),
+        dataKeys: result.data ? Object.keys(result.data) : null,
+      });
+      
+      // Parse response từ proxy: { success: true, data: { success: true, message: "OK", data: [...], pagination: null } }
+      if (result.success && result.data?.data && Array.isArray(result.data.data)) {
+        console.log("Found bookings:", result.data.data.length);
+        setAllBookings(result.data.data);
+      } else if (Array.isArray(result.data)) {
+        console.log("Data is array:", result.data.length);
+        setAllBookings(result.data);
+      } else {
+        console.log("No bookings found");
+        setAllBookings([]);
+      }
+    } catch (err) {
+      console.error("Error fetching bookings:", err);
+    } finally {
+      setLoadingBookings(false);
+    }
+  };
+
+  const handleToggleAllBookings = () => {
+    if (!showAllBookings) {
+      fetchAllBookings();
+    }
+    setShowAllBookings(!showAllBookings);
+  };
+
   const handleCreateBooking = async () => {
     // Check if dev mode or has API token
     const devToken = process.env.NEXT_PUBLIC_API_TOKEN;
@@ -112,6 +183,14 @@ const BookingPage = () => {
 
     if (!stationId) {
       setError("Vui lòng chọn trạm đổi pin");
+      return;
+    }
+
+    // Validate booking time is at least 2 hours from now
+    const now = new Date();
+    const twoHoursLater = new Date(now.getTime() + 2 * 60 * 60 * 1000);
+    if (bookingTime < twoHoursLater) {
+      setError("Thời gian đặt lịch phải ít nhất 2 giờ kể từ bây giờ");
       return;
     }
 
@@ -271,9 +350,84 @@ const BookingPage = () => {
     <div className="h-full overflow-y-auto bg-linear-to-br from-indigo-50 to-blue-50 p-4">
       <div className="max-w-3xl mx-auto">
         <div className="bg-white rounded-2xl shadow-xl p-6">
-          <h1 className="text-2xl font-bold text-gray-900 mb-1">
-            Đặt lịch đổi pin
-          </h1>
+          <div className="flex items-center justify-between mb-4">
+            <h1 className="text-2xl font-bold text-gray-900">
+              Đặt lịch đổi pin
+            </h1>
+            <button
+              onClick={handleToggleAllBookings}
+              className="px-4 py-2 bg-indigo-100 text-indigo-700 rounded-lg hover:bg-indigo-200 transition-colors font-semibold text-sm flex items-center gap-2"
+            >
+              <FaHistory />
+              {showAllBookings ? "Ẩn danh sách" : "Xem tất cả booking"}
+            </button>
+          </div>
+
+          {/* All Bookings List */}
+          {showAllBookings && (
+            <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">
+                Danh sách booking của bạn
+              </h2>
+              {loadingBookings ? (
+                <div className="text-center py-4">
+                  <FaSpinner className="text-2xl text-indigo-600 animate-spin mx-auto" />
+                  <p className="text-sm text-gray-600 mt-2">Đang tải...</p>
+                </div>
+              ) : allBookings.length === 0 ? (
+                <p className="text-sm text-gray-600 text-center py-4">
+                  Chưa có booking nào
+                </p>
+              ) : (
+                <div className="space-y-3 max-h-96 overflow-y-auto">
+                  {allBookings.map((booking) => (
+                    <div
+                      key={booking.bookingID}
+                      className="bg-white rounded-lg p-4 shadow-sm border border-gray-200"
+                    >
+                      <div className="flex items-start justify-between mb-2">
+                        <div>
+                          <p className="font-semibold text-gray-900">
+                            {booking.stationName}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            Mã: {booking.bookingID}
+                          </p>
+                        </div>
+                        <span
+                          className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                            booking.status === "completed"
+                              ? "bg-green-100 text-green-800"
+                              : booking.status === "pending"
+                              ? "bg-yellow-100 text-yellow-800"
+                              : "bg-red-100 text-red-800"
+                          }`}
+                        >
+                          {booking.status}
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 text-xs text-gray-600">
+                        <div>
+                          <span className="font-medium">Xe:</span>{" "}
+                          {booking.vehicleName}
+                        </div>
+                        <div>
+                          <span className="font-medium">Pin:</span>{" "}
+                          {booking.batteryType}
+                        </div>
+                        <div className="col-span-2">
+                          <span className="font-medium">Thời gian:</span>{" "}
+                          {new Date(booking.bookingTime).toLocaleString(
+                            "vi-VN"
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           {error && (
             <div className="mb-4 p-3 bg-red-50 border-l-4 border-red-500 rounded">
@@ -361,21 +515,84 @@ const BookingPage = () => {
                 </h2>
               </div>
               <div className="space-y-3">
+                {/* Date Input */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Chọn ngày:
+                  </label>
+                  <input
+                    type="date"
+                    value={bookingTime.toISOString().split('T')[0]}
+                    min={new Date().toISOString().split('T')[0]}
+                    onChange={(e) => {
+                      const newDate = new Date(e.target.value);
+                      newDate.setHours(bookingTime.getHours());
+                      newDate.setMinutes(bookingTime.getMinutes());
+                      
+                      // Validate if selected datetime is at least 2 hours from now
+                      const now = new Date();
+                      const twoHoursLater = new Date(now.getTime() + 2 * 60 * 60 * 1000);
+                      
+                      if (newDate < twoHoursLater) {
+                        setError("Thời gian đặt lịch phải ít nhất 2 giờ kể từ bây giờ");
+                        // Set to minimum valid time (now + 2 hours)
+                        setBookingTime(twoHoursLater);
+                      } else {
+                        setError("");
+                        setBookingTime(newDate);
+                      }
+                    }}
+                    className="w-full px-4 py-3 text-lg font-semibold text-gray-900 bg-white border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 hover:border-gray-400 transition-colors"
+                    style={{ colorScheme: 'light' }}
+                  />
+                </div>
+
+                {/* Time Input */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Chọn giờ:
+                  </label>
+                  <input
+                    type="time"
+                    value={`${String(bookingTime.getHours()).padStart(2, '0')}:${String(bookingTime.getMinutes()).padStart(2, '0')}`}
+                    onChange={(e) => {
+                      const [hours, minutes] = e.target.value.split(':');
+                      const newDate = new Date(bookingTime);
+                      newDate.setHours(parseInt(hours));
+                      newDate.setMinutes(parseInt(minutes));
+                      
+                      // Validate if selected time is at least 2 hours from now
+                      const now = new Date();
+                      const twoHoursLater = new Date(now.getTime() + 2 * 60 * 60 * 1000);
+                      
+                      if (newDate < twoHoursLater) {
+                        setError("Thời gian đặt lịch phải ít nhất 2 giờ kể từ bây giờ");
+                        // Set to minimum valid time (now + 2 hours)
+                        setBookingTime(twoHoursLater);
+                      } else {
+                        setError("");
+                        setBookingTime(newDate);
+                      }
+                    }}
+                    className="w-full px-4 py-3 text-lg font-semibold text-gray-900 bg-white border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 hover:border-gray-400 transition-colors"
+                    style={{ colorScheme: 'light' }}
+                  />
+                </div>
+
+                {/* Display selected time */}
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                   <p className="text-sm font-semibold text-blue-900 mb-1">
-                    Thời gian đặt lịch:
+                    Thời gian đã chọn:
                   </p>
                   <p className="text-base font-bold text-blue-700">
                     {formatDisplayTime(bookingTime)}
                   </p>
-                  <p className="text-xs text-blue-600 mt-2">
-                    (Tự động đặt sau 2 giờ kể từ bây giờ)
-                  </p>
                 </div>
+
                 <div className="bg-amber-50 border-l-4 border-amber-500 p-3 rounded">
                   <p className="text-xs text-amber-800">
                     <span className="font-semibold">⚠️ Lưu ý:</span> Vui lòng
-                    đến trạm trước thời gian đã đặt ít nhất 2 tiếng. Lịch đặt sẽ
+                    chọn thời gian ít nhất 2 giờ kể từ bây giờ. Lịch đặt sẽ
                     tự động hủy nếu bạn không đến đúng giờ.
                   </p>
                 </div>

@@ -68,24 +68,26 @@ export const authService = {
       let json: any = {};
       let rawText = '';
       try {
-        if (contentType.includes('application/json')) json = await res.json();
-        else rawText = await res.text();
+        if (contentType.includes('application/json')) {
+          json = await res.json();
+        } else {
+          rawText = await res.text();
+        }
       } catch (e) {
-        // ignore parse errors
+        console.error('Failed to parse login response:', e);
       }
 
-      // Always return an object describing the response so callers can handle different BE shapes
-      const result = {
-        status: res.status,
-        ok: res.ok,
-        success: json?.success ?? res.ok,
-        message: json?.message || json?.error || rawText || (res.ok ? 'OK' : 'Đăng nhập thất bại'),
-        ...json,
-      };
+      if (!res.ok) {
+        const message = json?.message || json?.error || rawText || 'Đăng nhập thất bại';
+        throw new Error(message);
+      }
 
-      return result;
+      // Return the parsed JSON directly (contains token, refreshToken, authDTO)
+      console.log('Login API response:', json);
+      return json;
     } catch (error) {
       const err = error as ApiError;
+      console.error('Login service error:', err);
       throw new Error(
         (err as any)?.message || 'Đăng nhập thất bại'
       );
@@ -295,7 +297,7 @@ export const authService = {
         // ignore localStorage access errors
       }
 
-      const res = await fetch('/api/auth/me', { cache: 'no-store', headers });
+      const res = await fetch('/api/me', { cache: 'no-store', headers });
       const payload = await res.json();
       if (!res.ok || !payload?.success) {
         throw new Error(payload?.message || 'Không thể lấy thông tin người dùng');

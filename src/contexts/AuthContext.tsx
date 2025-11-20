@@ -90,15 +90,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       // Normalize response to accept various BE shapes
       const res: any = response || {};
-      console.log('Login response (normalized):', res);
+      console.log('Login response:', res);
 
-      // Try multiple paths for token/refresh/authDTO
+      // Backend trả về: { token, refreshToken, expiresAt, authDTO }
       const accessToken = res.token ?? res.Token ?? res.data?.token ?? res.data?.Token ?? res.accessToken ?? res.data?.accessToken;
-      const refreshToken = res.refreshToken ?? res.RefreshToken ?? res.data?.refreshToken ?? res.data?.RefreshToken ?? res.refreshToken;
+      const refreshToken = res.refreshToken ?? res.RefreshToken ?? res.data?.refreshToken ?? res.data?.RefreshToken;
       const rawAuth = res.authDTO ?? res.AuthDTO ?? res.data?.authDTO ?? res.data?.AuthDTO ?? res.user ?? res.User ?? res.data?.user ?? null;
 
       if (!accessToken) {
-        console.error('Login did not return access token:', res);
+        console.error('Login did not return access token. Response:', res);
         throw new Error(res?.message || 'Đăng nhập thất bại: không nhận được token');
       }
 
@@ -110,31 +110,36 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         console.warn('Failed to write tokens to localStorage', e);
       }
 
-      // If backend returned auth info in response, use it; otherwise call refreshUser to populate
+      // Parse user info from authDTO
       let user: User | null = null;
       if (rawAuth) {
         user = {
-          id: rawAuth.userID ?? rawAuth.UserID ?? rawAuth.id ?? rawAuth.Id ?? rawAuth.ID,
-          email: rawAuth.email ?? rawAuth.Email,
-          name: rawAuth.username ?? rawAuth.Username ?? rawAuth.name ?? rawAuth.Name,
+          id: rawAuth.userID ?? rawAuth.UserID ?? rawAuth.id ?? rawAuth.Id ?? rawAuth.ID ?? '',
+          email: rawAuth.email ?? rawAuth.Email ?? '',
+          name: rawAuth.username ?? rawAuth.Username ?? rawAuth.name ?? rawAuth.Name ?? '',
           role: rawAuth.roleName ?? rawAuth.RoleName ?? rawAuth.role ?? rawAuth.Role ?? 'EMPLOYEE',
-          phone: rawAuth.phoneNumber ?? rawAuth.PhoneNumber ?? rawAuth.phone ?? rawAuth.Phone,
-          // attempt to capture station association when backend includes it in login response
-          stationId: rawAuth.stationId ?? rawAuth.StationID ?? rawAuth.stationID ?? rawAuth.StationId ?? undefined,
+          phone: rawAuth.phoneNumber ?? rawAuth.PhoneNumber ?? rawAuth.phone ?? rawAuth.Phone ?? '',
+          stationId: rawAuth.stationId ?? rawAuth.StationID ?? rawAuth.stationID ?? rawAuth.StationId ?? rawAuth.stationName ?? undefined,
         };
+        console.log('Parsed user:', user);
       }
+
       // Thiết lập cookie server-side để tránh race condition với middleware
       try {
         await fetch('/api/auth/session', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ token: accessToken, role: user?.role ?? 'EMPLOYEE', maxAge: 60 * 60 }), // 1h
+          body: JSON.stringify({ 
+            token: accessToken, 
+            role: user?.role ?? 'EMPLOYEE', 
+            maxAge: 60 * 60 
+          }), // 1h
         });
       } catch (e) {
         console.warn('Setting server session failed (non-fatal):', e);
       }
 
-      // If we parsed user from response use it, otherwise refresh from /api/auth/me
+      // Set user state
       if (user) {
         setUser(user);
         setIsAuthenticated(true);
@@ -147,17 +152,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
       
       // Redirect dựa vào role
-      const redirectRole = (user && user.role) || (typeof window !== 'undefined' && (() => {
-        try {
-          const p = JSON.parse(atob(accessToken.split('.')[1]));
-          return p.role || p.RoleName || p.roleName || p.unique_name;
-        } catch { return null; }
-      })()) || 'EMPLOYEE';
+      const redirectRole = user?.role || 'EMPLOYEE';
       const redirectPath = getRedirectPathByRole(redirectRole);
+      
+      console.log('Redirecting to:', redirectPath, 'for role:', redirectRole);
+      
       // Dùng replace để tránh quay lại trang login khi Back
       try {
         router.replace(redirectPath);
       } catch {}
+      
       // Fallback hard redirect nếu client router gặp vấn đề
       setTimeout(() => {
         if (typeof window !== 'undefined' && window.location.pathname.includes('/login')) {

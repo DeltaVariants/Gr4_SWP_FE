@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://gr4-swp-be2-sp25.onrender.com';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://gr4-swp-be2-sp25.onrender.com/api';
 
 export async function POST(request: NextRequest) {
   try {
@@ -15,8 +15,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    
-    const response = await fetch(`${API_URL}/api/Auth/login`, {
+    // API_URL đã có /api ở cuối rồi (từ .env), chỉ cần thêm /Auth/login
+    const response = await fetch(`${API_URL}/Auth/login`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -35,9 +35,10 @@ export async function POST(request: NextRequest) {
       rawText = await response.text().catch(() => '');
     }
 
+    console.log('Backend login response:', { status: response.status, data });
+
     if (!response.ok) {
-      
-  let message = data?.message || data?.error || rawText || 'Invalid credentials';
+      let message = data?.message || data?.error || rawText || 'Invalid credentials';
       if (response.status >= 500) {
         message = 'Máy chủ đang bận hoặc gặp sự cố. Vui lòng thử lại sau.';
       } else if (response.status === 401) {
@@ -49,27 +50,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    
-    const base = (data && (data.data || data.Data)) ? (data.data || data.Data) : data;
-    const token = base.token ?? base.Token;
-    const refreshToken = base.refreshToken ?? base.RefreshToken;
-    const rawAuth = base.authDTO ?? base.AuthDTO ?? base.user ?? base.User ?? null;
-    const authDTO = rawAuth
-      ? {
-          userID: rawAuth.userID ?? rawAuth.UserID ?? rawAuth.id ?? rawAuth.Id ?? rawAuth.ID,
-          email: rawAuth.email ?? rawAuth.Email,
-          username: rawAuth.username ?? rawAuth.Username ?? rawAuth.name ?? rawAuth.Name,
-          roleName: rawAuth.roleName ?? rawAuth.RoleName ?? rawAuth.role ?? rawAuth.Role,
-          phoneNumber: rawAuth.phoneNumber ?? rawAuth.PhoneNumber ?? rawAuth.phone ?? rawAuth.Phone,
-        }
-      : null;
-
+    // Backend trả về trực tiếp: { token, refreshToken, expiresAt, authDTO }
+    // Return đúng format mà không cần parse phức tạp
     return NextResponse.json({
       success: true,
-      token,
-      refreshToken,
-      authDTO,
-      data,
+      token: data.token,
+      refreshToken: data.refreshToken,
+      expiresAt: data.expiresAt,
+      authDTO: data.authDTO,
       message: 'Login successful',
     });
   } catch (error) {
