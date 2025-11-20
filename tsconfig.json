@@ -20,7 +20,8 @@
     ],
     "paths": {
       //alias
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@/dto": ["./src/domain/dto/Duy"]
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],

@@ -1,7 +1,7 @@
 // Xóa trạm theo tên
 // Usecase để xóa một trạm khỏi hệ thống
 
-import { IStationRepository } from "@/domain/repositories/Hoang/StationRepository";
+import { IStationRepository } from "@/domain/repositories/StationRepository";
 
 export async function deleteStationUseCase(
   stationRepository: IStationRepository,

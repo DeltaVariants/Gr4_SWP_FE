@@ -19,12 +19,12 @@ import {
   Chip,
 } from "@heroui/react";
 import { useAppDispatch, useAppSelector } from "@/application/hooks/useRedux";
-import { fetchAllStations } from "@/application/services/Hoang/stationService";
-import { Station } from "@/domain/dto/Hoang/Station";
+import { fetchAllStations } from "@/application/services/stationService";
+import { Station } from "@/domain/entities/Station";
 import { Select, SelectOption } from "@/presentation/components/ui/Select";
 import { Input } from "@/presentation/components/ui/Input";
 import { Actions, ActionItem } from "@/presentation/components/ui/Actions";
-import { stationRepositoryAPI } from "@/infrastructure/repositories/Hoang/StationRepositoryAPI.impl";
+import { stationRepositoryAPI } from "@/infrastructure/repositories/StationRepositoryAPI.impl";
 import { deleteStationUseCase } from "@/application/usecases/station/DeleteStation.usecase";
 import { Modal } from "@/presentation/components/ui/Modal";
 

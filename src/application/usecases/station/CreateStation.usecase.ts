@@ -1,11 +1,11 @@
 // Tạo trạm mới
 // Viết một hàm async function createStationUseCase() nhận vào repository và dữ liệu station
 
-import { Station } from "@/domain/dto/Hoang/Station";
+import { Station } from "@/domain/entities/Station";
 import {
   IStationRepository,
   CreateStationRequest,
-} from "@/domain/repositories/Hoang/StationRepository";
+} from "@/domain/repositories/StationRepository";
 
 export async function createStationUseCase(
   stationRepository: IStationRepository,

@@ -1,51 +1,62 @@
 /**
- * Login Use Case
- * Business logic for user login
+ * Use Case: Login
+ * Clean Architecture - Application Layer
  */
 
-import { IAuthRepository } from '@/domain/repositories/Hoang/IAuthRepository';
-import { LoginCredentials, AuthResponse } from '@/domain/dto/Hoang/Auth';
+import { IAuthRepository } from "@/domain/repositories/AuthRepository";
+import {
+  LoginCredentials,
+  AuthResponse,
+  getRouteByRole,
+} from "@/domain/entities/Auth";
+
+export interface LoginResult {
+  success: boolean;
+  message?: string;
+  data?: AuthResponse & { redirectPath: string };
+}
 
 export class LoginUseCase {
   constructor(private authRepository: IAuthRepository) {}
 
-  async execute(credentials: LoginCredentials): Promise<AuthResponse> {
-    // Validation
-    if (!credentials.email || credentials.email.trim().length === 0) {
-      throw new Error('Email is required');
-    }
-
-    if (!credentials.password || credentials.password.trim().length === 0) {
-      throw new Error('Password is required');
-    }
-
-    // Email format validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(credentials.email)) {
-      throw new Error('Invalid email format');
-    }
-
+  async execute(credentials: LoginCredentials): Promise<LoginResult> {
     try {
-      const response = await this.authRepository.login(credentials);
-      
-      console.log('[LoginUseCase] Login successful:', {
-        userId: response.user.userId,
-        role: response.user.role,
-      });
+      // Validate input
+      if (!credentials.email || !credentials.password) {
+        return {
+          success: false,
+          message: "Email và mật khẩu không được để trống",
+        };
+      }
 
-      return response;
-    } catch (error: any) {
-      console.error('[LoginUseCase] Login failed:', error);
-      
-      if (error.response?.status === 401) {
-        throw new Error('Invalid email or password');
+      // Email validation
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(credentials.email)) {
+        return {
+          success: false,
+          message: "Email không hợp lệ",
+        };
       }
-      
-      if (error.response?.status === 403) {
-        throw new Error('Account is disabled or suspended');
-      }
-      
-      throw new Error(error.response?.data?.message || 'Login failed. Please try again.');
+
+      // Call repository to login
+      const authResponse = await this.authRepository.login(credentials);
+
+      // Determine redirect path based on user role
+      const redirectPath = getRouteByRole(authResponse.user.roleName);
+
+      return {
+        success: true,
+        data: {
+          ...authResponse,
+          redirectPath,
+        },
+      };
+    } catch (error) {
+      const err = error as Error;
+      return {
+        success: false,
+        message: err.message || "Đăng nhập thất bại",
+      };
     }
   }
 }

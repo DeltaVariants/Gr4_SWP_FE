@@ -2,14 +2,15 @@
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useState } from "react";
-import { Station } from "@/domain/dto/Hoang/Station";
+import { Station } from "@/domain/entities/Station";
 import { AdminInput } from "../../components/AdminInput";
 import { Modal } from "@/presentation/components/ui/Modal";
-import { stationRepositoryAPI } from "@/infrastructure/repositories/Hoang/StationRepositoryAPI.impl";
-import { CreateStationRequest } from "@/domain/repositories/Hoang/StationRepository";
+import { Toast } from "@/presentation/components/ui/Toast";
+import { stationRepositoryAPI } from "@/infrastructure/repositories/StationRepositoryAPI.impl";
+import { CreateStationRequest } from "@/domain/repositories/StationRepository";
 import { createStationUseCase } from "@/application/usecases/station/CreateStation.usecase";
 import { useAppDispatch } from "@/application/hooks/useRedux";
-import { fetchAllStations } from "@/application/services/Hoang/stationService";
+import { fetchAllStations } from "@/application/services/stationService";
 
 export default function AddStation() {
   const router = useRouter();
@@ -18,6 +19,28 @@ export default function AddStation() {
   const [error, setError] = useState<string>("");
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [createdStation, setCreatedStation] = useState<Station | null>(null);
+
+  // Toast state
+  const [toast, setToast] = useState<{
+    message: string;
+    type: "success" | "error" | "info" | "warning";
+    isVisible: boolean;
+  }>({
+    message: "",
+    type: "info",
+    isVisible: false,
+  });
+
+  const showToast = (
+    message: string,
+    type: "success" | "error" | "info" | "warning" = "info"
+  ) => {
+    setToast({ message, type, isVisible: true });
+  };
+
+  const hideToast = () => {
+    setToast((prev) => ({ ...prev, isVisible: false }));
+  };
 
   const [formData, setFormData] = useState<CreateStationRequest>({
     stationName: "",
@@ -60,8 +83,10 @@ export default function AddStation() {
 
     if (formData.slotNumber < 1) {
       newErrors.slotNumber = "Slot number must be at least 1";
-    } else if (formData.slotNumber > 100) {
-      newErrors.slotNumber = "Slot number cannot exceed 100";
+      showToast("Slot number must be between 1 and 30", "error");
+    } else if (formData.slotNumber > 30) {
+      newErrors.slotNumber = "Slot number cannot exceed 30";
+      showToast("Slot number cannot exceed 30", "error");
     }
 
     setErrors(newErrors);
@@ -72,6 +97,15 @@ export default function AddStation() {
     field: keyof CreateStationRequest,
     value: string | number
   ) => {
+    // Validate slot number in real-time
+    if (field === "slotNumber") {
+      const slotNum = typeof value === "number" ? value : parseInt(value) || 0;
+      if (slotNum > 30) {
+        showToast("Slot number cannot exceed 30", "warning");
+        return; // Don't update if exceeds max
+      }
+    }
+
     setFormData((prev) => ({
       ...prev,
       [field]: value,
@@ -186,7 +220,7 @@ export default function AddStation() {
               required
               disabled={isSubmitting}
               min="1"
-              max="100"
+              max="30"
             />
 
             <AdminInput
@@ -330,6 +364,15 @@ export default function AddStation() {
           </div>
         </div>
       </Modal>
+
+      {/* Toast Notification */}
+      <Toast
+        message={toast.message}
+        type={toast.type}
+        isVisible={toast.isVisible}
+        onClose={hideToast}
+        duration={3000}
+      />
     </div>
   );
 }

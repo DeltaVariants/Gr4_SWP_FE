@@ -1,0 +1,230 @@
+import {
+  BatteryListResponse,
+  UpdateBatteryParams,
+  UpdateBatteryResponse,
+} from "@/dto";
+import {
+  IBatteryRepository,
+  GetBatteriesParams,
+} from "@/domain/repositories/BatteryRepository";
+import api from "@/lib/api";
+
+class BatteryRepositoryAPI implements IBatteryRepository {
+  /**
+   * Triển khai cụ thể getAll() để fetch từ API
+   */
+  async getAll(params?: GetBatteriesParams): Promise<BatteryListResponse> {
+    const endpoint = "/batteries";
+
+    try {
+      // Xây dựng query parameters
+      const queryParams = new URLSearchParams();
+
+      if (params?.pageNumber) {
+        queryParams.append("pageNumber", params.pageNumber.toString());
+      }
+      if (params?.pageSize) {
+        queryParams.append("pageSize", params.pageSize.toString());
+      }
+      if (params?.createDate) {
+        queryParams.append("createDate", params.createDate);
+      }
+      if (params?.typeName) {
+        queryParams.append("typeName", params.typeName);
+      }
+      if (params?.vehicleId) {
+        queryParams.append("vehicleId", params.vehicleId);
+      }
+
+      const url = queryParams.toString()
+        ? `${endpoint}?${queryParams.toString()}`
+        : endpoint;
+
+      console.log("Fetching batteries from URL:", url);
+
+      const response = await api.get(url);
+
+      console.log("Raw Battery API Response:", response.data);
+
+      // Validate response structure
+      if (!response.data || typeof response.data !== "object") {
+        throw new Error("Invalid API response: expected object");
+      }
+
+      const data = response.data as BatteryListResponse;
+
+      if (!data.success) {
+        throw new Error(data.message || "Failed to fetch batteries");
+      }
+
+      if (!Array.isArray(data.data)) {
+        throw new Error(
+          "Invalid API response: expected array of batteries in data field"
+        );
+      }
+
+      console.log("Batteries count:", data.data.length);
+      return data;
+    } catch (error) {
+      const axiosError = error as {
+        response?: { status: number; statusText: string; data: unknown };
+        request?: unknown;
+        message?: string;
+      };
+
+      if (axiosError.response) {
+        console.error(
+          `API error: ${axiosError.response.status}`,
+          axiosError.response.data
+        );
+        throw new Error(
+          `Failed to fetch batteries: ${axiosError.response.status} ${axiosError.response.statusText}`
+        );
+      } else if (axiosError.request) {
+        console.error(
+          "Network error - no response received:",
+          axiosError.request
+        );
+        throw new Error(
+          "Failed to fetch batteries: Network error. This might be a CORS issue."
+        );
+      } else {
+        console.error("Error setting up request:", axiosError.message);
+        throw new Error(
+          `Failed to fetch batteries: ${axiosError.message || "Unknown error"}`
+        );
+      }
+    }
+  }
+
+  /**
+   * Update thông tin pin (percentage hoặc slot)
+   */
+  async update(params: UpdateBatteryParams): Promise<UpdateBatteryResponse> {
+    const endpoint = `/batteries/${params.batteryID}`;
+
+    try {
+      console.log("Updating battery at URL:", endpoint, "with params:", params);
+
+      // Xây dựng query parameters
+      const queryParams = new URLSearchParams();
+
+      if (params.batterySlotID !== undefined) {
+        queryParams.append("BatterySlotID", params.batterySlotID);
+      }
+      if (params.currentPercentage !== undefined) {
+        queryParams.append(
+          "CurrentPercentage",
+          params.currentPercentage.toString()
+        );
+      }
+
+      const url = queryParams.toString()
+        ? `${endpoint}?${queryParams.toString()}`
+        : endpoint;
+
+      const response = await api.patch(url);
+
+      console.log("Raw Battery Update API Response:", response.data);
+
+      // API có thể trả về các dạng response khác nhau
+      // Case 1: Response là string message
+      if (typeof response.data === "string") {
+        return {
+          success: true,
+          message: response.data,
+        };
+      }
+
+      // Case 2: Response là object
+      if (response.data && typeof response.data === "object") {
+        const data = response.data as UpdateBatteryResponse;
+
+        // Nếu có field success, check nó
+        if (data.success !== undefined && !data.success) {
+          throw new Error(data.message || "Failed to update battery");
+        }
+
+        // Nếu không có field success, coi như thành công
+        console.log("Battery updated successfully:", params.batteryID);
+        return {
+          success: true,
+          message: data.message || "Battery updated successfully",
+          data: data.data,
+        };
+      }
+
+      // Case 3: Response rỗng hoặc undefined - coi như success (status 200)
+      console.log(
+        "Battery updated successfully (empty response):",
+        params.batteryID
+      );
+      return {
+        success: true,
+        message: "Battery updated successfully",
+      };
+    } catch (error) {
+      const axiosError = error as {
+        response?: { status: number; statusText: string; data: unknown };
+        request?: unknown;
+        message?: string;
+      };
+
+      if (axiosError.response) {
+        // Check if response data is a success message
+        if (
+          typeof axiosError.response.data === "string" &&
+          axiosError.response.data.toLowerCase().includes("success")
+        ) {
+          console.log(
+            "Battery updated successfully (from error response):",
+            params.batteryID
+          );
+          return {
+            success: true,
+            message: axiosError.response.data,
+          };
+        }
+
+        console.error(
+          `API error: ${axiosError.response.status}`,
+          axiosError.response.data
+        );
+        throw new Error(
+          `Failed to update battery: ${axiosError.response.status} ${axiosError.response.statusText}`
+        );
+      } else if (axiosError.request) {
+        console.error(
+          "Network error - no response received:",
+          axiosError.request
+        );
+        throw new Error(
+          "Failed to update battery: Network error. This might be a CORS issue."
+        );
+      } else {
+        console.error("Error setting up request:", axiosError.message);
+
+        // Check if the "error" message is actually a success message
+        if (
+          axiosError.message &&
+          axiosError.message.toLowerCase().includes("success")
+        ) {
+          console.log(
+            "Battery updated successfully (from error message):",
+            params.batteryID
+          );
+          return {
+            success: true,
+            message: axiosError.message,
+          };
+        }
+
+        throw new Error(
+          `Failed to update battery: ${axiosError.message || "Unknown error"}`
+        );
+      }
+    }
+  }
+}
+
+export const batteryRepositoryAPI = new BatteryRepositoryAPI();

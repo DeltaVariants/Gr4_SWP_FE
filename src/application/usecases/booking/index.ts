@@ -1,27 +1,17 @@
-/**
- * Booking Use Cases
- * Export all configured booking use case instances
- */
+export { createBookingUseCase } from "./CreateBooking.usecase";
+export { getBookingByIdUseCase } from "./GetBookingById.usecase";
+export { getAllBookingOfUserUseCase } from "./GetAllBookingOfUser.usecase";
+// Note: updateBookingStatusUseCase function is available but we export class instance instead
+// export { updateBookingStatusUseCase } from "./UpdateBookingStatus.usecase";
 
-import { bookingRepository } from '@/infrastructure/repositories/Hoang/BookingRepository';
-import { GetBookingsByStationUseCase } from './GetBookingsByStationUseCase';
-import { CheckInBookingUseCase } from './CheckInBookingUseCase';
-import { CompleteSwapUseCase } from './CompleteSwapUseCase';
-import { SearchBookingUseCase } from './SearchBookingUseCase';
-import { UpdateBookingStatusUseCase } from './UpdateBookingStatusUseCase';
+// Export classes for use cases that need instantiation
+export { GetBookingsByStationUseCase } from "./GetBookingsByStationUseCase";
+export { UpdateBookingStatusUseCase } from "./UpdateBookingStatusUseCase";
 
-// Export configured use case instances (singleton)
+// Export instantiated use cases (singleton pattern)
+import { bookingRepository } from "@/infrastructure/repositories/Hoang/BookingRepository";
+import { GetBookingsByStationUseCase } from "./GetBookingsByStationUseCase";
+import { UpdateBookingStatusUseCase } from "./UpdateBookingStatusUseCase";
+
 export const getBookingsByStationUseCase = new GetBookingsByStationUseCase(bookingRepository);
-export const checkInBookingUseCase = new CheckInBookingUseCase(bookingRepository);
-export const completeSwapUseCase = new CompleteSwapUseCase(bookingRepository);
-export const searchBookingUseCase = new SearchBookingUseCase(bookingRepository);
 export const updateBookingStatusUseCase = new UpdateBookingStatusUseCase(bookingRepository);
-
-// Export classes for testing or custom instantiation
-export { 
-  GetBookingsByStationUseCase, 
-  CheckInBookingUseCase, 
-  CompleteSwapUseCase,
-  SearchBookingUseCase,
-  UpdateBookingStatusUseCase,
-};

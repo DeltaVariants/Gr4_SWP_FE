@@ -8,8 +8,10 @@ import {
   FaCreditCard,
   FaQuestionCircle,
 } from "react-icons/fa";
-import SideBar, { NavigationItem } from "@/presentation/components/common/SideBar";
-import { useAuth } from '@/contexts/AuthContext';
+import SideBar, {
+  NavigationItem,
+} from "@/presentation/components/common/SideBar";
+import { useAuth } from "@/contexts/AuthContext";
 
 // --- Types ---
 interface CustomerSideBarProps {

@@ -11,10 +11,6 @@ export default function StationMonitor() {
         >
           ← Back to Stations
         </Link>
-        <h2 className="text-2xl font-semibold">Station Monitor</h2>
-        <p className="text-gray-600">
-          Real-time monitoring of all stations on map
-        </p>
       </div>
 
       <div className="bg-white rounded-lg shadow-sm p-6">
