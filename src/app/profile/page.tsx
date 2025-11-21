@@ -4,7 +4,7 @@ import { withAuth } from '@/hoc/withAuth';
 import { useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import SideBar, { NavigationItem, UserInfo } from '@/presentation/components/common/SideBar';
-import CustomerSideBar from '@/app/(customer)/home/components/CustomerSideBar';
+import CustomerSideBar from '@/app/(customer)/components/CustomerSideBar';
 import AdminSidebar from '@/app/(admin)/components/AdminSidebar';
 import { ProfileLayout } from '@/presentation/components/ui/profile/ProfileLayout';
 import { usePathname } from 'next/navigation';

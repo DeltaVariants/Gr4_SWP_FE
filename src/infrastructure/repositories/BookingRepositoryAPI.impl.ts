@@ -5,7 +5,7 @@ import api from "@/lib/api";
 class BookingRepositoryAPI implements IBookingRepository {
   async createBooking(request: CreateBookingRequest): Promise<BookingDTO> {
     try {
-      const response = await api.post("/api/bookings", request);
+      const response = await api.post("/bookings", request);
 
       console.log("Create Booking Response:", response.data);
 

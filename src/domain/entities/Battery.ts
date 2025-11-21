@@ -20,6 +20,9 @@ export interface Battery {
  * Based on battery_type_id
  */
 export const getBatteryTypeFromId = (batteryTypeId: string): string => {
+  if (!batteryTypeId || typeof batteryTypeId !== 'string') {
+    return "Unknown";
+  }
   const prefix = batteryTypeId.substring(0, 3).toUpperCase();
 
   switch (prefix) {

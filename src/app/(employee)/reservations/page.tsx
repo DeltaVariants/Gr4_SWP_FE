@@ -79,6 +79,23 @@ export default withStaffAuth(function ReservationsPage() {
         } catch (e) {
           console.error('[Reservations] Error resolving stationID from name:', e);
         }
+
+        // Không có stationID vẫn tiếp tục: proxy sẽ tự fallback theo stationName nếu có
+        const list = await bookingService.getAllBookingOfStation(stationID);
+        const rows = (list || []).map((b: any) => ({
+          id: b.bookingID || b.id || b.BookingID || b.bookingId,
+          time: b.bookingTime || b.time || b.bookingHour || '--',
+          driver: b.customerName || b.username || b.customer || b.driver || '—',
+          vehicle: b.vehicleId || b.vehicle || b.plate || '—',
+          battery: b.batteryType || b.batteryTypeName || '—',
+          status: b.bookingStatus || b.status || 'Booked',
+          raw: b,
+        }));
+        if (mounted) setData(rows);
+      } catch (e: any) {
+        showToast({ type: 'error', message: e?.message || 'Không thể load đặt chỗ' });
+      } finally {
+        if (mounted) setLoading(false);
       }
     };
     

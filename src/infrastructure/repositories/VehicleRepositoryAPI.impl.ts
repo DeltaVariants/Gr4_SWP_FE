@@ -7,7 +7,7 @@ class VehicleRepositoryAPI implements IVehicleRepository {
    * Lấy danh sách xe của người dùng
    */
   async getAll(): Promise<Vehicle[]> {
-    const endpoint = "/vehicles";
+    const endpoint = "/me/vehicles";
 
     try {
       console.log("Fetching vehicles from URL:", endpoint);
