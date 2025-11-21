@@ -5,7 +5,7 @@ import React, { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAppSelector, useAppDispatch } from "@/application/hooks/useRedux";
 import { fetchAllVehicles } from "@/application/services/vehicleService";
-import { getBatteryType } from "@/utils/batteryUtils";
+import { getBatteryTypeFromId } from "@/domain/entities/Battery";
 import { FiCheck } from "react-icons/fi";
 
 // Plan types from API
@@ -70,7 +70,28 @@ export default function BillingPlanPage() {
   useEffect(() => {
     const fetchPlans = async () => {
       try {
-        const response = await fetch("/api/subscription-plans");
+        // Get token from localStorage or cookies
+        let token = localStorage.getItem("accessToken");
+        
+        // Fallback to cookies if localStorage is empty
+        if (!token) {
+          const cookies = document.cookie.split(';');
+          const tokenCookie = cookies.find(c => c.trim().startsWith('accessToken='));
+          if (tokenCookie) {
+            token = tokenCookie.split('=')[1];
+            // Restore to localStorage for future use
+            localStorage.setItem("accessToken", token);
+          }
+        }
+        
+        const headers: HeadersInit = {
+          "Content-Type": "application/json",
+        };
+        if (token) {
+          headers["Authorization"] = `Bearer ${token}`;
+        }
+        
+        const response = await fetch("/api/subscription-plans", { headers });
         const result = await response.json();
         
         if (result.success && Array.isArray(result.data)) {
@@ -126,10 +147,12 @@ export default function BillingPlanPage() {
 
     // Determine vehicle type
     let targetVehicleType = "Xe máy điện"; // default
+    let batteryType = "Small"; // default
     
     const vehicle = selectedVehicle || vehicles[0];
     if (vehicle) {
-      const batteryType = getBatteryType(vehicle.batteryTypeModel);
+      batteryType = getBatteryTypeFromId(vehicle.batteryTypeID);
+      console.log(`[BillingPlan] Vehicle: ${vehicle.vehicleName}, batteryTypeID: ${vehicle.batteryTypeID}, batteryType: ${batteryType}`);
       targetVehicleType = batteryTypeToVehicleType[batteryType] || "Xe máy điện";
     }
 
@@ -137,6 +160,8 @@ export default function BillingPlanPage() {
     const filteredPlans = apiPlans
       .filter(p => getVehicleType(p.name.toLowerCase()) === targetVehicleType)
       .map(convertPlan);
+    
+    console.log(`[BillingPlan] Filtered ${filteredPlans.length} plans for ${targetVehicleType} (Battery: ${batteryType})`);
 
     if (filteredPlans.length > 0) {
       setSelectedPlanType({
@@ -202,10 +227,10 @@ export default function BillingPlanPage() {
 
       const result = await response.json();
       
-      if (response.ok) {
-        alert("Thanh toán thành công!");
-        setShowPaymentModal(false);
-        // Redirect or refresh
+      if (response.ok && result.data?.checkoutUrl) {
+        // Redirect to PayOS payment page
+        console.log('[Payment] Redirecting to:', result.data.checkoutUrl);
+        window.location.href = result.data.checkoutUrl;
       } else {
         setPaymentError(result.message || "Thanh toán thất bại");
       }

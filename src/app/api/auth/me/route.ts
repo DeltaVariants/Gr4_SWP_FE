@@ -202,7 +202,33 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    return NextResponse.json({ success: true, data: userData });
+    // Set cookies for middleware to recognize auth state
+    const response = NextResponse.json({ success: true, data: userData });
+    
+    // Set accessToken cookie (if we have it from request)
+    if (token) {
+      response.cookies.set('accessToken', token, {
+        httpOnly: false, // Need to be accessible by client-side code
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        path: '/',
+        maxAge: 60 * 60 * 24 * 7, // 7 days
+      });
+    }
+    
+    // Set role cookie for middleware
+    const roleName = userData?.roleName || userData?.RoleName || userData?.role;
+    if (roleName) {
+      response.cookies.set('role', roleName.toUpperCase(), {
+        httpOnly: false,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        path: '/',
+        maxAge: 60 * 60 * 24 * 7, // 7 days
+      });
+    }
+
+    return response;
   } catch (e) {
     console.error('[auth/me] Error:', e);
     return NextResponse.json({ success: false, message: 'Internal server error' }, { status: 500 });

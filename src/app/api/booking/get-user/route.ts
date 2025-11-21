@@ -6,7 +6,7 @@ export async function GET(req: NextRequest) {
   try {
     // forward all query params to backend
     const qs = req.nextUrl.searchParams.toString();
-    const url = `${API_URL}/me/bookings${qs ? '?' + qs : ''}`;
+    const url = `${API_URL}/api/me/bookings${qs ? '?' + qs : ''}`;
 
     const forwardHeaders: Record<string, string> = { 'Content-Type': 'application/json' };
     const incomingAuth = req.headers.get('authorization');

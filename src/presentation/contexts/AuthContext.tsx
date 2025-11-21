@@ -94,7 +94,45 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
    */
   useEffect(() => {
     const checkAuth = async () => {
-      const token = tokenStorage.getAccessToken();
+      // Try to get token from localStorage first
+      let token = tokenStorage.getAccessToken();
+      
+      // If no token in localStorage, try to recover from cookies
+      if (!token && typeof window !== "undefined") {
+        console.log("[AuthContext] No token in localStorage, checking cookies...");
+        const cookies = document.cookie.split(';');
+        const tokenCookie = cookies.find(c => c.trim().startsWith('accessToken='));
+        const roleCookie = cookies.find(c => c.trim().startsWith('role='));
+        
+        if (tokenCookie) {
+          const recoveredToken = tokenCookie.split('=')[1];
+          const recoveredRole = roleCookie?.split('=')[1];
+          
+          console.log("[AuthContext] Token recovered from cookies, restoring to localStorage");
+          
+          // Calculate token expiry (assume 24 hours if we can't decode)
+          let expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+          try {
+            const parts = recoveredToken.split('.');
+            if (parts.length >= 2) {
+              const payload = JSON.parse(atob(parts[1]));
+              if (payload.exp) {
+                expiresAt = new Date(payload.exp * 1000).toISOString();
+              }
+            }
+          } catch (e) {
+            console.warn("[AuthContext] Could not decode token expiry");
+          }
+          
+          tokenStorage.saveTokens({ 
+            token: recoveredToken, 
+            refreshToken: '', // We don't store refresh token in cookies
+            expiresAt
+          });
+          token = recoveredToken;
+        }
+      }
+      
       if (!token) return;
 
       try {
@@ -115,7 +153,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               const err = refreshError as Error;
               console.warn("[AuthContext] Token refresh failed:", err.message);
               tokenStorage.clearTokens();
-              await sessionCookie.clearSession();
+              // Don't auto-logout to avoid clearing session when user is still browsing
+              // await sessionCookie.clearSession();
               setUser(null);
               setIsAuthenticated(false);
               return; // Don't try to refresh user if token refresh failed
@@ -124,7 +163,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             // No refresh token available
             console.warn("[AuthContext] No refresh token available");
             tokenStorage.clearTokens();
-            await sessionCookie.clearSession();
+            // Don't auto-logout
+            // await sessionCookie.clearSession();
             setUser(null);
             setIsAuthenticated(false);
             return;
@@ -138,7 +178,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         console.error("[AuthContext] Error checking auth:", err.message);
         // Clear invalid tokens
         tokenStorage.clearTokens();
-        await sessionCookie.clearSession();
+        // Don't auto-logout when checking auth fails
+        // await sessionCookie.clearSession();
         setUser(null);
         setIsAuthenticated(false);
       }

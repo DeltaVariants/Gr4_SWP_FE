@@ -2,7 +2,8 @@
 
 import React, { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useAuth } from "@/hooks/useAuth";
+import { withCustomerAuth } from '@/hoc/withAuth';
+import { useAuth } from "@/presentation/hooks/useAuth";
 import { useAppSelector, useAppDispatch } from "@/application/hooks/useRedux";
 import { fetchAllVehicles } from "@/application/services/vehicleService";
 import { fetchAllBatteryTypes } from "@/application/services/batteryTypeService";
@@ -48,10 +49,9 @@ const BookingPage = () => {
   const [stationName, setStationName] = useState("");
   const [bookingTime, setBookingTime] = useState<Date>(new Date());
 
-  // Initialize booking time to current time + 2 hours
+  // Initialize booking time to current time
   useEffect(() => {
     const now = new Date();
-    now.setHours(now.getHours() + 2);
     now.setMinutes(0);
     now.setSeconds(0);
     setBookingTime(now);
@@ -119,7 +119,23 @@ const BookingPage = () => {
         return;
       }
 
-      const response = await fetch("/api/booking/get-user", {
+      // Get selectedVehicleId from localStorage (optional filter)
+      const selectedVehicleId = localStorage.getItem("selectedVehicleId");
+      
+      // Build URL with query params
+      // Note: Không filter theo vehicleId để lấy tất cả bookings của user
+      const params = new URLSearchParams();
+      // Tạm comment để lấy tất cả bookings
+      // if (selectedVehicleId) {
+      //   params.append("vehicleId", selectedVehicleId);
+      // }
+      const queryString = params.toString();
+      const url = `/api/booking/get-user${queryString ? `?${queryString}` : ''}`;
+      
+      console.log("Fetching all bookings from:", url);
+      console.log("Selected vehicle ID (not filtering):", selectedVehicleId);
+
+      const response = await fetch(url, {
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
@@ -168,7 +184,7 @@ const BookingPage = () => {
     const isDevMode = Boolean(devToken);
 
     // In dev mode or if not authenticated, use dummy user
-    const userId = user?.id || (isDevMode ? "12345" : null);
+    const userId = user?.userId || (isDevMode ? "12345" : null);
 
     if (!userId) {
       setError("Vui lòng đăng nhập để đặt lịch");
@@ -181,16 +197,20 @@ const BookingPage = () => {
       return;
     }
 
-    if (!stationId) {
+    if (!stationId || !stationName) {
       setError("Vui lòng chọn trạm đổi pin");
       return;
     }
 
-    // Validate booking time is at least 2 hours from now
+    if (!bookingTime) {
+      setError("Vui lòng chọn thời gian đặt lịch");
+      return;
+    }
+
+    // Validate booking time is not in the past
     const now = new Date();
-    const twoHoursLater = new Date(now.getTime() + 2 * 60 * 60 * 1000);
-    if (bookingTime < twoHoursLater) {
-      setError("Thời gian đặt lịch phải ít nhất 2 giờ kể từ bây giờ");
+    if (bookingTime < now) {
+      setError("Thời gian đặt lịch không thể trong quá khứ");
       return;
     }
 
@@ -529,14 +549,11 @@ const BookingPage = () => {
                       newDate.setHours(bookingTime.getHours());
                       newDate.setMinutes(bookingTime.getMinutes());
                       
-                      // Validate if selected datetime is at least 2 hours from now
+                      // Validate if selected datetime is not in the past
                       const now = new Date();
-                      const twoHoursLater = new Date(now.getTime() + 2 * 60 * 60 * 1000);
                       
-                      if (newDate < twoHoursLater) {
-                        setError("Thời gian đặt lịch phải ít nhất 2 giờ kể từ bây giờ");
-                        // Set to minimum valid time (now + 2 hours)
-                        setBookingTime(twoHoursLater);
+                      if (newDate < now) {
+                        setError("Thời gian đặt lịch không thể trong quá khứ");
                       } else {
                         setError("");
                         setBookingTime(newDate);
@@ -550,33 +567,88 @@ const BookingPage = () => {
                 {/* Time Input */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Chọn giờ:
+                    Chọn giờ (00:00 - 23:59):
                   </label>
-                  <input
-                    type="time"
-                    value={`${String(bookingTime.getHours()).padStart(2, '0')}:${String(bookingTime.getMinutes()).padStart(2, '0')}`}
-                    onChange={(e) => {
-                      const [hours, minutes] = e.target.value.split(':');
-                      const newDate = new Date(bookingTime);
-                      newDate.setHours(parseInt(hours));
-                      newDate.setMinutes(parseInt(minutes));
-                      
-                      // Validate if selected time is at least 2 hours from now
-                      const now = new Date();
-                      const twoHoursLater = new Date(now.getTime() + 2 * 60 * 60 * 1000);
-                      
-                      if (newDate < twoHoursLater) {
-                        setError("Thời gian đặt lịch phải ít nhất 2 giờ kể từ bây giờ");
-                        // Set to minimum valid time (now + 2 hours)
-                        setBookingTime(twoHoursLater);
-                      } else {
-                        setError("");
-                        setBookingTime(newDate);
-                      }
-                    }}
-                    className="w-full px-4 py-3 text-lg font-semibold text-gray-900 bg-white border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 hover:border-gray-400 transition-colors"
-                    style={{ colorScheme: 'light' }}
-                  />
+                  <div className="grid grid-cols-2 gap-3">
+                    {/* Hour Select */}
+                    <div>
+                      <label className="block text-xs text-gray-600 mb-1">Giờ</label>
+                      <select
+                        value={bookingTime.getHours()}
+                        onChange={(e) => {
+                          const newDate = new Date(bookingTime);
+                          newDate.setHours(parseInt(e.target.value));
+                          
+                          const now = new Date();
+                          if (newDate < now) {
+                            setError("Thời gian đặt lịch không thể trong quá khứ");
+                          } else {
+                            setError("");
+                            setBookingTime(newDate);
+                          }
+                        }}
+                        className="w-full px-3 py-3 text-lg font-semibold text-gray-900 bg-white border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 hover:border-gray-400 transition-colors"
+                      >
+                        {Array.from({ length: 24 }, (_, i) => i).map((hour) => {
+                          const now = new Date();
+                          const selectedDate = new Date(bookingTime);
+                          selectedDate.setHours(0, 0, 0, 0);
+                          const today = new Date();
+                          today.setHours(0, 0, 0, 0);
+                          
+                          // Disable if selected date is today and hour is in the past
+                          const isDisabled = selectedDate.getTime() === today.getTime() && hour < now.getHours();
+                          
+                          return (
+                            <option key={hour} value={hour} disabled={isDisabled} style={isDisabled ? { opacity: 0.4 } : {}}>
+                              {String(hour).padStart(2, '0')}
+                            </option>
+                          );
+                        })}
+                      </select>
+                    </div>
+                    
+                    {/* Minute Select */}
+                    <div>
+                      <label className="block text-xs text-gray-600 mb-1">Phút</label>
+                      <select
+                        value={bookingTime.getMinutes()}
+                        onChange={(e) => {
+                          const newDate = new Date(bookingTime);
+                          newDate.setMinutes(parseInt(e.target.value));
+                          
+                          const now = new Date();
+                          if (newDate < now) {
+                            setError("Thời gian đặt lịch không thể trong quá khứ");
+                          } else {
+                            setError("");
+                            setBookingTime(newDate);
+                          }
+                        }}
+                        className="w-full px-3 py-3 text-lg font-semibold text-gray-900 bg-white border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 hover:border-gray-400 transition-colors"
+                      >
+                        {Array.from({ length: 60 }, (_, i) => i).map((minute) => {
+                          const now = new Date();
+                          const selectedDate = new Date(bookingTime);
+                          selectedDate.setHours(0, 0, 0, 0);
+                          const today = new Date();
+                          today.setHours(0, 0, 0, 0);
+                          
+                          // Disable if selected date is today, same hour, and minute is in the past
+                          const isDisabled = 
+                            selectedDate.getTime() === today.getTime() && 
+                            bookingTime.getHours() === now.getHours() && 
+                            minute < now.getMinutes();
+                          
+                          return (
+                            <option key={minute} value={minute} disabled={isDisabled} style={isDisabled ? { opacity: 0.4 } : {}}>
+                              {String(minute).padStart(2, '0')}
+                            </option>
+                          );
+                        })}
+                      </select>
+                    </div>
+                  </div>
                 </div>
 
                 {/* Display selected time */}
@@ -592,8 +664,8 @@ const BookingPage = () => {
                 <div className="bg-amber-50 border-l-4 border-amber-500 p-3 rounded">
                   <p className="text-xs text-amber-800">
                     <span className="font-semibold">⚠️ Lưu ý:</span> Vui lòng
-                    chọn thời gian ít nhất 2 giờ kể từ bây giờ. Lịch đặt sẽ
-                    tự động hủy nếu bạn không đến đúng giờ.
+                    chọn thời gian trong tương lai. Lịch đặt sẽ
+                    tự động hủy nếu bạn không đến sau 1 giờ.
                   </p>
                 </div>
               </div>
@@ -601,11 +673,19 @@ const BookingPage = () => {
 
             {/* Payment Info */}
             <div className="bg-indigo-50 rounded-lg p-4 border-2 border-indigo-200">
-              <div className="flex items-center gap-3 mb-3">
-                <FaBatteryFull className="text-indigo-600 text-xl" />
-                <h2 className="text-lg font-semibold text-gray-900">
-                  Gói thanh toán
-                </h2>
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-3">
+                  <FaBatteryFull className="text-indigo-600 text-xl" />
+                  <h2 className="text-lg font-semibold text-gray-900">
+                    Gói thanh toán
+                  </h2>
+                </div>
+                <button
+                  onClick={() => router.push('/billing-plan')}
+                  className="px-3 py-1.5 bg-indigo-600 text-white text-sm rounded-lg hover:bg-indigo-700 transition-colors font-semibold"
+                >
+                  Chọn gói
+                </button>
               </div>
               <p className="text-sm text-gray-700 mb-1.5">
                 <span className="font-semibold">Gói hiện tại:</span>{" "}

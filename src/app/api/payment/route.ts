@@ -14,17 +14,38 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json();
     
+    console.log('[Payment API] Request body:', body);
+    
+    // Validate required fields for subscription payment
+    if (body.planID && !body.vehicleID) {
+      return NextResponse.json(
+        { success: false, message: "vehicleID is required for subscription payment" },
+        { status: 400 }
+      );
+    }
+    
+    // Backend expects query parameters (not body)
+    const queryParams = new URLSearchParams({
+      vehicleID: body.vehicleID,
+      planID: body.planID,
+    });
+    
+    const backendUrl = `${API_URL}/payment?${queryParams.toString()}`;
+    console.log('[Payment API] Backend URL:', backendUrl);
+    
     // Forward to backend
-    const response = await fetch(`${API_URL}/payment`, {
+    const response = await fetch(backendUrl, {
       method: "POST",
       headers: {
         Authorization: token,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(body),
     });
 
     const data = await response.json();
+    
+    console.log('[Payment API] Backend response status:', response.status);
+    console.log('[Payment API] Backend response data:', JSON.stringify(data, null, 2));
 
     if (!response.ok) {
       return NextResponse.json(
