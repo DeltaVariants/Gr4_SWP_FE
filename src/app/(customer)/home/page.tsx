@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { useSearchParams, useRouter } from 'next/navigation';
-import { useAuth } from '@/presentation/hooks/useAuth';
+import { useAuth } from '@/contexts/AuthContext';
 import CarInfoCard from "./components/CarInfoCard";
 import BatteryStatusCard from "./components/BatteryStatusCard";
 import BookingInfoCard from "./components/BookingInfoCard";
@@ -87,20 +87,20 @@ function CustomerHomePage() {
   };
 
   return (
-    <div>
-      {/* Main Content - Takes remaining height after header */}
-      <div className="flex-1">
-        {/* Top Section - 60% height */}
-        <div className="h-[60%] grid grid-cols-2 gap-6 mb-6">
+    <div className="w-full">
+      {/* Main Content - Scrollable */}
+      <div className="space-y-6">
+        {/* Top Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Left Column */}
-          <div className="flex flex-col">
+          <div className="flex flex-col gap-4">
             {/* Car Info Card */}
             <div>
               <CarInfoCard />
             </div>
 
             {/* Battery Status Card */}
-            <div className="h-full">
+            <div className="min-h-[200px]">
               <BatteryStatusCard onFindStation={handleFindStation} />
             </div>
           </div>
@@ -124,10 +124,10 @@ function CustomerHomePage() {
           </div>
         </div>
 
-        {/* Bottom Section - 40% height */}
-        <div className="h-[40%] grid grid-cols-2 gap-6">
+        {/* Bottom Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Recent Stations List */}
-          <div className="h-full">
+          <div className="min-h-[400px]">
             <RecentStationsList
               onSearch={handleSearchStations}
               onStationSelect={handleStationSelect}
@@ -135,7 +135,7 @@ function CustomerHomePage() {
           </div>
 
           {/* Map Section */}
-          <div className="h-full">
+          <div className="min-h-[400px]">
             <MapSection />
           </div>
         </div>

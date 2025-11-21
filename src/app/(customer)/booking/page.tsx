@@ -317,13 +317,7 @@ const BookingPage = () => {
             </div>
 
             <div className="bg-indigo-50 rounded-lg p-4 border-2 border-indigo-200">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600">Gói thanh toán</p>
-                  <p className="font-semibold text-indigo-900 text-lg capitalize">
-                    {bookingData.planName}
-                  </p>
-                </div>
+              <div className="flex items-center justify-end">
                 <div className="text-right">
                   <p className="text-sm text-gray-600">Trạng thái</p>
                   <p className="font-semibold text-green-700 capitalize">
@@ -367,7 +361,7 @@ const BookingPage = () => {
 
   // Booking form
   return (
-    <div className="h-full overflow-y-auto bg-linear-to-br from-indigo-50 to-blue-50 p-4">
+    <div className="w-full bg-linear-to-br from-indigo-50 to-blue-50 p-4">
       <div className="max-w-3xl mx-auto">
         <div className="bg-white rounded-2xl shadow-xl p-6">
           <div className="flex items-center justify-between mb-4">
@@ -672,29 +666,6 @@ const BookingPage = () => {
             </div>
 
             {/* Payment Info */}
-            <div className="bg-indigo-50 rounded-lg p-4 border-2 border-indigo-200">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-3">
-                  <FaBatteryFull className="text-indigo-600 text-xl" />
-                  <h2 className="text-lg font-semibold text-gray-900">
-                    Gói thanh toán
-                  </h2>
-                </div>
-                <button
-                  onClick={() => router.push('/billing-plan')}
-                  className="px-3 py-1.5 bg-indigo-600 text-white text-sm rounded-lg hover:bg-indigo-700 transition-colors font-semibold"
-                >
-                  Chọn gói
-                </button>
-              </div>
-              <p className="text-sm text-gray-700 mb-1.5">
-                <span className="font-semibold">Gói hiện tại:</span>{" "}
-                Pay-per-swap (Thanh toán theo lượt)
-              </p>
-              <p className="text-xs text-gray-600">
-                Bạn sẽ thanh toán sau khi hoàn thành việc đổi pin
-              </p>
-            </div>
           </div>
 
           {/* Action Buttons */}

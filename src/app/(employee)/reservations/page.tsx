@@ -79,23 +79,6 @@ export default withStaffAuth(function ReservationsPage() {
         } catch (e) {
           console.error('[Reservations] Error resolving stationID from name:', e);
         }
-
-        // Không có stationID vẫn tiếp tục: proxy sẽ tự fallback theo stationName nếu có
-        const list = await bookingService.getAllBookingOfStation(stationID);
-        const rows = (list || []).map((b: any) => ({
-          id: b.bookingID || b.id || b.BookingID || b.bookingId,
-          time: b.bookingTime || b.time || b.bookingHour || '--',
-          driver: b.customerName || b.username || b.customer || b.driver || '—',
-          vehicle: b.vehicleId || b.vehicle || b.plate || '—',
-          battery: b.batteryType || b.batteryTypeName || '—',
-          status: b.bookingStatus || b.status || 'Booked',
-          raw: b,
-        }));
-        if (mounted) setData(rows);
-      } catch (e: any) {
-        showToast({ type: 'error', message: e?.message || 'Không thể load đặt chỗ' });
-      } finally {
-        if (mounted) setLoading(false);
       }
     };
     
@@ -152,8 +135,14 @@ export default withStaffAuth(function ReservationsPage() {
   // Handle check-in (redirect to check-in page)
   // Flow mới: Đi thẳng đến check-in, không cần confirm trước
   const handleCheckIn = useCallback((bookingId: string) => {
+    if (!bookingId) {
+      console.error('[Reservations] Cannot check-in: bookingId is missing');
+      showToast({ type: 'error', message: 'Booking ID is missing. Please refresh the page.' });
+      return;
+    }
+    console.log('[Reservations] Navigating to check-in with bookingId:', bookingId);
     router.push(`/check-in?bookingId=${bookingId}`);
-  }, [router]);
+  }, [router, showToast]);
 
   // Define columns with dynamic action buttons
   const columns = useMemo(() => [
@@ -187,16 +176,33 @@ export default withStaffAuth(function ReservationsPage() {
             {isCompleted && (
               <>
                 <button
-                  onClick={() => handleCheckIn(row.id)}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium text-white bg-emerald-600 hover:bg-emerald-700 shadow-sm"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (row.id) {
+                      handleCheckIn(row.id);
+                    } else {
+                      console.error('[Reservations] Row ID is missing:', row);
+                      showToast({ type: 'error', message: 'Booking ID is missing. Please refresh the page.' });
+                    }
+                  }}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium text-white bg-emerald-600 hover:bg-emerald-700 shadow-sm transition-colors cursor-pointer"
+                  disabled={!row.id}
                 >
                   <Battery className="w-3.5 h-3.5" />
                   Continue Swap
                 </button>
                 <button
-                  onClick={() => handleCancelBooking(row.id)}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium text-white bg-red-500 hover:bg-red-600 shadow-sm"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (row.id) {
+                      handleCancelBooking(row.id);
+                    }
+                  }}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium text-white bg-red-500 hover:bg-red-600 shadow-sm transition-colors cursor-pointer"
                   title="Cancel booking"
+                  disabled={!row.id}
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
@@ -213,7 +219,7 @@ export default withStaffAuth(function ReservationsPage() {
         );
       }
     },
-  ], [handleCancelBooking, handleCheckIn]);
+  ], [handleCancelBooking, handleCheckIn, showToast]);
 
   // Transform bookings to table data
   const data = useMemo(() => {

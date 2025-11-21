@@ -26,7 +26,19 @@ export interface AuthHookReturn {
 }
 
 export const useAuth = (): AuthHookReturn => {
-  const [user, setUser] = useState<AuthUser | null>(null);
+  // Initialize user from cache synchronously to avoid race conditions
+  const [user, setUser] = useState<AuthUser | null>(() => {
+    if (typeof window === 'undefined') return null;
+    try {
+      const cachedUser = localStorage.getItem('userInfo');
+      if (cachedUser) {
+        return JSON.parse(cachedUser);
+      }
+    } catch (e) {
+      console.warn('[useAuth] Failed to load user from cache on init:', e);
+    }
+    return null;
+  });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
@@ -134,12 +146,15 @@ export const useAuth = (): AuthHookReturn => {
     }
   }, []);
 
-  // Load user from cache on mount
+  // Load user from cache on mount if not already loaded
   useEffect(() => {
     const token = localStorage.getItem('accessToken');
     if (token && !user) {
       console.log('[useAuth] Token exists but no user, loading from cache...');
-      loadUserFromCache();
+      const cachedUser = loadUserFromCache();
+      if (!cachedUser) {
+        console.log('[useAuth] No cached user found, will need to fetch from API');
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Only run once on mount

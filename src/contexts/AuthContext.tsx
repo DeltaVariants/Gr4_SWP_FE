@@ -45,6 +45,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [isInitialized, setIsInitialized] = useState(false);
   const router = useRouter();
 
+
   // Load user on mount if token exists
   useEffect(() => {
     let isMounted = true; // Prevent state updates after unmount
@@ -54,9 +55,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       console.log('[AuthContext] Initializing auth, token exists:', !!token);
       
       if (token) {
-        // Check if authHook already has user (from previous load or cache)
+        // Check if authHook already has user (from synchronous cache load or previous load)
+        // The useAuth hook now loads from cache synchronously, so user should be available immediately
         if (authHook.user) {
-          console.log('[AuthContext] User already loaded in hook, skipping API call');
+          console.log('[AuthContext] User already loaded in hook (from cache), skipping API call');
           if (isMounted) {
             setIsInitialized(true);
             console.log('[AuthContext] Initialization complete (user exists)');
@@ -64,13 +66,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           return;
         }
         
-        // Try to get fresh user data from API
+        // User not in cache, try to get fresh user data from API
         try {
-          console.log('[AuthContext] Loading user data from API...');
+          console.log('[AuthContext] No cached user, loading user data from API...');
           const userData = await authHook.getCurrentUser();
           
           if (isMounted) {
-            console.log('[AuthContext] User loaded successfully:', userData);
+            console.log('[AuthContext] User loaded successfully from API:', userData);
             // Cache is automatically updated by authHook
           }
         } catch (error: any) {
@@ -86,7 +88,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             localStorage.removeItem('userInfo');
           } else if (error?.message?.includes('Network') || error?.message?.includes('timeout')) {
             console.warn('[AuthContext] Network error during init - will retry on next action');
-            // Keep token for retry later
+            // Keep token for retry later - user might be in cache
           } else {
             console.error('[AuthContext] Failed to load user on init:', error?.message || error);
             // Clear tokens for unknown errors
@@ -106,6 +108,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
     };
 
+    // Small delay to ensure authHook has initialized (user from cache should be available immediately)
+    // But we still need to check if we should refresh from API
     initAuth();
     
     // Cleanup function to prevent memory leaks

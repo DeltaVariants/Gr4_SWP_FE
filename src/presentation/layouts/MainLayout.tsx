@@ -21,8 +21,8 @@ export default function MainLayout({
         {/* Header - Fixed position */}
         <div className="shrink-0 z-40 bg-white shadow-sm">{header}</div>
 
-        {/* Main Dashboard Content - No scroll, children control their own scroll */}
-        <main className="flex-1 p-[3vh] overflow-hidden">{children}</main>
+        {/* Main Dashboard Content - Allow scroll */}
+        <main className="flex-1 p-[3vh] overflow-y-auto">{children}</main>
       </div>
     </div>
   );

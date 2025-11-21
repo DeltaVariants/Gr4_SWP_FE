@@ -31,3 +31,6 @@ src/
  └─ shared/                   # Shared code across layers
      ├─ lib/                  # Utilities (date, format...)
      └─ constants/
+1. quản lí xe khách hàng
+2.xử lí lỗi ràng buộc, thông báo lỗi nếu có 
+3.hoàn thiện luồng booking, mua gói

@@ -34,8 +34,54 @@ export class SwapTransactionRepository implements ISwapTransactionRepository {
   }
 
   async getByUser(userID: string): Promise<SwapTransaction[]> {
-    const response = await api.get(`${this.basePath}/user/${userID}`);
-    const data = response.data.data || response.data;
+    // Try the /me/swap-transactions endpoint first (for current user)
+    // If that fails, fall back to the old endpoint
+    try {
+      const response = await api.get('/me/swap-transactions');
+      const data = response.data.data || response.data;
+      return Array.isArray(data) ? data : [];
+    } catch (error: any) {
+      // Fallback to old endpoint if /me endpoint doesn't work
+      console.warn('[SwapTransactionRepository] /me/swap-transactions failed, trying /user endpoint:', error?.message);
+      const response = await api.get(`${this.basePath}/user/${userID}`);
+      const data = response.data.data || response.data;
+      return Array.isArray(data) ? data : [];
+    }
+  }
+
+  /**
+   * Get current user's swap transactions (uses /me/swap-transactions endpoint)
+   * Calls Next.js API route which proxies to backend
+   */
+  async getMySwapTransactions(): Promise<SwapTransaction[]> {
+    // Get token from localStorage for authorization
+    let token: string | null = null;
+    if (typeof window !== 'undefined') {
+      token = localStorage.getItem('accessToken');
+    }
+
+    // Use Next.js API route which proxies to backend /api/me/swap-transactions
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+    
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    const response = await fetch('/api/me/swap-transactions', {
+      method: 'GET',
+      headers,
+      credentials: 'include',
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ message: 'Failed to fetch swap transactions' }));
+      throw new Error(errorData.message || 'Failed to fetch swap transactions');
+    }
+
+    const payload = await response.json();
+    const data = payload.data?.data || payload.data || payload;
     return Array.isArray(data) ? data : [];
   }
 
