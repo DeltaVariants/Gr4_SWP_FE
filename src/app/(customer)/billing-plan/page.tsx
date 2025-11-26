@@ -5,16 +5,31 @@ import React, { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAppSelector, useAppDispatch } from "@/application/hooks/useRedux";
 import { fetchAllVehicles } from "@/application/services/vehicleService";
-import { getBatteryType } from "@/utils/batteryUtils";
+import { getBatteryTypeFromId } from "@/domain/entities/Battery";
 import { FiCheck } from "react-icons/fi";
+
+// Plan types from API
+interface ApiPlan {
+  planID: string;
+  name: string;
+  planGroup: string;
+  tier: string;
+  price: number;
+  description: string;
+  durationDays: number;
+  maxSwapsPerPeriod: number | null;
+}
 
 // Plan types and data structures
 interface PlanDetail {
+  planID: string;
   type: string;
   description: string;
   price: string;
   swapLimit?: string;
   savings?: string;
+  tier: string;
+  planGroup: string;
 }
 
 interface VehicleTypePlans {
@@ -22,178 +37,6 @@ interface VehicleTypePlans {
   capacity: string;
   plans: PlanDetail[];
 }
-
-// Plan data from SubPlan.md
-const planData: VehicleTypePlans[] = [
-  {
-    vehicleType: "Xe máy điện",
-    capacity: "2 kWh",
-    plans: [
-      {
-        type: "Theo Lần (Pay-per-swap)",
-        description: "Trả tiền mỗi lần đổi pin, phù hợp với khách dùng ít",
-        price: "40.000 ₫/lần",
-      },
-      {
-        type: "Theo Ngày (Daily Rental)",
-        description: "Thuê pin ngắn hạn, đổi pin không giới hạn trong 24h",
-        price: "60.000 ₫/ngày",
-        swapLimit: "Không giới hạn",
-      },
-      {
-        type: "Theo Tháng - Cơ bản",
-        description: "Gói phí cố định hàng tháng",
-        price: "350.000 ₫/tháng",
-        swapLimit: "≤10 lần/tháng",
-      },
-      {
-        type: "Theo Tháng - Tiêu chuẩn",
-        description: "Gói phí cố định hàng tháng",
-        price: "500.000 ₫/tháng",
-        swapLimit: "≤20 lần/tháng",
-      },
-      {
-        type: "Theo Tháng - Premium",
-        description: "Gói phí cố định hàng tháng",
-        price: "800.000 ₫/tháng",
-        swapLimit: "Không giới hạn",
-      },
-      {
-        type: "Theo Năm - Cơ bản",
-        description: "Thanh toán theo năm, tiết kiệm 20-25%",
-        price: "3.300.000 ₫/năm",
-        swapLimit: "≤120 lần/năm",
-        savings: "Tiết kiệm 20%",
-      },
-      {
-        type: "Theo Năm - Tiêu chuẩn",
-        description: "Thanh toán theo năm, tiết kiệm 20-25%",
-        price: "4.800.000 ₫/năm",
-        swapLimit: "≤240 lần/năm",
-        savings: "Tiết kiệm 20%",
-      },
-      {
-        type: "Theo Năm - Premium",
-        description: "Thanh toán theo năm, tiết kiệm 20-25%",
-        price: "7.500.000 ₫/năm",
-        swapLimit: "Không giới hạn",
-        savings: "Tiết kiệm 25%",
-      },
-    ],
-  },
-  {
-    vehicleType: "Ô tô điện cỡ nhỏ",
-    capacity: "40 kWh",
-    plans: [
-      {
-        type: "Theo Lần (Pay-per-swap)",
-        description: "Trả tiền mỗi lần đổi pin, phù hợp với khách dùng ít",
-        price: "200.000 ₫/lần",
-      },
-      {
-        type: "Theo Ngày (Daily Rental)",
-        description: "Thuê pin ngắn hạn, đổi pin không giới hạn trong 24h",
-        price: "400.000 ₫/ngày",
-        swapLimit: "Không giới hạn",
-      },
-      {
-        type: "Theo Tháng - Cơ bản",
-        description: "Gói phí cố định hàng tháng",
-        price: "2.000.000 ₫/tháng",
-        swapLimit: "≤10 lần/tháng",
-      },
-      {
-        type: "Theo Tháng - Tiêu chuẩn",
-        description: "Gói phí cố định hàng tháng",
-        price: "3.000.000 ₫/tháng",
-        swapLimit: "≤20 lần/tháng",
-      },
-      {
-        type: "Theo Tháng - Premium",
-        description: "Gói phí cố định hàng tháng",
-        price: "5.000.000 ₫/tháng",
-        swapLimit: "Không giới hạn",
-      },
-      {
-        type: "Theo Năm - Cơ bản",
-        description: "Thanh toán theo năm, tiết kiệm 20-25%",
-        price: "20.000.000 ₫/năm",
-        swapLimit: "≤120 lần/năm",
-        savings: "Tiết kiệm 20%",
-      },
-      {
-        type: "Theo Năm - Tiêu chuẩn",
-        description: "Thanh toán theo năm, tiết kiệm 20-25%",
-        price: "30.000.000 ₫/năm",
-        swapLimit: "≤240 lần/năm",
-        savings: "Tiết kiệm 20%",
-      },
-      {
-        type: "Theo Năm - Premium",
-        description: "Thanh toán theo năm, tiết kiệm 20-25%",
-        price: "50.000.000 ₫/năm",
-        swapLimit: "Không giới hạn",
-        savings: "Tiết kiệm 25%",
-      },
-    ],
-  },
-  {
-    vehicleType: "Ô tô điện SUV/cỡ lớn",
-    capacity: "80 kWh",
-    plans: [
-      {
-        type: "Theo Lần (Pay-per-swap)",
-        description: "Trả tiền mỗi lần đổi pin, phù hợp với khách dùng ít",
-        price: "400.000 ₫/lần",
-      },
-      {
-        type: "Theo Ngày (Daily Rental)",
-        description: "Thuê pin ngắn hạn, đổi pin không giới hạn trong 24h",
-        price: "700.000 ₫/ngày",
-        swapLimit: "Không giới hạn",
-      },
-      {
-        type: "Theo Tháng - Cơ bản",
-        description: "Gói phí cố định hàng tháng",
-        price: "3.500.000 ₫/tháng",
-        swapLimit: "≤10 lần/tháng",
-      },
-      {
-        type: "Theo Tháng - Tiêu chuẩn",
-        description: "Gói phí cố định hàng tháng",
-        price: "5.000.000 ₫/tháng",
-        swapLimit: "≤20 lần/tháng",
-      },
-      {
-        type: "Theo Tháng - Premium",
-        description: "Gói phí cố định hàng tháng",
-        price: "8.000.000 ₫/tháng",
-        swapLimit: "Không giới hạn",
-      },
-      {
-        type: "Theo Năm - Cơ bản",
-        description: "Thanh toán theo năm, tiết kiệm 20-25%",
-        price: "35.000.000 ₫/năm",
-        swapLimit: "≤120 lần/năm",
-        savings: "Tiết kiệm 20%",
-      },
-      {
-        type: "Theo Năm - Tiêu chuẩn",
-        description: "Thanh toán theo năm, tiết kiệm 20-25%",
-        price: "50.000.000 ₫/năm",
-        swapLimit: "≤240 lần/năm",
-        savings: "Tiết kiệm 20%",
-      },
-      {
-        type: "Theo Năm - Premium",
-        description: "Thanh toán theo năm, tiết kiệm 20-25%",
-        price: "80.000.000 ₫/năm",
-        swapLimit: "Không giới hạn",
-        savings: "Tiết kiệm 25%",
-      },
-    ],
-  },
-];
 
 // Map battery type to vehicle type
 const batteryTypeToVehicleType: Record<string, string> = {
@@ -216,6 +59,53 @@ export default function BillingPlanPage() {
   const [loading, setLoading] = useState(true);
   const [selectedPlanType, setSelectedPlanType] =
     useState<VehicleTypePlans | null>(null);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState<PlanDetail | null>(null);
+  const [paymentLoading, setPaymentLoading] = useState(false);
+  const [paymentError, setPaymentError] = useState("");
+  const [apiPlans, setApiPlans] = useState<ApiPlan[]>([]);
+  const [plansLoading, setPlansLoading] = useState(true);
+
+  // Fetch subscription plans from API
+  useEffect(() => {
+    const fetchPlans = async () => {
+      try {
+        // Get token from localStorage or cookies
+        let token = localStorage.getItem("accessToken");
+        
+        // Fallback to cookies if localStorage is empty
+        if (!token) {
+          const cookies = document.cookie.split(';');
+          const tokenCookie = cookies.find(c => c.trim().startsWith('accessToken='));
+          if (tokenCookie) {
+            token = tokenCookie.split('=')[1];
+            // Restore to localStorage for future use
+            localStorage.setItem("accessToken", token);
+          }
+        }
+        
+        const headers: HeadersInit = {
+          "Content-Type": "application/json",
+        };
+        if (token) {
+          headers["Authorization"] = `Bearer ${token}`;
+        }
+        
+        const response = await fetch("/api/subscription-plans", { headers });
+        const result = await response.json();
+        
+        if (result.success && Array.isArray(result.data)) {
+          setApiPlans(result.data);
+        }
+      } catch (err) {
+        console.error("Error fetching plans:", err);
+      } finally {
+        setPlansLoading(false);
+      }
+    };
+
+    fetchPlans();
+  }, []);
 
   // Fetch vehicles from Redux if not already loaded
   useEffect(() => {
@@ -224,50 +114,132 @@ export default function BillingPlanPage() {
     }
   }, [isAuthenticated, user, vehicles.length, vehicleLoading, dispatch]);
 
-  // Determine plan type based on vehicle's battery type
+  // Convert API plans to display format
   useEffect(() => {
-    if (!isAuthenticated || !user) {
-      setLoading(false);
-      setSelectedPlanType(planData[0]); // Default to motorcycle
+    if (plansLoading || apiPlans.length === 0) {
       return;
     }
 
-    // Wait for vehicles to be loaded
-    if (vehicleLoading) {
-      return;
-    }
+    // Group plans by vehicle type based on plan name
+    const getVehicleType = (planName: string): string => {
+      if (planName.includes("xe máy")) return "Xe máy điện";
+      if (planName.includes("ô tô nhỏ")) return "Ô tô điện cỡ nhỏ";
+      if (planName.includes("ô tô SUV") || planName.includes("ô tô điện suv")) return "Ô tô điện SUV/cỡ lớn";
+      return "Xe điện";
+    };
 
-    // Use selectedVehicle from Redux or first vehicle if available
+    // Convert API plan to PlanDetail
+    const convertPlan = (apiPlan: ApiPlan): PlanDetail => {
+      const swapLimit = apiPlan.maxSwapsPerPeriod 
+        ? `≤${apiPlan.maxSwapsPerPeriod} lần`
+        : "Không giới hạn";
+
+      return {
+        planID: apiPlan.planID,
+        type: apiPlan.name,
+        description: apiPlan.description,
+        price: `${apiPlan.price.toLocaleString("vi-VN")} ₫`,
+        swapLimit,
+        tier: apiPlan.tier,
+        planGroup: apiPlan.planGroup,
+      };
+    };
+
+    // Determine vehicle type
+    let targetVehicleType = "Xe máy điện"; // default
+    let batteryType = "Small"; // default
+    
     const vehicle = selectedVehicle || vehicles[0];
-
     if (vehicle) {
-      // Determine vehicle type from battery type
-      // Use batteryTypeModel first, fallback to batteryTypeID
-      const batteryType = getBatteryType(vehicle.batteryTypeModel);
-      const vehicleType = batteryTypeToVehicleType[batteryType] || "Xe điện";
+      batteryType = getBatteryTypeFromId(vehicle.batteryTypeID);
+      console.log(`[BillingPlan] Vehicle: ${vehicle.vehicleName}, batteryTypeID: ${vehicle.batteryTypeID}, batteryType: ${batteryType}`);
+      targetVehicleType = batteryTypeToVehicleType[batteryType] || "Xe máy điện";
+    }
 
-      console.log(
-        "Battery Type:",
-        batteryType,
-        "-> Vehicle Type:",
-        vehicleType
-      );
-      console.log("Vehicle from Redux:", vehicle);
+    // Filter and convert plans for this vehicle type
+    const filteredPlans = apiPlans
+      .filter(p => getVehicleType(p.name.toLowerCase()) === targetVehicleType)
+      .map(convertPlan);
+    
+    console.log(`[BillingPlan] Filtered ${filteredPlans.length} plans for ${targetVehicleType} (Battery: ${batteryType})`);
 
-      // Find matching plan data
-      const matchedPlan = planData.find((p) => p.vehicleType === vehicleType);
-      setSelectedPlanType(matchedPlan || planData[0]);
+    if (filteredPlans.length > 0) {
+      setSelectedPlanType({
+        vehicleType: targetVehicleType,
+        capacity: "", // Not needed from API
+        plans: filteredPlans,
+      });
     } else {
-      // Default to motorcycle if no vehicle
-      setSelectedPlanType(planData[0]);
+      // Fallback: show all motorcycle plans if no match
+      const motorPlans = apiPlans
+        .filter(p => p.name.toLowerCase().includes("xe máy"))
+        .map(convertPlan);
+      
+      setSelectedPlanType({
+        vehicleType: "Xe máy điện",
+        capacity: "2 kWh",
+        plans: motorPlans,
+      });
     }
 
     setLoading(false);
-  }, [isAuthenticated, user, selectedVehicle, vehicles, vehicleLoading]);
+  }, [apiPlans, plansLoading, selectedVehicle, vehicles]);
 
   const handleSelectPlan = (plan: PlanDetail) => {
-    // TODO: Implement plan selection/purchase logic
-    console.log("Selected plan:", plan);
+    setSelectedPlan(plan);
+    setShowPaymentModal(true);
+    setPaymentError("");
+  };
+
+  const handlePayment = async () => {
+    const vehicle = selectedVehicle || vehicles[0];
+    if (!vehicle) {
+      setPaymentError("Vui lòng chọn xe trước");
+      return;
+    }
+
+    if (!selectedPlan) {
+      setPaymentError("Vui lòng chọn gói");
+      return;
+    }
+
+    setPaymentLoading(true);
+    setPaymentError("");
+
+    try {
+      const token = localStorage.getItem("accessToken");
+      if (!token) {
+        setPaymentError("Vui lòng đăng nhập");
+        return;
+      }
+
+      const response = await fetch("/api/payment", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          vehicleID: vehicle.vehicleID,
+          planID: selectedPlan.planID,
+        }),
+      });
+
+      const result = await response.json();
+      
+      if (response.ok && result.data?.checkoutUrl) {
+        // Redirect to PayOS payment page
+        console.log('[Payment] Redirecting to:', result.data.checkoutUrl);
+        window.location.href = result.data.checkoutUrl;
+      } else {
+        setPaymentError(result.message || "Thanh toán thất bại");
+      }
+    } catch (err) {
+      console.error("Payment error:", err);
+      setPaymentError("Lỗi kết nối. Vui lòng thử lại");
+    } finally {
+      setPaymentLoading(false);
+    }
   };
 
   if (loading) {
@@ -417,8 +389,80 @@ export default function BillingPlanPage() {
           </div>
         </div>
       </div>
+
+      {/* Payment Modal */}
+      {showPaymentModal && selectedPlan && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl">
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">
+              Xác nhận thanh toán
+            </h2>
+
+            <div className="space-y-4 mb-6">
+              <div className="bg-gray-50 rounded-lg p-4">
+                <p className="text-sm text-gray-600">Gói đã chọn</p>
+                <p className="font-semibold text-gray-900">{selectedPlan.type}</p>
+                <p className="text-sm text-gray-600 mt-1">{selectedPlan.description}</p>
+              </div>
+
+              <div className="bg-gray-50 rounded-lg p-4">
+                <p className="text-sm text-gray-600">Giá</p>
+                <p className="text-2xl font-bold text-indigo-600">{selectedPlan.price}</p>
+              </div>
+
+              {selectedPlan.swapLimit && (
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <p className="text-sm text-gray-600">Giới hạn đổi pin</p>
+                  <p className="font-semibold text-gray-900">{selectedPlan.swapLimit}</p>
+                </div>
+              )}
+
+              <div className="bg-gray-50 rounded-lg p-4">
+                <p className="text-sm text-gray-600">Xe sử dụng</p>
+                <p className="font-semibold text-gray-900">
+                  {(selectedVehicle || vehicles[0])?.vehicleName || "Chưa chọn xe"}
+                </p>
+              </div>
+            </div>
+
+            {paymentError && (
+              <div className="mb-4 p-3 bg-red-50 border-l-4 border-red-500 rounded">
+                <p className="text-sm text-red-700">{paymentError}</p>
+              </div>
+            )}
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowPaymentModal(false);
+                  setPaymentError("");
+                }}
+                disabled={paymentLoading}
+                className="flex-1 px-4 py-2.5 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-semibold disabled:opacity-50"
+              >
+                Hủy
+              </button>
+              <button
+                onClick={handlePayment}
+                disabled={paymentLoading}
+                className="flex-1 px-4 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-semibold disabled:opacity-50 flex items-center justify-center"
+              >
+                {paymentLoading ? (
+                  <>
+                    <svg className="animate-spin h-5 w-5 mr-2" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
+                    </svg>
+                    Đang xử lý...
+                  </>
+                ) : (
+                  "Xác nhận thanh toán"
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
-
-export default withCustomerAuth(BillingPlanPage);

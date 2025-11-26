@@ -13,7 +13,7 @@ import {
 } from "@/domain/entities/Auth";
 
 const API_URL =
-  process.env.NEXT_PUBLIC_API_URL || "https://gr4-swp-be2-sp25.onrender.com";
+  process.env.NEXT_PUBLIC_API_URL || "https://gr4-swp-be2-sp25.onrender.com/api";
 
 // Type guards for API responses
 interface ApiErrorResponse {
@@ -240,7 +240,7 @@ export class AuthRepositoryAPI implements IAuthRepository {
   async getCurrentUser(token: string): Promise<AuthUser> {
     try {
       // Call backend API directly (PascalCase)
-      const response = await fetch(`${API_URL}/Auth/me`, {
+      const response = await fetch(`${API_URL}/me`, {
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,

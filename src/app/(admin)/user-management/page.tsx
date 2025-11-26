@@ -253,7 +253,7 @@ export default withAdminAuth(function UserManagement() {
     [handleDeleteClick, router]
   );
 
->>>>>>> 8874b02de5655de9891a581139b5df7e93aaabe8
+
   return (
     <div className="h-full flex flex-col overflow-hidden">
       {/* Filter Bar with Action Buttons */}

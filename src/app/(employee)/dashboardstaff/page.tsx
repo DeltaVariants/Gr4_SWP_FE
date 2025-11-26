@@ -204,6 +204,7 @@ export default withStaffAuth(function StaffDashboard() {
           }
         }
 
+        // Không có stationID vẫn tiếp tục: proxy sẽ tự fallback theo stationName nếu có
         
         // If still no stationID, try to get it from /api/auth/me as fallback
         // But only if user is authenticated (to avoid unnecessary calls)

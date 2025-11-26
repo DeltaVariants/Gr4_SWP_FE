@@ -39,9 +39,10 @@ export async function POST(request: NextRequest) {
       rawText = await response.text().catch(() => '');
     }
 
+    console.log('Backend login response:', { status: response.status, data });
+
     if (!response.ok) {
-      
-  let message = data?.message || data?.error || rawText || 'Invalid credentials';
+      let message = data?.message || data?.error || rawText || 'Invalid credentials';
       if (response.status >= 500) {
         message = 'Máy chủ đang bận hoặc gặp sự cố. Vui lòng thử lại sau.';
       } else if (response.status === 401) {
@@ -95,10 +96,10 @@ export async function POST(request: NextRequest) {
     // Create response with cookies for middleware
     const responseData = {
       success: true,
-      token,
-      refreshToken,
-      authDTO,
-      data,
+      token: data.token,
+      refreshToken: data.refreshToken,
+      expiresAt: data.expiresAt,
+      authDTO: data.authDTO,
       message: 'Login successful',
     };
 

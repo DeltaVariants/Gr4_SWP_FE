@@ -9,6 +9,8 @@ export interface Payment {
   bookingID?: string;
   userID: string;
   userName?: string;
+  vehicleID?: string;
+  planID?: string;
   amount: number;
   paymentMethod: 'Cash' | 'Card' | 'E-Wallet' | 'PayOS' | 'Subscription';
   paymentStatus: 'Pending' | 'Processing' | 'Completed' | 'Failed' | 'Refunded';
@@ -23,6 +25,8 @@ export interface CreatePaymentData {
   swapTransactionID?: string;
   bookingID?: string;
   userID: string;
+  vehicleID?: string;
+  planID?: string;
   amount: number;
   paymentMethod: Payment['paymentMethod'];
   transactionReference?: string;
